@@ -33,6 +33,7 @@ services:
     logging: *logging
     environment:
       DATABASE_URL: postgres://miffer:${DB_PASSWORD}@db:5432/miffer
+      TRUST_PROXY: "true" # nginx-proxy sets X-Real-IP, which the join rate limit goes by
       VIRTUAL_HOST: ${DOMAIN:?set DOMAIN in .env}
       VIRTUAL_PATH: /api/
       VIRTUAL_PORT: "3000"

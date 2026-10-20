@@ -1,5 +1,5 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import { api, ok, session } from "../api";
+import { ApiError, api, ok, session } from "../api";
 
 /** This phone's device id and everyone in the household, oldest first. */
 export const meQuery = queryOptions({
@@ -21,3 +21,24 @@ export function useMembers() {
       id === (data?.deviceId ?? session.deviceId) ? "you" : (members.find((m) => m.id === id)?.name ?? "someone"),
   };
 }
+
+/**
+ * Whether a link code would work, without using it up. Link up fetches it before going to
+ * the name screen, which then reads the same answer from the cache instead of asking again.
+ */
+export const codeQuery = (code: string) =>
+  queryOptions({
+    queryKey: ["code", code],
+    queryFn: async () => {
+      await ok(api.households.check.$post({ json: { code } }));
+      return true;
+    },
+    staleTime: 60_000,
+    retry: false,
+    // Each check counts against the join rate limit, so only ask when the screen opens.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+/** The server said this code doesn't work, as opposed to a busy server or a dropped connection. */
+export const isWrongCode = (error: unknown) => error instanceof ApiError && error.status === 404;

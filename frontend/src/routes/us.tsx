@@ -1,20 +1,16 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Form } from "react-aria-components";
 import { Pencil, X } from "lucide-react";
 import { useToken } from "../api";
 import { Avatar, Wordmark } from "../brand";
-import { Button, buttonClass } from "../components/Button";
+import { Button } from "../components/Button";
+import { CodeCard } from "../components/CodeCard";
 import { Confirm } from "../components/Confirm";
 import { TextField } from "../components/TextField";
-import {
-  useJoinHousehold,
-  useNewLinkCode,
-  useRemoveMember,
-  useRename,
-  useStartHousehold,
-} from "../mutations/household";
-import { useMembers } from "../queries/household";
+import { useNewLinkCode, useRemoveMember, useRename } from "../mutations/household";
+import { codeQuery, useMembers } from "../queries/household";
 import ui from "../ui.module.css";
 import s from "./us.module.css";
 
@@ -22,8 +18,6 @@ export const Route = createFileRoute("/us")({ component: Us });
 
 function Us() {
   const token = useToken();
-  // Shown right after "Start fresh" so others can link up.
-  const [newCode, setNewCode] = useState<string | null>(null);
 
   return (
     <main className={`${ui.content} ${s.us}`}>
@@ -36,73 +30,53 @@ function Us() {
             : "Enter a code from anyone in your household to link up, or start a new household."}
         </p>
       </div>
-      {newCode ? (
-        <CodeCard
-          code={newCode}
-          after={
-            <Link to="/groceries" className={buttonClass("primary")}>
-              Go to the list
-            </Link>
-          }
-        />
-      ) : token ? (
-        <Household />
-      ) : (
-        <LinkUp onStarted={setNewCode} />
-      )}
+      {token ? <Household /> : <LinkUp />}
     </main>
   );
 }
 
-function LinkUp({ onStarted }: { onStarted: (code: string) => void }) {
+/** The first step: a code to join with, or a new household. Both go on to the name screen. */
+function LinkUp() {
   const navigate = useNavigate();
-  const [name, setName] = useState("");
+  const queryClient = useQueryClient();
   const [code, setCode] = useState("");
-  const join = useJoinHousehold(() => navigate({ to: "/groceries" }));
-  const start = useStartHousehold(onStarted);
-  const hasName = name.trim().length > 0;
+  // A wrong code shows here, before they've typed their name.
+  const check = useMutation({
+    mutationFn: (code: string) => queryClient.fetchQuery(codeQuery(code)),
+    onSuccess: (_, code) => navigate({ to: "/name", hash: `code=${code}` }),
+  });
 
   return (
     <>
-      <div className={ui.panel}>
-        <TextField
-          label="Your name"
-          placeholder="So others know who added what"
-          value={name}
-          onChange={setName}
-          maxLength={40}
-          autoComplete="given-name"
-        />
-      </div>
       <Form
         className={ui.panel}
         onSubmit={(e) => {
           e.preventDefault();
-          join.mutate({ code, name });
+          check.mutate(code);
         }}
       >
         <TextField
           label="Link code"
           placeholder="ABC123"
           value={code}
-          onChange={(v) => setCode(v.toUpperCase())}
+          onChange={(v) => {
+            setCode(v.toUpperCase());
+            check.reset(); // the error was about the code they're now changing
+          }}
           maxLength={6}
           autoComplete="off"
-          inputProps={{ className: s.codeInput, autoCapitalize: "characters", spellCheck: false }}
+          inputProps={{ className: `${ui.codeBox} ${s.codeInput}`, autoCapitalize: "characters", spellCheck: false }}
         />
-        {join.error && <p className={ui.error}>{join.error.message}</p>}
-        <Button type="submit" isDisabled={!hasName || code.length !== 6 || join.isPending}>
+        {check.error && <p className={ui.error}>{check.error.message}</p>}
+        <Button type="submit" isDisabled={code.length !== 6 || check.isPending}>
           Link up
         </Button>
       </Form>
       <div className={s.divider}>or</div>
-      <Button variant="outline" onPress={() => start.mutate(name)} isDisabled={!hasName || start.isPending}>
+      <Button variant="outline" onPress={() => navigate({ to: "/name" })}>
         Start a new household
       </Button>
-      {start.error && <p className={ui.error}>{start.error.message}</p>}
-      <p className={`${ui.muted} ${ui.small} ${s.hint}`}>
-        {hasName ? "You'll get a code to share. No account needed." : "Fill in your name first."}
-      </p>
+      <p className={`${ui.muted} ${ui.small} ${s.hint}`}>No account needed.</p>
     </>
   );
 }
@@ -149,9 +123,9 @@ function Household() {
         <h2 id="add-someone" className={s.panelTitle}>
           Add someone
         </h2>
-        <span className={`${ui.muted} ${ui.small}`}>Get a code and enter it on their phone. Each code links one phone.</span>
+        <span className={`${ui.muted} ${ui.small}`}>Get an invite link to send them, or a code to enter on their phone. Each one links one phone.</span>
         <Button variant="outline" onPress={() => newCode.mutate()} isDisabled={newCode.isPending}>
-          Get a link code
+          Invite someone
         </Button>
       </section>
       {newCode.data && <CodeCard code={newCode.data.code} />}
@@ -220,17 +194,5 @@ function MyName({ name }: { name: string }) {
       </Button>
       {rename.error && <p className={ui.error}>{rename.error.message}</p>}
     </Form>
-  );
-}
-
-function CodeCard({ code, after }: { code: string; after?: React.ReactNode }) {
-  return (
-    <div className={ui.panel}>
-      <span className={`${ui.muted} ${ui.small}`}>Enter this on their phone within 10 minutes</span>
-      <output className={s.code} aria-label={`Link code ${code.split("").join(" ")}`}>
-        {code}
-      </output>
-      {after}
-    </div>
   );
 }

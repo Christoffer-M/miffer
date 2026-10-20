@@ -2,9 +2,17 @@ import { boolean, index, integer, pgTable, primaryKey, text, timestamp, uuid } f
 
 export const households = pgTable("households", {
   id: uuid().primaryKey().defaultRandom(),
-  linkCode: text().unique(),
-  linkCodeExpiresAt: timestamp({ withTimezone: true }),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+// Codes for linking another phone. Each links one phone, and a household can have several
+// out at once, so inviting someone new doesn't break the link sent to someone else.
+export const linkCodes = pgTable("link_codes", {
+  code: text().primaryKey(),
+  householdId: uuid()
+    .notNull()
+    .references(() => households.id, { onDelete: "cascade" }),
+  expiresAt: timestamp({ withTimezone: true }).notNull(),
 });
 
 export const devices = pgTable("devices", {

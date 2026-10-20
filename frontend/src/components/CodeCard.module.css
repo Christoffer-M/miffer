@@ -1,0 +1,16 @@
+/* Dashed, to read as something to copy rather than a field to type in. */
+.code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+}
+
+.link {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.link span {
+  user-select: all; /* one tap selects the whole link */
+  font-weight: 600;
+}

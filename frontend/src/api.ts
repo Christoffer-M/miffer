@@ -47,7 +47,16 @@ export const { api } = hc<AppType>(BASE || "/", {
 
 export type Item = InferResponseType<typeof api.items.$get, 200>[number];
 
-/** Throws on a failed response; a revoked token sends the phone back to link up. */
+/** A failed response: the server's message, and its status for telling failures apart. */
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+/** Throws an ApiError on a failed response; a revoked token sends the phone back to link up. */
 export async function ok<T extends Response>(request: Promise<T>): Promise<Exclude<T, { ok: false }>> {
   const res = await request;
   if (res.status === 401) {
@@ -56,7 +65,7 @@ export async function ok<T extends Response>(request: Promise<T>): Promise<Exclu
   }
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error ?? `Request failed (${res.status})`);
+    throw new ApiError(body?.error ?? `Request failed (${res.status})`, res.status);
   }
   return res as Exclude<T, { ok: false }>;
 }
