@@ -5,23 +5,23 @@
 // still slide the whole screen.
 
 let running = 0;
-let popping: string | null = null;
-
-/** True for the item that was just ticked or unticked, so it pops on its way. */
-export const isPopping = (id: string) => id === popping;
 
 const nextTask = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+/** The marker that makes an item pop. Only ever on the item of the transition that's running. */
+const clearPopping = () => document.querySelectorAll("[data-popping]").forEach((el) => el.removeAttribute("data-popping"));
 
 /**
  * Runs `update` (a change to the items in the query cache) as an animated list change.
  * Pass `pop` with an item id to make that item pop as it moves.
  */
 export function animateListChange(update: () => void, pop?: string) {
-  popping = pop ?? null;
   if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) {
     update();
     return;
   }
+  // A marker left from an earlier change would make that item pop again.
+  clearPopping();
   const html = document.documentElement;
   running++;
   html.classList.add("list-transition");
@@ -32,8 +32,11 @@ export function animateListChange(update: () => void, pop?: string) {
     // picture shows the new list, not the old one.
     await nextTask();
     await nextTask();
+    // Marked in the "after" state only, so just this item pops on its way.
+    if (pop) document.querySelector(`[data-vt-item="${CSS.escape(pop)}"]`)?.setAttribute("data-popping", "");
   });
   transition.finished.finally(() => {
+    if (pop) document.querySelector(`[data-vt-item="${CSS.escape(pop)}"]`)?.removeAttribute("data-popping");
     if (--running === 0) html.classList.remove("list-transition");
   });
 }

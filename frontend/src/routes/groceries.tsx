@@ -12,7 +12,6 @@ import { useAddItem, useClearDone, useRemoveItem, useSetDone } from "../mutation
 import { useMembers } from "../queries/household";
 import { itemsQuery } from "../queries/items";
 import ui from "../ui.module.css";
-import { isPopping } from "../viewTransition";
 import s from "./groceries.module.css";
 
 export const Route = createFileRoute("/groceries")({ component: Groceries });
@@ -33,8 +32,7 @@ function useOnline() {
 
 /** Lets an item animate between its old and new spot in list changes (see viewTransition.ts). */
 const animated = (id: string) => ({
-  "data-vt-item": "",
-  "data-popping": isPopping(id) ? "" : undefined,
+  "data-vt-item": id,
   style: { "--vt-name": `item-${id}` } as CSSProperties,
 });
 
