@@ -35,10 +35,3 @@ button,
 input {
   font: inherit;
 }
-
-input[type="checkbox"] {
-  width: 22px;
-  height: 22px;
-  margin: 0;
-  accent-color: var(--accent-bright);
-}

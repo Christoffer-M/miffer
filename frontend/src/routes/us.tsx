@@ -1,7 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { Form } from "react-aria-components";
 import { useToken } from "../api";
 import { Avatar, Wordmark } from "../brand";
+import { Button, buttonClass } from "../components/Button";
+import { Confirm } from "../components/Confirm";
+import { TextField } from "../components/TextField";
 import { CloseIcon, PencilIcon } from "../icons";
 import {
   useJoinHousehold,
@@ -15,9 +19,6 @@ import ui from "../ui.module.css";
 import s from "./us.module.css";
 
 export const Route = createFileRoute("/us")({ component: Us });
-
-const primary = `${ui.button} ${ui.primary}`;
-const outline = `${ui.button} ${ui.outline}`;
 
 function Us() {
   const token = useToken();
@@ -39,7 +40,7 @@ function Us() {
         <CodeCard
           code={newCode}
           after={
-            <Link to="/groceries" className={primary}>
+            <Link to="/groceries" className={buttonClass("primary")}>
               Go to the list
             </Link>
           }
@@ -63,45 +64,41 @@ function LinkUp({ onStarted }: { onStarted: (code: string) => void }) {
 
   return (
     <>
-      <div className={`${ui.panel} ${s.panel}`}>
-        <label htmlFor="name">Your name</label>
-        <input
-          id="name"
-          className={s.textInput}
+      <div className={ui.panel}>
+        <TextField
+          label="Your name"
+          placeholder="So others know who added what"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={setName}
           maxLength={40}
           autoComplete="given-name"
-          placeholder="So others know who added what"
         />
       </div>
-      <form
-        className={`${ui.panel} ${s.panel}`}
+      <Form
+        className={ui.panel}
         onSubmit={(e) => {
           e.preventDefault();
           join.mutate({ code, name });
         }}
       >
-        <label htmlFor="code">Link code</label>
-        <input
-          id="code"
-          className={s.codeInput}
+        <TextField
+          label="Link code"
+          placeholder="ABC123"
           value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          onChange={(v) => setCode(v.toUpperCase())}
           maxLength={6}
           autoComplete="off"
-          autoCapitalize="characters"
-          placeholder="ABC123"
+          inputProps={{ className: s.codeInput, autoCapitalize: "characters", spellCheck: false }}
         />
         {join.error && <p className={ui.error}>{join.error.message}</p>}
-        <button type="submit" className={primary} disabled={!hasName || code.length !== 6 || join.isPending}>
+        <Button type="submit" isDisabled={!hasName || code.length !== 6 || join.isPending}>
           Link up
-        </button>
-      </form>
+        </Button>
+      </Form>
       <div className={s.divider}>or</div>
-      <button type="button" className={outline} onClick={() => start.mutate(name)} disabled={!hasName || start.isPending}>
+      <Button variant="outline" onPress={() => start.mutate(name)} isDisabled={!hasName || start.isPending}>
         Start a new household
-      </button>
+      </Button>
       {start.error && <p className={ui.error}>{start.error.message}</p>}
       <p className={`${ui.muted} ${ui.small} ${s.hint}`}>
         {hasName ? "You'll get a code to share. No account needed." : "Fill in your name first."}
@@ -118,7 +115,9 @@ function Household() {
   return (
     <>
       <section className={ui.panel} aria-labelledby="members">
-        <strong id="members">In this household · {members.length}</strong>
+        <h2 id="members" className={s.panelTitle}>
+          In this household · {members.length}
+        </h2>
         <ul className={s.members}>
           {members.map((m, i) => (
             <li key={m.id}>
@@ -126,22 +125,19 @@ function Household() {
               {m.id === myId ? (
                 <MyName name={m.name} />
               ) : (
-                <span className={s.memberName}>{m.name}</span>
-              )}
-              {m.id !== myId && (
-                <button
-                  type="button"
-                  className={ui.iconButton}
-                  aria-label={`Remove ${m.name}`}
-                  disabled={remove.isPending}
-                  onClick={() => {
-                    if (confirm(`Remove ${m.name}'s phone? They'll need a new code to link up again.`)) {
-                      remove.mutate(m.id);
-                    }
-                  }}
-                >
-                  <CloseIcon />
-                </button>
+                <>
+                  <span className={s.memberName}>{m.name}</span>
+                  <Confirm
+                    title={`Remove ${m.name}?`}
+                    message={`${m.name}'s phone will stop seeing the list right away. They'll need a new code to link up again.`}
+                    confirmLabel="Remove"
+                    onConfirm={() => remove.mutate(m.id)}
+                  >
+                    <Button variant="icon" aria-label={`Remove ${m.name}`} isDisabled={remove.isPending}>
+                      <CloseIcon />
+                    </Button>
+                  </Confirm>
+                </>
               )}
             </li>
           ))}
@@ -149,25 +145,26 @@ function Household() {
         {remove.error && <p className={ui.error}>{remove.error.message}</p>}
       </section>
 
-      <div className={ui.panel}>
-        <strong>Add someone</strong>
+      <section className={ui.panel} aria-labelledby="add-someone">
+        <h2 id="add-someone" className={s.panelTitle}>
+          Add someone
+        </h2>
         <span className={`${ui.muted} ${ui.small}`}>Get a code and enter it on their phone. Each code links one phone.</span>
-        <button type="button" className={outline} onClick={() => newCode.mutate()} disabled={newCode.isPending}>
+        <Button variant="outline" onPress={() => newCode.mutate()} isDisabled={newCode.isPending}>
           Get a link code
-        </button>
-      </div>
+        </Button>
+      </section>
       {newCode.data && <CodeCard code={newCode.data.code} />}
 
       {myId && (
-        <button
-          type="button"
-          className={ui.textButton}
-          onClick={() => {
-            if (confirm("Leave this household? You'll need a new code to link up again.")) remove.mutate(myId);
-          }}
+        <Confirm
+          title="Leave this household?"
+          message="This phone will stop seeing the list. You'll need a new code from someone in the household to link up again."
+          confirmLabel="Leave"
+          onConfirm={() => remove.mutate(myId)}
         >
-          Leave this household
-        </button>
+          <Button variant="text">Leave this household</Button>
+        </Confirm>
       )}
     </>
   );
@@ -185,43 +182,44 @@ function MyName({ name }: { name: string }) {
           {name}
           <span className={ui.muted}> (this phone)</span>
         </span>
-        <button
-          type="button"
-          className={ui.iconButton}
+        <Button
+          variant="icon"
           aria-label="Change your name"
-          onClick={() => setDraft(name === "Unnamed phone" ? "" : name)}
+          onPress={() => setDraft(name === "Unnamed phone" ? "" : name)}
         >
           <PencilIcon />
-        </button>
+        </Button>
       </>
     );
   }
 
   return (
-    <form
+    <Form
       className={s.rename}
       onSubmit={(e) => {
         e.preventDefault();
         rename.mutate(draft, { onSuccess: () => setDraft(null) });
       }}
     >
-      <input
-        aria-label="Your name"
-        className={s.textInput}
+      <TextField
+        label="Your name"
+        hideLabel
         value={draft}
-        onChange={(e) => setDraft(e.target.value)}
+        onChange={setDraft}
         onKeyDown={(e) => e.key === "Escape" && setDraft(null)}
         maxLength={40}
         autoFocus
+        className={s.renameField}
+        inputProps={{ className: s.renameInput }}
       />
-      <button type="submit" className={ui.textButton} disabled={!draft.trim() || rename.isPending}>
+      <Button type="submit" variant="text" className={s.renameButton} isDisabled={!draft.trim() || rename.isPending}>
         Save
-      </button>
-      <button type="button" className={ui.textButton} onClick={() => setDraft(null)}>
+      </Button>
+      <Button variant="text" className={s.renameButton} onPress={() => setDraft(null)}>
         Cancel
-      </button>
+      </Button>
       {rename.error && <p className={ui.error}>{rename.error.message}</p>}
-    </form>
+    </Form>
   );
 }
 

@@ -1,8 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useSyncExternalStore } from "react";
+import { Form } from "react-aria-components";
 import { session } from "../api";
 import { Avatars } from "../brand";
+import { Button } from "../components/Button";
+import { Checkbox } from "../components/Checkbox";
+import { TextField } from "../components/TextField";
 import { CloseIcon } from "../icons";
 import { useAddItem, useClearDone, useRemoveItem, useSetDone } from "../mutations/items";
 import { useMembers } from "../queries/household";
@@ -75,52 +79,45 @@ function Groceries() {
         {!isPending && items.length === 0 && <p className={`${ui.muted} ${s.empty}`}>Nothing on the list yet.</p>}
 
         {todo.length > 0 && (
-          <ul className={s.sheet}>
+          <ul className={s.sheet} aria-label="To get">
             {todo.map((item) => (
               <li key={item.id} className={s.item}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={false}
-                    onChange={() => setDone.mutate({ id: item.id, done: true })}
-                  />
-                  <span>{item.name}</span>
-                </label>
-                <span className={`${ui.muted} ${ui.small}`}>
-                  {whoIs(item.addedBy)}
-                </span>
-                <button
-                  type="button"
-                  className={ui.iconButton}
-                  aria-label={`Remove ${item.name}`}
-                  onClick={() => removeItem.mutate(item.id)}
+                <Checkbox
+                  className={s.check}
+                  isSelected={false}
+                  onChange={() => setDone.mutate({ id: item.id, done: true })}
                 >
+                  {item.name}
+                </Checkbox>
+                <span className={`${ui.muted} ${ui.small}`}>{whoIs(item.addedBy)}</span>
+                <Button variant="icon" aria-label={`Remove ${item.name}`} onPress={() => removeItem.mutate(item.id)}>
                   <CloseIcon />
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
         )}
 
         {done.length > 0 && (
-          <section>
+          <section aria-labelledby="in-cart">
             <div className={`${ui.row} ${s.sectionHead}`}>
-              <span className={`${ui.eyebrow} ${ui.muted}`}>In the cart</span>
-              <button type="button" className={ui.textButton} onClick={() => clearDone.mutate()}>
+              <h2 id="in-cart" className={`${ui.eyebrow} ${ui.muted} ${s.sectionTitle}`}>
+                In the cart
+              </h2>
+              <Button variant="text" onPress={() => clearDone.mutate()}>
                 Clear
-              </button>
+              </Button>
             </div>
             <ul className={s.doneList}>
               {done.map((item) => (
                 <li key={item.id}>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked
-                      onChange={() => setDone.mutate({ id: item.id, done: false })}
-                    />
+                  <Checkbox
+                    className={`${s.check} ${s.doneCheck}`}
+                    isSelected
+                    onChange={() => setDone.mutate({ id: item.id, done: false })}
+                  >
                     <s>{item.name}</s>
-                  </label>
+                  </Checkbox>
                 </li>
               ))}
             </ul>
@@ -128,21 +125,20 @@ function Groceries() {
         )}
       </main>
 
-      <form className={s.addBar} onSubmit={add}>
-        <label>
-          Add item
-          <input
-            type="text"
-            placeholder="e.g. oat milk"
-            value={draft}
-            maxLength={200}
-            onChange={(e) => setDraft(e.target.value)}
-          />
-        </label>
-        <button type="submit" className={`${ui.button} ${ui.primary}`}>
+      <Form className={s.addBar} onSubmit={add}>
+        <TextField
+          label="Add item"
+          placeholder="e.g. oat milk"
+          value={draft}
+          onChange={setDraft}
+          maxLength={200}
+          className={s.addField}
+          inputProps={{ className: s.addInput, enterKeyHint: "done" }}
+        />
+        <Button type="submit" className={s.addButton}>
           Add
-        </button>
-      </form>
+        </Button>
+      </Form>
     </>
   );
 }

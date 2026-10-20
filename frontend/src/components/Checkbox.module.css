@@ -1,0 +1,51 @@
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 52px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.box {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: 2px solid var(--field-border);
+  border-radius: 7px;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 120ms,
+    border-color 120ms,
+    transform 80ms;
+}
+
+.box svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+}
+
+/* React Aria marks state with data attributes. */
+.checkbox[data-selected] .box {
+  background: var(--accent-bright);
+  border-color: var(--accent-bright);
+}
+.checkbox[data-selected] .box svg {
+  opacity: 1;
+}
+.checkbox[data-pressed] .box {
+  transform: scale(0.92);
+}
+.checkbox[data-focus-visible] .box {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

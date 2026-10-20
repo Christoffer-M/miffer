@@ -79,28 +79,26 @@
   border-bottom: 0;
 }
 
-.item label,
-.doneList label {
+/* The checkbox row takes the free space so the whole name is the tap target. */
+.check {
   flex-grow: 1;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 52px;
   font-size: 16px;
   font-weight: 500;
-  cursor: pointer;
 }
 
 .doneList {
   padding: 0 8px;
 }
-.doneList label {
+.doneCheck {
   color: var(--muted);
   font-weight: 400;
 }
 
 .sectionHead {
   padding: 20px 8px 4px;
+}
+.sectionTitle {
+  margin: 0;
 }
 
 .addBar {
@@ -111,24 +109,16 @@
   background: var(--surface);
   border-top: 1px solid var(--line);
 }
-.addBar label {
+.addField {
   flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+}
+.addField label {
   font-size: 13px;
-  font-weight: 600;
 }
-.addBar input {
+.addInput {
   height: 44px;
-  padding: 0 16px;
-  border: 1px solid var(--field-border);
   border-radius: 999px;
-  background: var(--ground);
-  color: var(--ink);
-  font-size: 16px;
-  font-weight: 400;
 }
-.addBar button {
+.addButton {
   height: 44px;
 }

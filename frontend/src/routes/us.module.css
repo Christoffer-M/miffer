@@ -16,19 +16,10 @@
   line-height: 1.55;
 }
 
-.panel label {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.textInput {
-  height: 48px;
-  padding: 0 16px;
-  border: 1px solid var(--field-border);
-  border-radius: 12px;
-  background: var(--ground);
-  color: var(--ink);
+.panelTitle {
+  margin: 0;
   font-size: 16px;
+  font-weight: 700;
 }
 
 .members {
@@ -64,12 +55,13 @@
   gap: 4px;
   padding: 6px 0;
 }
-.rename input {
+.renameField {
   flex: 1 1 96px;
-  min-width: 0;
+}
+.renameInput {
   height: 44px;
 }
-.rename button {
+.renameButton {
   padding: 0 8px;
 }
 .rename p {
