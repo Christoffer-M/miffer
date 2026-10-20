@@ -31,6 +31,7 @@ function matchAt(name: string, q: string) {
  * What to suggest for what's typed: the household's own history (most added first),
  * then the starter list. An exact name comes first, then names starting with the text,
  * then names with a later word starting with it, then names with it inside a word.
+ * Things already on the list always come last.
  * With nothing typed: what the household added at least 3 times, last within 3 months
  * (most added first) and not on the list or in the cart; if there's none of that, the
  * starter list (count 0), minus what's on the list or in the cart.
@@ -67,7 +68,8 @@ export function suggest<I extends ListItem>(
   // ponytail: a linear scan over a few hundred names per keystroke; index it if history grows to thousands.
   const rank = (s: Suggestion<I>) => {
     const l = lower(s.name);
-    return l === q ? 0 : s.at === 0 ? 1 : /[\s-]/.test(l[s.at - 1]) ? 2 : 3;
+    const match = l === q ? 0 : s.at === 0 ? 1 : /[\s-]/.test(l[s.at - 1]) ? 2 : 3;
+    return (s.item && !s.item.done ? 4 : 0) + match; // on the list: after everything else
   };
   return all
     .filter((s) => s.at >= 0)

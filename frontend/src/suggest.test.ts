@@ -17,7 +17,7 @@ const items = [
 const names = (s: { name: string }[]) => s.map((x) => x.name);
 
 test("history first, the household's own spelling wins, exact names lead", () => {
-  assert.deepEqual(names(suggest("m", history, starter, items)), ["mælk", "Mel", "Mango", "Havremælk"]);
+  assert.deepEqual(names(suggest("m", history, starter, items)), ["mælk", "Mel", "Havremælk", "Mango"]);
   // Word starts match too, after names that start with the text.
   assert.deepEqual(names(suggest("oks", history, starter, items)), ["Hakket oksekød"]);
   assert.equal(suggest("oks", history, starter, items)[0].at, 7);
@@ -26,7 +26,8 @@ test("history first, the household's own spelling wins, exact names lead", () =>
   assert.deepEqual(names(suggest("æ", history, starter, items)), ["Æg", "Æbler", "Havremælk", "mælk"]);
 });
 
-test("knows what's on the list or in the cart", () => {
+test("what's on the list comes last; knows what's in the cart", () => {
+  // Mango is on the list: after Havremælk, which only has the "m" inside a word.
   assert.equal(suggest("mango", history, starter, items)[0].item?.done, false);
   assert.equal(suggest("æb", history, starter, items)[0].item?.done, true);
 });

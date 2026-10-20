@@ -1,6 +1,6 @@
 .header {
   background: var(--ground); /* covers items that slide under it while animating */
-  padding: 40px 20px 16px;
+  padding: 16px 20px 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -15,6 +15,18 @@
 
 .titleRow {
   align-items: flex-end;
+}
+
+/* While the phone keyboard is open (see keyboard.ts): just the title, smaller, so the
+   list keeps a few more rows. The offline notice below still shows when it matters. */
+:global(html[data-keyboard]) .header {
+  padding: 8px 20px;
+}
+:global(html[data-keyboard]) .header > :not(.titleRow) {
+  display: none;
+}
+:global(html[data-keyboard]) .header h1 {
+  font-size: 26px;
 }
 
 .badge {
@@ -121,9 +133,9 @@
 }
 
 .addBar {
-  position: relative; /* the suggestions sit on top of it */
   padding: 12px 20px;
   display: flex;
+  flex-wrap: wrap; /* the suggestions take the first line */
   gap: 8px;
   align-items: flex-end;
   background: var(--surface);
@@ -146,87 +158,25 @@
   height: 44px;
 }
 
-/* Suggestions while typing: a card just above the add bar, over the list. */
-.suggest {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: calc(100% + 8px);
-  max-height: calc(var(--app-height, 100dvh) - 200px); /* keeps clear of the header */
-  overflow-y: auto;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow:
-    0 12px 32px rgb(20 33 61 / 14%),
-    0 2px 6px rgb(20 33 61 / 6%);
-}
-
-.suggestions {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.suggestions li + li {
-  border-top: 1px solid var(--line-soft);
-}
-
-.suggestion {
-  width: 100%;
-  min-height: 52px;
+/* Suggestions while typing: one row of chips above the field, scrolling sideways. */
+.strip {
+  flex: 0 0 calc(100% + 40px); /* a line of its own, edge to edge; the field and Add wrap below it */
+  margin: 0 -20px 4px;
+  padding: 0 20px 2px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 4px 0 16px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font-size: 16px;
-  text-align: left;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-button.suggestion {
-  padding-right: 16px;
-}
-.suggestion[data-pressed] {
-  background: var(--ground);
-}
-.suggestion[data-focus-visible],
-.chip[data-focus-visible] {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-
-.suggestName {
-  flex-grow: 1;
-}
-.stack {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-}
-.suggestName b {
-  font-weight: 700;
-}
-
-.plus {
-  flex-shrink: 0;
-  color: var(--accent);
-}
-
-.quick {
-  padding: 14px 16px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.chips {
-  display: flex;
-  flex-wrap: wrap;
   gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
 }
+.strip::-webkit-scrollbar {
+  display: none;
+}
+
 .chip {
+  position: relative; /* keeps its .srOnly text inside the row; else it widens the page */
+  flex-shrink: 0;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -238,18 +188,44 @@ button.suggestion {
   color: var(--ink);
   font-size: 15px;
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: transform 80ms ease-out;
+}
+.chip b {
+  font-weight: 700;
 }
 .chip[data-pressed] {
   transform: scale(0.97);
 }
+.chip[data-focus-visible] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.chipIcon {
+  flex-shrink: 0;
+  color: var(--accent);
+}
 
-.newNote {
-  margin: 0;
-  padding: 16px;
+/* Already on the list: shown, but nothing to do. */
+.chipOnList {
+  background: transparent;
+  color: var(--muted);
+  cursor: default;
+}
+/* Read by screen readers, not shown. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.stripNote {
+  min-height: 44px;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 15px;
+  align-items: center;
 }

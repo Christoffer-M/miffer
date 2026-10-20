@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type CSSProperties, useState, useSyncExternalStore } from "react";
 import { Button as AriaButton, Form } from "react-aria-components";
-import { Check, Plus, ShoppingCart, Trash2, Undo2, X } from "lucide-react";
+import { Check, Plus, Trash2, Undo2, X } from "lucide-react";
 import { session } from "../api";
 import { Avatars } from "../brand";
 import { Button } from "../components/Button";
@@ -58,7 +58,7 @@ function Groceries() {
   const todo = items.filter((i) => !i.done);
   const done = items.filter((i) => i.done);
   const typed = draft.trim();
-  const suggestions = suggest(draft, history, starterItems, items, typed ? 5 : 6);
+  const suggestions = suggest(draft, history, starterItems, items, 8);
 
   /** Adds a name, unless it's already there: then it's put back from the cart, or left be. */
   function addName(name: string) {
@@ -166,66 +166,47 @@ function Groceries() {
           onFocus={() => setTyping(true)}
           onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setTyping(false)}
         >
+          {/* A single row that scrolls sideways, in the bar rather than over the list, so the
+              list stays in view (and shows what was just added) while the keyboard is open. */}
           {typing && (typed || suggestions.length > 0) && (
-            <div className={s.suggest}>
-              {!typed ? (
-                <div className={s.quick}>
-                  <span className={`${ui.eyebrow} ${ui.muted}`}>{suggestions[0].count > 0 ? "You often get" : "Quick add"}</span>
-                  <div className={s.chips}>
-                    {suggestions.map((sg) => (
-                      <AriaButton key={sg.name} className={s.chip} preventFocusOnPress onPress={() => addName(sg.name)}>
-                        <Plus size={16} aria-hidden className={s.plus} />
-                        {sg.name}
-                      </AriaButton>
-                    ))}
-                  </div>
-                </div>
-              ) : suggestions.length === 0 ? (
-                <p className={s.newNote}>
-                  <strong>New to your list</strong>
-                  <span className={ui.muted}>Tap Add to put “{typed}” on it. Next time it's suggested here.</span>
-                </p>
-              ) : (
-                <ul className={s.suggestions} aria-label="Suggestions">
-                  {suggestions.map((sg) => {
-                    const name = (
-                      <span className={s.suggestName}>
-                        {sg.name.slice(0, sg.at)}
-                        <b>{sg.name.slice(sg.at, sg.at + lower(typed).length)}</b>
-                        {sg.name.slice(sg.at + lower(typed).length)}
-                      </span>
-                    );
-                    return (
-                      <li key={sg.name}>
-                        {!sg.item ? (
-                          <AriaButton className={s.suggestion} preventFocusOnPress onPress={() => addName(sg.name)}>
-                            <Plus size={20} aria-hidden className={s.plus} />
-                            {name}
-                            {sg.count > 0 && <span className={`${ui.muted} ${ui.small}`}>{sg.count}×</span>}
-                          </AriaButton>
-                        ) : sg.item.done ? (
-                          <div className={s.suggestion}>
-                            <ShoppingCart size={20} aria-hidden className={ui.muted} />
-                            <span className={s.stack}>
-                              {name}
-                              <span className={`${ui.muted} ${ui.small}`}>In the cart</span>
-                            </span>
-                            <Button variant="text" preventFocusOnPress onPress={() => addName(sg.name)}>
-                              Put back
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className={`${s.suggestion} ${ui.muted}`}>
-                            <Check size={20} aria-hidden />
-                            {name}
-                            <span className={`${s.badge} ${s.offline}`}>On the list</span>
-                          </div>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
+            <div className={s.strip} aria-label="Suggestions" role="group">
+              {typed && suggestions.length === 0 && (
+                <span className={`${ui.muted} ${ui.small} ${s.stripNote}`}>New to your list: tap Add to put it on.</span>
               )}
+              {suggestions.map((sg) => {
+                const end = typed ? sg.at + lower(typed).length : 0;
+                const name = (
+                  <span>
+                    {sg.name.slice(0, sg.at)}
+                    <b>{sg.name.slice(sg.at, end)}</b>
+                    {sg.name.slice(end)}
+                  </span>
+                );
+                return !sg.item ? (
+                  <AriaButton key={sg.name} className={s.chip} preventFocusOnPress onPress={() => addName(sg.name)}>
+                    <Plus size={16} aria-hidden className={s.chipIcon} />
+                    {name}
+                  </AriaButton>
+                ) : !sg.item.done ? (
+                  <span key={sg.name} className={`${s.chip} ${s.chipOnList}`}>
+                    <Check size={16} aria-hidden />
+                    {name}
+                    <span className={s.srOnly}>, on the list</span>
+                  </span>
+                ) : (
+                  <AriaButton
+                    key={sg.name}
+                    className={s.chip}
+                    preventFocusOnPress
+                    onPress={() => addName(sg.name)}
+                    aria-label={`Put ${sg.name} back on the list`}
+                  >
+                    <Undo2 size={16} aria-hidden className={s.chipIcon} />
+                    {name}
+                    <span className={`${ui.muted} ${ui.small}`}>in cart</span>
+                  </AriaButton>
+                );
+              })}
             </div>
           )}
           <TextField

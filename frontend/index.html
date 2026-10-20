@@ -2,10 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <!-- interactive-widget: on Android the keyboard shrinks the page instead of covering it -->
+    <!-- interactive-widget=resizes-visual: the keyboard only covers the page, and keyboard.ts
+         fits the app above it. Letting Android resize the page instead cancels list animations
+         whenever the keyboard's height changes (e.g. Chrome's autofill bar above it closing). -->
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-visual"
     />
     <meta name="theme-color" content="#F2F4F7" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
