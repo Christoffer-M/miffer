@@ -21,6 +21,40 @@
   font-weight: 600;
 }
 
+.textInput {
+  height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--field-border);
+  border-radius: 12px;
+  background: var(--ground);
+  color: var(--ink);
+  font-size: 16px;
+}
+
+.members {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.members li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.members li:last-child {
+  border-bottom: 0;
+}
+
+.memberName {
+  flex-grow: 1;
+  font-weight: 600;
+}
+.memberName span {
+  font-weight: 400;
+}
+
 .codeInput,
 .code {
   height: 56px;

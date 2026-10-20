@@ -16,6 +16,7 @@
 .avatar {
   width: 36px;
   height: 36px;
+  flex-shrink: 0;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -25,13 +26,34 @@
   border: 2px solid var(--ground);
 }
 
-.you {
-  background: var(--accent-tint);
-  color: var(--you);
+.avatars .avatar + .avatar {
+  margin-left: -8px;
 }
 
-.partner {
-  margin-left: -8px;
-  background: var(--partner-tint);
-  color: var(--partner);
+/* Member colours: light tint with dark text, all above 4.5:1. */
+.c0 {
+  background: #ffedd5;
+  color: #9a3412;
+}
+.c1 {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.c2 {
+  background: #dcfce7;
+  color: #166534;
+}
+.c3 {
+  background: #f3e8ff;
+  color: #6b21a8;
+}
+.c4 {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
+.more {
+  background: var(--line);
+  color: var(--ink);
+  font-size: 12px;
 }

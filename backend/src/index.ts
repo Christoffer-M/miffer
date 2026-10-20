@@ -22,10 +22,16 @@ app.get(
       },
       onMessage: async (evt, ws) => {
         if (householdId) return;
-        const device = await deviceForToken(String(evt.data));
-        if (!device) return ws.close(4401, "unauthorized");
-        householdId = device.householdId;
-        subscribe(householdId, socket ?? ws);
+        // Not covered by Hono's error handling: an uncaught error here would crash the process.
+        try {
+          const device = await deviceForToken(String(evt.data));
+          if (!device) return ws.close(4401, "unauthorized");
+          householdId = device.householdId;
+          subscribe(householdId, socket ?? ws);
+        } catch (err) {
+          console.error("ws auth failed", err);
+          ws.close(1011, "server error"); // the app reconnects and tries again
+        }
       },
       onClose: (_evt, ws) => {
         if (householdId) unsubscribe(householdId, socket ?? ws);

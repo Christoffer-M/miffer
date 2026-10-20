@@ -16,9 +16,9 @@ export function unsubscribe(householdId: string, ws: WSContext) {
   if (set?.size === 0) sockets.delete(householdId);
 }
 
-/** Tell every phone in the household that its items changed; they refetch. */
-export function notify(householdId: string) {
-  sockets.get(householdId)?.forEach((ws) => ws.send("items"));
+/** Tell every phone in the household what changed ("items" or "members"); they refetch it. */
+export function notify(householdId: string, what: "items" | "members" = "items") {
+  sockets.get(householdId)?.forEach((ws) => ws.send(what));
 }
 
 /** nginx drops WebSockets idle for 60s, so ping every 30s. */

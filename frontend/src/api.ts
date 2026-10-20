@@ -61,12 +61,14 @@ export async function ok<T extends Response>(request: Promise<T>): Promise<Exclu
   return res as Exclude<T, { ok: false }>;
 }
 
+export type LiveTopic = "items" | "members";
+
 /**
- * Opens the live connection and calls onChange whenever the household's items
- * change, and on every (re)connect so a ping missed while offline can't leave
- * the list stale. Returns a function that closes it.
+ * Opens the live connection and calls onChange with what changed in the
+ * household, and with both topics on every (re)connect so a ping missed while
+ * offline can't leave anything stale. Returns a function that closes it.
  */
-export function connectLive(onChange: () => void) {
+export function connectLive(onChange: (what: LiveTopic) => void) {
   let ws: WebSocket | undefined;
   let retry: number | undefined;
   let stopped = false;
@@ -77,10 +79,11 @@ export function connectLive(onChange: () => void) {
     ws = new WebSocket(url);
     ws.onopen = () => {
       ws?.send(session.token ?? "");
-      onChange();
+      onChange("items");
+      onChange("members");
     };
     ws.onmessage = (e) => {
-      if (e.data === "items") onChange();
+      if (e.data === "items" || e.data === "members") onChange(e.data);
     };
     ws.onclose = () => {
       if (!stopped) retry = window.setTimeout(open, 2000);

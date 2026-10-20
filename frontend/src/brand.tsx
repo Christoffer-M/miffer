@@ -1,3 +1,4 @@
+import { useMembers } from "./queries/household";
 import s from "./brand.module.css";
 
 export const Wordmark = () => (
@@ -6,13 +7,29 @@ export const Wordmark = () => (
   </span>
 );
 
-export const Avatars = () => (
-  <div className={s.avatars}>
-    <span className={`${s.avatar} ${s.you}`} title="You" aria-label="You">
-      Y
+// Each member keeps a colour by join order: you, then everyone else.
+const COLORS = [s.c0, s.c1, s.c2, s.c3, s.c4];
+const SHOWN = 4;
+
+export function Avatar({ name, index }: { name: string; index: number }) {
+  return (
+    <span className={`${s.avatar} ${COLORS[index % COLORS.length]}`} title={name} aria-hidden="true">
+      {name.trim().charAt(0).toUpperCase() || "?"}
     </span>
-    <span className={`${s.avatar} ${s.partner}`} title="Partner" aria-label="Partner">
-      P
-    </span>
-  </div>
-);
+  );
+}
+
+/** Everyone in the household as overlapping initials. */
+export function Avatars() {
+  const { members } = useMembers();
+  if (members.length === 0) return null;
+  const extra = members.length - SHOWN;
+  return (
+    <div className={s.avatars} aria-label={`Shared with ${members.map((m) => m.name).join(", ")}`}>
+      {members.slice(0, SHOWN).map((m, i) => (
+        <Avatar key={m.id} name={m.name} index={i} />
+      ))}
+      {extra > 0 && <span className={`${s.avatar} ${s.more}`}>+{extra}</span>}
+    </div>
+  );
+}

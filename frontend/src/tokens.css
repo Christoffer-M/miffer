@@ -10,9 +10,6 @@
   --accent: #c2410c; /* buttons, labels: white text passes contrast */
   --accent-bright: #ea580c; /* checkmarks, the wordmark dot */
   --accent-tint: #ffedd5;
-  --you: #9a3412;
-  --partner: #1d4ed8;
-  --partner-tint: #dbeafe;
   --display: "Bricolage Grotesque", "DM Sans", sans-serif;
   --body: "DM Sans", ui-sans-serif, system-ui, sans-serif;
 }

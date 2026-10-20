@@ -1,10 +1,15 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { session, useToken } from "../api";
-import { Wordmark } from "../brand";
-import { useJoinHousehold, useNewLinkCode, useStartHousehold } from "../mutations/household";
-import { meQuery } from "../queries/household";
+import { useToken } from "../api";
+import { Avatar, Wordmark } from "../brand";
+import { CloseIcon } from "../icons";
+import {
+  useJoinHousehold,
+  useNewLinkCode,
+  useRemoveMember,
+  useStartHousehold,
+} from "../mutations/household";
+import { useMembers } from "../queries/household";
 import ui from "../ui.module.css";
 import s from "./us.module.css";
 
@@ -15,18 +20,18 @@ const outline = `${ui.button} ${ui.outline}`;
 
 function Us() {
   const token = useToken();
-  // Shown right after "Start fresh" so the partner can link up.
+  // Shown right after "Start fresh" so others can link up.
   const [newCode, setNewCode] = useState<string | null>(null);
 
   return (
     <main className={`${ui.content} ${s.us}`}>
       <div className={s.intro}>
         <Wordmark />
-        <h1 className={ui.display}>One app, two phones</h1>
+        <h1 className={ui.display}>One list for the whole household</h1>
         <p className={ui.muted}>
           {token
-            ? "Everything you add is shared with your partner's phone."
-            : "Enter the code from your partner's phone to link up. Your grocery list is shared between you."}
+            ? "Everything you add shows up for everyone here."
+            : "Enter a code from anyone in your household to link up, or start a new household."}
         </p>
       </div>
       {newCode ? (
@@ -39,7 +44,7 @@ function Us() {
           }
         />
       ) : token ? (
-        <Linked />
+        <Household />
       ) : (
         <LinkUp onStarted={setNewCode} />
       )}
@@ -49,17 +54,31 @@ function Us() {
 
 function LinkUp({ onStarted }: { onStarted: (code: string) => void }) {
   const navigate = useNavigate();
+  const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const join = useJoinHousehold(() => navigate({ to: "/groceries" }));
   const start = useStartHousehold(onStarted);
+  const hasName = name.trim().length > 0;
 
   return (
     <>
+      <div className={`${ui.panel} ${s.panel}`}>
+        <label htmlFor="name">Your name</label>
+        <input
+          id="name"
+          className={s.textInput}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={40}
+          autoComplete="given-name"
+          placeholder="So others know who added what"
+        />
+      </div>
       <form
         className={`${ui.panel} ${s.panel}`}
         onSubmit={(e) => {
           e.preventDefault();
-          join.mutate(code);
+          join.mutate({ code, name });
         }}
       >
         <label htmlFor="code">Link code</label>
@@ -74,46 +93,80 @@ function LinkUp({ onStarted }: { onStarted: (code: string) => void }) {
           placeholder="ABC123"
         />
         {join.error && <p className={ui.error}>{join.error.message}</p>}
-        <button type="submit" className={primary} disabled={code.length !== 6 || join.isPending}>
+        <button type="submit" className={primary} disabled={!hasName || code.length !== 6 || join.isPending}>
           Link up
         </button>
       </form>
       <div className={s.divider}>or</div>
-      <button type="button" className={outline} onClick={() => start.mutate()} disabled={start.isPending}>
-        Start fresh
+      <button type="button" className={outline} onClick={() => start.mutate(name)} disabled={!hasName || start.isPending}>
+        Start a new household
       </button>
       {start.error && <p className={ui.error}>{start.error.message}</p>}
-      <p className={`${ui.muted} ${ui.small} ${s.hint}`}>You'll get a code to share. No account needed.</p>
+      <p className={`${ui.muted} ${ui.small} ${s.hint}`}>
+        {hasName ? "You'll get a code to share. No account needed." : "Fill in your name first."}
+      </p>
     </>
   );
 }
 
-function Linked() {
-  const qc = useQueryClient();
-  const me = useQuery(meQuery);
+function Household() {
+  const { members, myId } = useMembers();
+  const remove = useRemoveMember();
   const newCode = useNewLinkCode();
 
   return (
     <>
+      <section className={ui.panel} aria-labelledby="members">
+        <strong id="members">In this household · {members.length}</strong>
+        <ul className={s.members}>
+          {members.map((m, i) => (
+            <li key={m.id}>
+              <Avatar name={m.name} index={i} />
+              <span className={s.memberName}>
+                {m.name}
+                {m.id === myId && <span className={ui.muted}> (this phone)</span>}
+              </span>
+              {m.id !== myId && (
+                <button
+                  type="button"
+                  className={ui.iconButton}
+                  aria-label={`Remove ${m.name}`}
+                  disabled={remove.isPending}
+                  onClick={() => {
+                    if (confirm(`Remove ${m.name}'s phone? They'll need a new code to link up again.`)) {
+                      remove.mutate(m.id);
+                    }
+                  }}
+                >
+                  <CloseIcon />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+        {remove.error && <p className={ui.error}>{remove.error.message}</p>}
+      </section>
+
       <div className={ui.panel}>
-        <strong>{me.data && me.data.devices > 1 ? `Linked · ${me.data.devices} phones` : "Only this phone so far"}</strong>
-        <span className={`${ui.muted} ${ui.small}`}>Need to link another phone? Get a code and enter it there.</span>
+        <strong>Add someone</strong>
+        <span className={`${ui.muted} ${ui.small}`}>Get a code and enter it on their phone. Each code links one phone.</span>
         <button type="button" className={outline} onClick={() => newCode.mutate()} disabled={newCode.isPending}>
           Get a link code
         </button>
       </div>
       {newCode.data && <CodeCard code={newCode.data.code} />}
-      <button
-        type="button"
-        className={ui.textButton}
-        onClick={() => {
-          if (!confirm("Unlink this phone? You'll need a new code from your partner to link up again.")) return;
-          session.clear();
-          qc.clear();
-        }}
-      >
-        Unlink this phone
-      </button>
+
+      {myId && (
+        <button
+          type="button"
+          className={ui.textButton}
+          onClick={() => {
+            if (confirm("Leave this household? You'll need a new code to link up again.")) remove.mutate(myId);
+          }}
+        >
+          Leave this household
+        </button>
+      )}
     </>
   );
 }
@@ -121,7 +174,7 @@ function Linked() {
 function CodeCard({ code, after }: { code: string; after?: React.ReactNode }) {
   return (
     <div className={ui.panel}>
-      <span className={`${ui.muted} ${ui.small}`}>Enter this on your partner's phone within 10 minutes</span>
+      <span className={`${ui.muted} ${ui.small}`}>Enter this on their phone within 10 minutes</span>
       <output className={s.code} aria-label={`Link code ${code.split("").join(" ")}`}>
         {code}
       </output>

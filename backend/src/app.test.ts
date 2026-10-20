@@ -18,10 +18,10 @@ function call(path: string, opts: { method?: string; token?: string; body?: unkn
   });
 }
 
-test("two linked phones share one list, and nobody else sees it", async () => {
-  const you = await (await call("/households", { method: "POST" })).json();
+test("linked phones share one list, and nobody else sees it", async () => {
+  const you = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
   const partner = await (
-    await call("/households/join", { method: "POST", body: { code: you.code.toLowerCase() } })
+    await call("/households/join", { method: "POST", body: { code: you.code.toLowerCase(), name: " Ben " } })
   ).json();
 
   const id = crypto.randomUUID();
@@ -32,10 +32,10 @@ test("two linked phones share one list, and nobody else sees it", async () => {
   expect(list).toEqual([expect.objectContaining({ id, name: "Milk", done: true, addedBy: you.deviceId })]);
 
   // Codes are single-use.
-  expect((await call("/households/join", { method: "POST", body: { code: you.code } })).status).toBe(404);
+  expect((await call("/households/join", { method: "POST", body: { code: you.code, name: "Eve" } })).status).toBe(404);
 
   // Another household can't see or change it.
-  const stranger = await (await call("/households", { method: "POST" })).json();
+  const stranger = await (await call("/households", { method: "POST", body: { name: "Eve" } })).json();
   expect(await (await call("/items", { token: stranger.token })).json()).toEqual([]);
   await call(`/items/${id}`, { method: "DELETE", token: stranger.token });
   expect(await (await call("/items", { token: you.token })).json()).toHaveLength(1);
@@ -45,4 +45,32 @@ test("two linked phones share one list, and nobody else sees it", async () => {
   expect(await (await call("/items", { token: you.token })).json()).toEqual([]);
 
   expect((await call("/items")).status).toBe(401);
+});
+
+test("a household can grow to a family, and a phone can be removed", async () => {
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  expect((await call("/households", { method: "POST", body: { name: "  " } })).status).toBe(400);
+
+  // Each new phone needs its own code.
+  const join = async (name: string) => {
+    const { code } = await (await call("/households/code", { method: "POST", token: anna.token })).json();
+    return (await call("/households/join", { method: "POST", body: { code, name } })).json();
+  };
+  const ben = await join("Ben");
+  const kid = await join("Kid");
+
+  const me = await (await call("/households/me", { token: ben.token })).json();
+  expect(me.deviceId).toBe(ben.deviceId);
+  expect(me.members.map((m: { name: string }) => m.name)).toEqual(["Anna", "Ben", "Kid"]);
+
+  // A stranger can't remove anyone.
+  const stranger = await (await call("/households", { method: "POST", body: { name: "Eve" } })).json();
+  await call(`/households/members/${kid.deviceId}`, { method: "DELETE", token: stranger.token });
+  expect((await call("/items", { token: kid.token })).status).toBe(200);
+
+  // Removing the kid's lost phone revokes its token at once.
+  await call(`/households/members/${kid.deviceId}`, { method: "DELETE", token: anna.token });
+  expect((await call("/items", { token: kid.token })).status).toBe(401);
+  const after = await (await call("/households/me", { token: anna.token })).json();
+  expect(after.members).toHaveLength(2);
 });

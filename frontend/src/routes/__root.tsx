@@ -3,6 +3,7 @@ import { createRootRouteWithContext, Link, Outlet, redirect } from "@tanstack/re
 import { useEffect } from "react";
 import { connectLive, session, useToken } from "../api";
 import { BasketIcon, HomeIcon, UsIcon } from "../icons";
+import { meQuery } from "../queries/household";
 import { itemsQuery } from "../queries/items";
 import s from "./__root.module.css";
 
@@ -20,7 +21,10 @@ function Root() {
 
   useEffect(() => {
     if (!token) return;
-    return connectLive(() => queryClient.invalidateQueries(itemsQuery));
+    return connectLive((what) => {
+      if (what === "items") queryClient.invalidateQueries(itemsQuery);
+      else queryClient.invalidateQueries(meQuery);
+    });
   }, [token, queryClient]);
 
   return (

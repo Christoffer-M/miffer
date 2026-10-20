@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { session } from "../api";
 import { Avatars, Wordmark } from "../brand";
 import { BasketIcon, ChevronIcon } from "../icons";
+import { useMembers } from "../queries/household";
 import { itemsQuery } from "../queries/items";
 import ui from "../ui.module.css";
 import s from "./index.module.css";
@@ -17,7 +18,8 @@ function greeting() {
 function Home() {
   const { data: items = [] } = useQuery(itemsQuery);
   const todo = items.filter((i) => !i.done);
-  const fromPartner = items.find((i) => i.addedBy && i.addedBy !== session.deviceId); // newest first
+  const { whoIs } = useMembers();
+  const fromOthers = items.find((i) => i.addedBy && i.addedBy !== session.deviceId); // newest first
 
   return (
     <>
@@ -50,7 +52,11 @@ function Home() {
               {todo.length > 3 && <span className={`${s.chip} ${ui.muted}`}>+{todo.length - 3} more</span>}
             </div>
           )}
-          {fromPartner && <span className={`${ui.muted} ${ui.small}`}>Partner added {fromPartner.name}</span>}
+          {fromOthers && (
+            <span className={`${ui.muted} ${ui.small}`}>
+              {whoIs(fromOthers.addedBy)} added {fromOthers.name}
+            </span>
+          )}
         </Link>
       </main>
     </>

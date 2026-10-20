@@ -13,6 +13,7 @@ export const devices = pgTable("devices", {
     .notNull()
     .references(() => households.id, { onDelete: "cascade" }),
   tokenHash: text().notNull().unique(),
+  name: text().notNull().default(""),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 

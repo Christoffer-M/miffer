@@ -5,6 +5,7 @@ import { session } from "../api";
 import { Avatars } from "../brand";
 import { CloseIcon } from "../icons";
 import { useAddItem, useClearDone, useRemoveItem, useSetDone } from "../mutations/items";
+import { useMembers } from "../queries/household";
 import { itemsQuery } from "../queries/items";
 import ui from "../ui.module.css";
 import s from "./groceries.module.css";
@@ -28,6 +29,7 @@ function useOnline() {
 function Groceries() {
   const { data: items = [], isPending, error } = useQuery(itemsQuery);
   const online = useOnline();
+  const { whoIs } = useMembers();
   const addItem = useAddItem();
   const setDone = useSetDone();
   const removeItem = useRemoveItem();
@@ -85,7 +87,7 @@ function Groceries() {
                   <span>{item.name}</span>
                 </label>
                 <span className={`${ui.muted} ${ui.small}`}>
-                  {item.addedBy === session.deviceId ? "you" : "partner"}
+                  {whoIs(item.addedBy)}
                 </span>
                 <button
                   type="button"
