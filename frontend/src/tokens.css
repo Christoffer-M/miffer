@@ -105,6 +105,24 @@ html:active-view-transition-type(back)::view-transition-new(root) {
   view-transition-name: add-bar;
 }
 
+/*
+ * In a list change only the items should visibly change. Everything else shows its new
+ * look straight away instead of cross-fading an old picture into a new one: when anything
+ * else changed too (the suggestion row, or the app growing as Chrome's autofill bar above
+ * the phone keyboard closes) that fade made the whole page look like it was redrawing.
+ * Their groups still glide if they move.
+ */
+.list-transition::view-transition-old(root),
+.list-transition::view-transition-old(list-header),
+.list-transition::view-transition-old(add-bar) {
+  display: none;
+}
+.list-transition::view-transition-new(root),
+.list-transition::view-transition-new(list-header),
+.list-transition::view-transition-new(add-bar) {
+  animation: none;
+}
+
 /* The header, add bar and tab bar stay on top, so items moving past the list's edges slide under them. */
 ::view-transition-group(list-header),
 ::view-transition-group(add-bar),
