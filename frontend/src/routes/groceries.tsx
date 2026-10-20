@@ -158,7 +158,9 @@ function Groceries() {
           className={s.addField}
           inputProps={{ className: s.addInput, enterKeyHint: "done" }}
         />
-        <Button type="submit" className={s.addButton}>
+        {/* Keeps focus (and the phone keyboard) on the field: otherwise the keyboard starts
+            closing mid-tap, the layout jumps, and the tap no longer lands on the button. */}
+        <Button type="submit" className={s.addButton} preventFocusOnPress>
           Add
         </Button>
       </Form>
