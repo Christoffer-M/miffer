@@ -1,0 +1,12 @@
+{
+  "name": "miffer",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "db": "docker compose -f compose.dev.yml up -d",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "build": "pnpm -r build"
+  }
+}

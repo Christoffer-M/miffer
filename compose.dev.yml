@@ -1,0 +1,13 @@
+# Local development only: a Postgres on localhost:5432. `pnpm db` starts it.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: miffer
+      POSTGRES_PASSWORD: miffer
+      POSTGRES_DB: miffer
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: [pgdata-dev:/var/lib/postgresql/data]
+
+volumes:
+  pgdata-dev: {}
