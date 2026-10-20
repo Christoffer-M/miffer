@@ -194,11 +194,6 @@
   flex-shrink: 0;
   color: var(--accent);
 }
-.chipOnList {
-  background: transparent;
-  color: var(--muted);
-  cursor: default;
-}
 
 .stripNote {
   min-height: 44px;

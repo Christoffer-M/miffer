@@ -13,7 +13,7 @@ export type Suggestion<I extends ListItem = ListItem> = {
   count: number;
   /** Where the typed text starts in the name, for highlighting. */
   at: number;
-  /** The item with this name on the list or in the cart, if any. */
+  /** The item with this name in the cart, if any. */
   item?: I;
 };
 
@@ -31,6 +31,7 @@ function matchAt(name: string, q: string) {
  * What to suggest for what's typed: the household's own history (most added first),
  * then the starter list. An exact name comes first, then names starting with the text,
  * then names with a later word starting with it, then names with it inside a word.
+ * Things already on the list are left out; things in the cart come with their item.
  * With nothing typed: what the household added at least 3 times, last within 3 months
  * (most added first) and not on the list or in the cart; if there's none of that, the
  * starter list (count 0), minus what's on the list or in the cart.
@@ -70,7 +71,7 @@ export function suggest<I extends ListItem>(
     return l === q ? 0 : s.at === 0 ? 1 : /[\s-]/.test(l[s.at - 1]) ? 2 : 3;
   };
   return all
-    .filter((s) => s.at >= 0)
+    .filter((s) => s.at >= 0 && (!s.item || s.item.done))
     .sort((a, b) => rank(a) - rank(b)) // stable, so history order holds within a rank
     .slice(0, max);
 }
