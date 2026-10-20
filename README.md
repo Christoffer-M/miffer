@@ -25,8 +25,10 @@ After changing `backend/src/db/schema.ts`, run `pnpm --filter backend db:generat
 ## Deploy
 
 Every push to `main` runs `.github/workflows/deploy.yml`: typecheck, tests and build, then
-it builds the two images, pushes them to `ghcr.io/christoffer-m/miffer-*`, and on the
-server pulls them and runs `docker compose up -d`. Pull requests only run the checks.
+it builds the two images, pushes them to `ghcr.io/christoffer-m/miffer-*`, copies
+`docker-compose.yml` to the server, pulls the images there and runs `docker compose up -d`.
+Pull requests only run the checks. The server never needs the repo: just one folder with
+`docker-compose.yml` and `.env`.
 
 The server is any VPS with Docker where nginx-proxy and acme-companion already run, on the
 Docker network `proxy`. nginx-proxy sends `/api/` to `backend` and everything else to
@@ -34,10 +36,11 @@ Docker network `proxy`. nginx-proxy sends `/api/` to `backend` and everything el
 
 ### One-time setup
 
-**On the server**, clone the repo and add a `.env` next to `docker-compose.yml`:
+**On the server**, make a folder with a `.env` in it. The first deploy puts
+`docker-compose.yml` next to it.
 
 ```bash
-git clone https://github.com/Christoffer-M/miffer.git ~/miffer
+mkdir -p /srv/miffer
 ```
 
 | Variable | Example | What it is |
@@ -53,7 +56,7 @@ git clone https://github.com/Christoffer-M/miffer.git ~/miffer
 | `VPS_HOST` | the server's address |
 | `VPS_USER` | the SSH user |
 | `VPS_SSH_KEY` | the private key for that user |
-| `VPS_DEPLOY_PATH` | where you cloned miffer, e.g. `/home/<user>/miffer` |
+| `VPS_DEPLOY_PATH` | that folder, as an absolute path, e.g. `/srv/miffer` |
 
 The first push to `main` after that deploys.
 

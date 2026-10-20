@@ -84,29 +84,40 @@ jobs:
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 
+      # The server holds only docker-compose.yml and its .env in one folder; no checkout.
       - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.5
         env:
-          TAG: ${{ github.sha }}
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          HOST: ${{ secrets.VPS_HOST }}
+          SSH_USER: ${{ secrets.VPS_USER }}
           DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+          TAG: ${{ github.sha }}
           GHCR_USER: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          envs: TAG,DEPLOY_PATH,GHCR_USER,GHCR_TOKEN
-          script: |
-            set -euo pipefail
-            cd "$DEPLOY_PATH"
-            # The compose file comes from the repo, so pull it first.
-            git pull --ff-only origin main
-            export TAG
-            # This job's token only lives for the run, so log in just long enough to pull.
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-            docker compose pull backend frontend
-            docker logout ghcr.io
-            # ponytail: plain recreate, so miffer is down for a few seconds per deploy.
-            # Start the new backend next to the old one before stopping it if that ever matters.
-            docker compose up -d --no-build --remove-orphans --wait --wait-timeout 180
-            docker image prune -af --filter label=com.miffer.image=true
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # ponytail: trusts the server's host key on first sight, like the usual SSH actions.
+          # Pin it in a known_hosts secret if that ever matters.
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          SSH="ssh -i $HOME/.ssh/deploy_key $SSH_USER@$HOST"
+
+          # Ship this commit's compose file.
+          $SSH "mkdir -p $(printf %q "$DEPLOY_PATH")"
+          scp -i ~/.ssh/deploy_key docker-compose.yml "$SSH_USER@$HOST:$DEPLOY_PATH/docker-compose.yml"
+
+          # The script goes over stdin, so the registry token never shows in a process list.
+          # This job's token only lives for the run, so log in just long enough to pull.
+          $SSH bash -s <<EOF
+          set -euo pipefail
+          cd $(printf %q "$DEPLOY_PATH")
+          export TAG=$TAG
+          echo $(printf %q "$GHCR_TOKEN") | docker login ghcr.io -u $(printf %q "$GHCR_USER") --password-stdin
+          docker compose pull backend frontend
+          docker logout ghcr.io
+          # ponytail: plain recreate, so miffer is down for a few seconds per deploy.
+          # Start the new backend next to the old one before stopping it if that ever matters.
+          docker compose up -d --remove-orphans --wait --wait-timeout 180
+          docker image prune -af --filter label=com.miffer.image=true
+          EOF

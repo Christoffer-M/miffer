@@ -1,5 +1,6 @@
-# The whole production stack. On the server: `docker compose up -d` (the deploy
-# workflow does this). Settings come from .env next to this file:
+# The whole production stack, self-contained: on the server this file and a .env
+# in one folder is all there is. The deploy workflow copies this file there and
+# runs `docker compose up -d`. Settings come from .env next to this file:
 #   DB_PASSWORD  Postgres password (keep it the same after the first start)
 #   DOMAIN       the domain nginx-proxy routes to miffer
 #   TAG          image tag to run; the deploy sets it to the commit it built (default: latest)
@@ -27,9 +28,8 @@ services:
     restart: unless-stopped
 
   backend:
-    # The server pulls what CI pushed; `docker compose build` still builds locally.
+    # Built and pushed by CI from backend/Dockerfile; the server only pulls it.
     image: ghcr.io/christoffer-m/miffer-backend:${TAG:-latest}
-    build: { context: ., dockerfile: backend/Dockerfile }
     logging: *logging
     environment:
       DATABASE_URL: postgres://miffer:${DB_PASSWORD}@db:5432/miffer
@@ -48,8 +48,8 @@ services:
     restart: unless-stopped
 
   frontend:
+    # Built and pushed by CI from frontend/Dockerfile.
     image: ghcr.io/christoffer-m/miffer-frontend:${TAG:-latest}
-    build: { context: ., dockerfile: frontend/Dockerfile }
     logging: *logging
     environment:
       VIRTUAL_HOST: ${DOMAIN}
