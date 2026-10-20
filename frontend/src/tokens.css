@@ -122,6 +122,16 @@ html:active-view-transition-type(back)::view-transition-new(root) {
 .list-transition::view-transition-new(add-bar) {
   animation: none;
 }
+/* Same for items that stay: they don't change, they only move. Fading their old picture
+   into the new one also went wrong on Android: on the first add after focusing the field,
+   Chrome dropped the old pictures as its autofill bar closed, so every row vanished and
+   faded back in. Arriving and leaving items (:only-child) still animate below. */
+.list-transition::view-transition-old(.item):not(:only-child) {
+  display: none;
+}
+.list-transition::view-transition-new(.item):not(:only-child) {
+  animation: none;
+}
 
 /* The header, add bar and tab bar stay on top, so items moving past the list's edges slide under them. */
 ::view-transition-group(list-header),
