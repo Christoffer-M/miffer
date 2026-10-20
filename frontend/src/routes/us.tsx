@@ -1,8 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { api, ok, session, useToken } from "../api";
+import { session, useToken } from "../api";
 import { Wordmark } from "../brand";
+import { useJoinHousehold, useNewLinkCode, useStartHousehold } from "../mutations/household";
+import { meQuery } from "../queries/household";
 import ui from "../ui.module.css";
 import s from "./us.module.css";
 
@@ -48,20 +50,8 @@ function Us() {
 function LinkUp({ onStarted }: { onStarted: (code: string) => void }) {
   const navigate = useNavigate();
   const [code, setCode] = useState("");
-  const join = useMutation({
-    mutationFn: async () => (await ok(api.households.join.$post({ json: { code } }))).json(),
-    onSuccess: ({ token, deviceId }) => {
-      session.save(token, deviceId);
-      navigate({ to: "/groceries" });
-    },
-  });
-  const start = useMutation({
-    mutationFn: async () => (await ok(api.households.$post())).json(),
-    onSuccess: ({ token, deviceId, code }) => {
-      session.save(token, deviceId);
-      onStarted(code);
-    },
-  });
+  const join = useJoinHousehold(() => navigate({ to: "/groceries" }));
+  const start = useStartHousehold(onStarted);
 
   return (
     <>
@@ -69,7 +59,7 @@ function LinkUp({ onStarted }: { onStarted: (code: string) => void }) {
         className={`${ui.panel} ${s.panel}`}
         onSubmit={(e) => {
           e.preventDefault();
-          join.mutate();
+          join.mutate(code);
         }}
       >
         <label htmlFor="code">Link code</label>
@@ -100,13 +90,8 @@ function LinkUp({ onStarted }: { onStarted: (code: string) => void }) {
 
 function Linked() {
   const qc = useQueryClient();
-  const me = useQuery({
-    queryKey: ["me"],
-    queryFn: async () => (await ok(api.households.me.$get())).json(),
-  });
-  const newCode = useMutation({
-    mutationFn: async () => (await ok(api.households.code.$post())).json(),
-  });
+  const me = useQuery(meQuery);
+  const newCode = useNewLinkCode();
 
   return (
     <>

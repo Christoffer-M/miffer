@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { session } from "../api";
 import { Avatars, Wordmark } from "../brand";
 import { BasketIcon, ChevronIcon } from "../icons";
-import { itemsQuery } from "../items";
+import { itemsQuery } from "../queries/items";
 import ui from "../ui.module.css";
 import s from "./index.module.css";
 

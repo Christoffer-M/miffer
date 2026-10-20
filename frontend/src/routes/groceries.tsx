@@ -4,7 +4,8 @@ import { useState, useSyncExternalStore } from "react";
 import { session } from "../api";
 import { Avatars } from "../brand";
 import { CloseIcon } from "../icons";
-import { itemsQuery, useAddItem, useClearDone, useRemoveItem, useSetDone } from "../items";
+import { useAddItem, useClearDone, useRemoveItem, useSetDone } from "../mutations/items";
+import { itemsQuery } from "../queries/items";
 import ui from "../ui.module.css";
 import s from "./groceries.module.css";
 

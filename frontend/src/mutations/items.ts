@@ -1,10 +1,6 @@
-import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, ok, type Item } from "./api";
-
-export const itemsQuery = queryOptions({
-  queryKey: ["items"],
-  queryFn: async () => (await ok(api.items.$get())).json(),
-});
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, ok, type Item } from "../api";
+import { itemsQuery } from "../queries/items";
 
 /** A change that shows on this phone at once, then gets confirmed by the server. */
 function useListMutation<V>(send: (v: V) => Promise<unknown>, apply: (items: Item[], v: V) => Item[]) {

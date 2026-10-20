@@ -3,7 +3,7 @@ import { createRootRouteWithContext, Link, Outlet, redirect } from "@tanstack/re
 import { useEffect } from "react";
 import { connectLive, session, useToken } from "../api";
 import { BasketIcon, HomeIcon, UsIcon } from "../icons";
-import { itemsQuery } from "../items";
+import { itemsQuery } from "../queries/items";
 import s from "./__root.module.css";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
