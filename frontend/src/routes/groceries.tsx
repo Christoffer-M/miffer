@@ -1,7 +1,6 @@
-import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useSyncExternalStore } from "react";
+import { type CSSProperties, useState, useSyncExternalStore } from "react";
 import { Form } from "react-aria-components";
 import { X } from "lucide-react";
 import { session } from "../api";
@@ -13,6 +12,7 @@ import { useAddItem, useClearDone, useRemoveItem, useSetDone } from "../mutation
 import { useMembers } from "../queries/household";
 import { itemsQuery } from "../queries/items";
 import ui from "../ui.module.css";
+import { isPopping } from "../viewTransition";
 import s from "./groceries.module.css";
 
 export const Route = createFileRoute("/groceries")({ component: Groceries });
@@ -31,6 +31,13 @@ function useOnline() {
   );
 }
 
+/** Lets an item animate between its old and new spot in list changes (see viewTransition.ts). */
+const animated = (id: string) => ({
+  "data-vt-item": "",
+  "data-popping": isPopping(id) ? "" : undefined,
+  style: { "--vt-name": `item-${id}` } as CSSProperties,
+});
+
 function Groceries() {
   const { data: items = [], isPending, error } = useQuery(itemsQuery);
   const online = useOnline();
@@ -40,11 +47,6 @@ function Groceries() {
   const removeItem = useRemoveItem();
   const clearDone = useClearDone();
   const [draft, setDraft] = useState("");
-  // Items slide in, out and into place on any change: yours, a live update, or Clear.
-  // auto-animate skips this when the phone asks for reduced motion.
-  const [listRef] = useAutoAnimate<HTMLElement>({ duration: 220 });
-  const [todoRef] = useAutoAnimate<HTMLUListElement>({ duration: 220 });
-  const [doneRef] = useAutoAnimate<HTMLUListElement>({ duration: 220 });
 
   const todo = items.filter((i) => !i.done);
   const done = items.filter((i) => i.done);
@@ -80,14 +82,14 @@ function Groceries() {
         </div>
       )}
 
-      <main ref={listRef} className={`${ui.content} ${s.list}`}>
+      <main className={`${ui.content} ${s.list}`}>
         {error && <p className={ui.error}>{error.message}</p>}
         {!isPending && items.length === 0 && <p className={`${ui.muted} ${s.empty}`}>Nothing on the list yet.</p>}
 
         {todo.length > 0 && (
-          <ul ref={todoRef} className={s.sheet} aria-label="To get">
+          <ul className={s.sheet} aria-label="To get" data-vt="todo-sheet">
             {todo.map((item) => (
-              <li key={item.id} className={s.item}>
+              <li key={item.id} className={s.item} {...animated(item.id)}>
                 <Checkbox
                   className={s.check}
                   isSelected={false}
@@ -106,7 +108,7 @@ function Groceries() {
 
         {done.length > 0 && (
           <section aria-labelledby="in-cart">
-            <div className={`${ui.row} ${s.sectionHead}`}>
+            <div className={`${ui.row} ${s.sectionHead}`} data-vt="cart-head">
               <h2 id="in-cart" className={`${ui.eyebrow} ${ui.muted} ${s.sectionTitle}`}>
                 In the cart
               </h2>
@@ -114,9 +116,9 @@ function Groceries() {
                 Clear
               </Button>
             </div>
-            <ul ref={doneRef} className={s.doneList}>
+            <ul className={s.doneList}>
               {done.map((item) => (
-                <li key={item.id}>
+                <li key={item.id} {...animated(item.id)}>
                   <Checkbox
                     className={`${s.check} ${s.doneCheck}`}
                     isSelected

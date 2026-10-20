@@ -1,5 +1,5 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import { api, ok } from "../api";
+import { api, ok, session } from "../api";
 
 /** This phone's device id and everyone in the household, oldest first. */
 export const meQuery = queryOptions({
@@ -17,6 +17,7 @@ export function useMembers() {
     myId: data?.deviceId,
     /** "you" for this phone, the member's name otherwise. */
     whoIs: (id: string | null) =>
-      id === data?.deviceId ? "you" : (members.find((m) => m.id === id)?.name ?? "someone"),
+      // The stored device id works before the member list has loaded.
+      id === (data?.deviceId ?? session.deviceId) ? "you" : (members.find((m) => m.id === id)?.name ?? "someone"),
   };
 }

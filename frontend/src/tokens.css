@@ -82,3 +82,64 @@ html:active-view-transition-type(back)::view-transition-new(root) {
     opacity: 0;
   }
 }
+
+/*
+ * Grocery list changes (src/viewTransition.ts). While <html> has .list-transition,
+ * every item has its own name, so the browser glides it from its old spot to its
+ * new one, even from the list down into the cart.
+ */
+.list-transition [data-vt-item] {
+  view-transition-name: var(--vt-name);
+  view-transition-class: item;
+}
+.list-transition [data-vt-item][data-popping] {
+  view-transition-class: item popping;
+}
+.list-transition [data-vt="todo-sheet"] {
+  view-transition-name: todo-sheet;
+}
+.list-transition [data-vt="cart-head"] {
+  view-transition-name: cart-head;
+}
+
+::view-transition-group(.item),
+::view-transition-group(todo-sheet),
+::view-transition-group(cart-head) {
+  animation-duration: 340ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Added: drops in. */
+::view-transition-new(.item):only-child {
+  animation: item-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+/* Deleted or cleared: shrinks away. */
+::view-transition-old(.item):only-child {
+  animation: item-out 200ms ease-in both;
+}
+/* Ticked or unticked: pops, then glides to its new list above the others. */
+::view-transition-group(.popping) {
+  z-index: 1;
+  animation-duration: 440ms;
+}
+::view-transition-image-pair(.popping) {
+  animation: item-pop 440ms ease-out;
+}
+
+@keyframes item-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+}
+@keyframes item-out {
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+@keyframes item-pop {
+  30% {
+    transform: scale(1.08);
+  }
+}

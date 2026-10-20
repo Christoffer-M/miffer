@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { House, ShoppingBasket, Users } from "lucide-react";
 import { connectLive, session, useToken } from "../api";
 import { meQuery } from "../queries/household";
-import { itemsQuery } from "../queries/items";
+import { refreshItems } from "../queries/items";
 import s from "./__root.module.css";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -22,7 +22,7 @@ function Root() {
   useEffect(() => {
     if (!token) return;
     return connectLive((what) => {
-      if (what === "items") queryClient.invalidateQueries(itemsQuery);
+      if (what === "items") refreshItems(queryClient).catch(() => {});
       else queryClient.invalidateQueries(meQuery);
     });
   }, [token, queryClient]);
