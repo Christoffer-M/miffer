@@ -29,7 +29,7 @@ function Us() {
     <main className={`${ui.content} ${s.us}`}>
       <div className={s.intro}>
         <Wordmark />
-        <h1 className={ui.display}>One list for the whole household</h1>
+        <h1 className={ui.display}>Your household, together</h1>
         <p className={ui.muted}>
           {token
             ? "Everything you add shows up for everyone here."
