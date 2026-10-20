@@ -1,0 +1,112 @@
+name: CI & deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    name: Typecheck, test and build
+    runs-on: ubuntu-latest
+    # The backend tests need a real Postgres; the default DATABASE_URL points here.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: miffer
+          POSTGRES_PASSWORD: miffer
+          POSTGRES_DB: miffer
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U miffer" --health-interval 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  deploy:
+    name: Build images and deploy to the server
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    # Back-to-back pushes must not interleave: an older run finishing last
+    # would deploy a stale image over the newer one.
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY: ghcr.io/christoffer-m
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # .dockerignore keeps .env and node_modules out of the build context.
+      - name: Build and push backend
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/miffer-backend:${{ github.sha }}
+            ${{ env.REGISTRY }}/miffer-backend:latest
+          # The server prunes old images by this label, leaving other apps' images alone.
+          labels: com.miffer.image=true
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/miffer-frontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/miffer-frontend:latest
+          labels: com.miffer.image=true
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          TAG: ${{ github.sha }}
+          DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: TAG,DEPLOY_PATH,GHCR_USER,GHCR_TOKEN
+          script: |
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+            # The compose file comes from the repo, so pull it first.
+            git pull --ff-only origin main
+            export TAG
+            # This job's token only lives for the run, so log in just long enough to pull.
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            docker compose pull backend frontend
+            docker logout ghcr.io
+            # ponytail: plain recreate, so miffer is down for a few seconds per deploy.
+            # Start the new backend next to the old one before stopping it if that ever matters.
+            docker compose up -d --no-build --remove-orphans --wait --wait-timeout 180
+            docker image prune -af --filter label=com.miffer.image=true
