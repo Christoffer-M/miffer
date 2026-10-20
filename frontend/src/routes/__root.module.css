@@ -9,6 +9,7 @@
 }
 
 .tabs {
+  view-transition-name: tabs; /* stays put while the screen above slides */
   display: flex;
   background: var(--surface);
   border-top: 1px solid var(--line);

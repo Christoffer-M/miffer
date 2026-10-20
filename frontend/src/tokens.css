@@ -35,3 +35,50 @@ button,
 input {
   font: inherit;
 }
+
+/*
+ * Screen changes. The router runs each navigation as a View Transition tagged
+ * "forward" or "back" (by tab order); the tab bar has its own name so it stays put.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+html:active-view-transition-type(forward)::view-transition-old(root) {
+  animation-name: slide-out-left;
+}
+html:active-view-transition-type(forward)::view-transition-new(root) {
+  animation-name: slide-in-right;
+}
+html:active-view-transition-type(back)::view-transition-old(root) {
+  animation-name: slide-out-right;
+}
+html:active-view-transition-type(back)::view-transition-new(root) {
+  animation-name: slide-in-left;
+}
+
+@keyframes slide-out-left {
+  to {
+    transform: translateX(-25%);
+    opacity: 0;
+  }
+}
+@keyframes slide-in-right {
+  from {
+    transform: translateX(25%);
+    opacity: 0;
+  }
+}
+@keyframes slide-out-right {
+  to {
+    transform: translateX(25%);
+    opacity: 0;
+  }
+}
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-25%);
+    opacity: 0;
+  }
+}

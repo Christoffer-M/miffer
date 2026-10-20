@@ -6,7 +6,24 @@ import { routeTree } from "./routeTree.gen";
 import "./tokens.css";
 
 const queryClient = new QueryClient();
-const router = createRouter({ routeTree, context: { queryClient } });
+
+// Tabs in bar order: moving right slides the new screen in from the right, and back again.
+const TABS = ["/", "/groceries", "/us"];
+
+const router = createRouter({
+  routeTree,
+  context: { queryClient },
+  // Every navigation runs as a View Transition; the animation itself is CSS in tokens.css.
+  defaultViewTransition: {
+    types: ({ fromLocation, toLocation, pathChanged }) => {
+      if (!pathChanged || matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+      const from = TABS.indexOf(fromLocation?.pathname ?? "");
+      const to = TABS.indexOf(toLocation.pathname);
+      if (from === -1 || to === -1) return ["fade"];
+      return [to > from ? "forward" : "back"];
+    },
+  },
+});
 
 declare module "@tanstack/react-router" {
   interface Register {
