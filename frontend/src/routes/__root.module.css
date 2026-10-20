@@ -30,8 +30,8 @@
   font-weight: 600;
 }
 
-/* While typing on a phone the keyboard takes half the screen; give the room to the list. */
-:global(html[data-typing]) .tabs {
+/* While the phone keyboard is open it takes half the screen; give the room to the list. */
+:global(html[data-keyboard]) .tabs {
   display: none;
 }
 
