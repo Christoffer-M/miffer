@@ -10,8 +10,10 @@
   position: relative;
   transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+/* Follows the finger exactly while dragging, on its own GPU layer. */
 .content[data-dragging] {
   transition: none;
+  will-change: transform;
 }
 
 /* The coloured panel revealed under the row while swiping. */
