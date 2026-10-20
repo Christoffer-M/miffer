@@ -51,12 +51,6 @@
   padding: 0 12px 16px;
   gap: 0;
 }
-/* Never squash the list card or the cart to fit; the list scrolls instead.
-   (overflow: hidden on the card would otherwise let it shrink and cut off items.) */
-.list > * {
-  flex-shrink: 0;
-}
-
 .empty {
   padding: 24px 8px;
 }

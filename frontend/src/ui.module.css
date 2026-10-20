@@ -8,6 +8,11 @@
   flex-direction: column;
   gap: 14px;
 }
+/* This area scrolls when it's too tall. Without this, the browser squashes buttons,
+   fields and cards to fit instead (e.g. on a short phone or with the keyboard open). */
+.content > * {
+  flex-shrink: 0;
+}
 
 .row {
   display: flex;
