@@ -37,11 +37,33 @@ Docker network `proxy`. nginx-proxy sends `/api/` to `backend` and everything el
 ### One-time setup
 
 **On the server**, make a folder with a `.env` in it. The first deploy puts
-`docker-compose.yml` next to it.
+`docker-compose.yml` next to it. Paste this as the deploy user (`VPS_USER`) after
+changing `DOMAIN` (and `DIR` if you like). It generates the database password and
+refuses to overwrite an existing `.env`:
 
 ```bash
-mkdir -p /srv/miffer
+(
+  set -euo pipefail
+  DIR=/srv/miffer               # the folder VPS_DEPLOY_PATH points at
+  DOMAIN=miffer.example.com     # the domain pointing at this server
+
+  mkdir -p "$DIR"
+  if [ -e "$DIR/.env" ]; then
+    echo "$DIR/.env already exists, not touching it (Postgres keeps the password it started with)." >&2
+    exit 1
+  fi
+  umask 077   # only the owner can read it
+  cat > "$DIR/.env" <<EOF
+# miffer settings, read by docker-compose.yml in this folder
+DB_PASSWORD=$(openssl rand -hex 32)
+DOMAIN=$DOMAIN
+PROXY_NETWORK=proxy
+EOF
+  echo "Wrote $DIR/.env"
+)
 ```
+
+If `/srv` needs root: `sudo mkdir -p /srv/miffer && sudo chown $USER /srv/miffer` first.
 
 | Variable | Example | What it is |
 |---|---|---|
