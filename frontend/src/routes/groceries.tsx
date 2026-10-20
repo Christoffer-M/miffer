@@ -171,11 +171,7 @@ function Groceries() {
           {typing && (typed || suggestions.length > 0) && (
             <div className={s.strip} aria-label="Suggestions" role="group">
               {typed && suggestions.length === 0 && (
-                <span className={`${ui.muted} ${ui.small} ${s.stripNote}`}>
-                  {todo.some((i) => lower(i.name) === lower(typed))
-                    ? "Already on the list."
-                    : "New to your list: tap Add to put it on."}
-                </span>
+                <span className={`${ui.muted} ${ui.small} ${s.stripNote}`}>New to your list: tap Add to put it on.</span>
               )}
               {suggestions.map((sg) => {
                 const end = typed ? sg.at + lower(typed).length : 0;
@@ -191,6 +187,12 @@ function Groceries() {
                     <Plus size={16} aria-hidden className={s.chipIcon} />
                     {name}
                   </AriaButton>
+                ) : !sg.item.done ? (
+                  <span key={sg.name} className={`${s.chip} ${s.chipOnList}`}>
+                    <Check size={16} aria-hidden />
+                    {name}
+                    <span className={s.srOnly}>, on the list</span>
+                  </span>
                 ) : (
                   <AriaButton
                     key={sg.name}

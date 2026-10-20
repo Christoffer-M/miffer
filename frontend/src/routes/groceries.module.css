@@ -163,6 +163,7 @@
 }
 
 .chip {
+  position: relative; /* keeps its .srOnly text inside the row; else it widens the page */
   flex-shrink: 0;
   min-height: 44px;
   display: inline-flex;
@@ -193,6 +194,22 @@
 .chipIcon {
   flex-shrink: 0;
   color: var(--accent);
+}
+
+/* Already on the list: shown, but nothing to do. */
+.chipOnList {
+  background: transparent;
+  color: var(--muted);
+  cursor: default;
+}
+/* Read by screen readers, not shown. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .stripNote {
