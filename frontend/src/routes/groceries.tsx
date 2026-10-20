@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type CSSProperties, useState, useSyncExternalStore } from "react";
-import { Form } from "react-aria-components";
-import { Check, Trash2, Undo2, X } from "lucide-react";
+import { Button as AriaButton, Form } from "react-aria-components";
+import { Check, Plus, ShoppingCart, Trash2, Undo2, X } from "lucide-react";
 import { session } from "../api";
 import { Avatars } from "../brand";
 import { Button } from "../components/Button";
@@ -11,7 +11,9 @@ import { SwipeRow } from "../components/SwipeRow";
 import { TextField } from "../components/TextField";
 import { useAddItem, useClearDone, useRemoveItem, useSetDone } from "../mutations/items";
 import { useMembers } from "../queries/household";
-import { itemsQuery } from "../queries/items";
+import { historyQuery, itemsQuery } from "../queries/items";
+import { starterItems } from "../groceries.da";
+import { lower, suggest } from "../suggest";
 import ui from "../ui.module.css";
 import s from "./groceries.module.css";
 
@@ -49,17 +51,26 @@ function Groceries() {
   const setDone = useSetDone();
   const removeItem = useRemoveItem();
   const clearDone = useClearDone();
+  const { data: history = [] } = useQuery(historyQuery);
   const [draft, setDraft] = useState("");
+  const [typing, setTyping] = useState(false);
 
   const todo = items.filter((i) => !i.done);
   const done = items.filter((i) => i.done);
+  const typed = draft.trim();
+  const suggestions = suggest(draft, history, starterItems, items, typed ? 5 : 6);
+
+  /** Adds a name, unless it's already there: then it's put back from the cart, or left be. */
+  function addName(name: string) {
+    const existing = items.find((i) => lower(i.name) === lower(name));
+    if (!existing) addItem.mutate({ id: crypto.randomUUID(), name, addedBy: session.deviceId });
+    else if (existing.done) setDone.mutate({ id: existing.id, done: false });
+    setDraft("");
+  }
 
   function add(e: React.FormEvent) {
     e.preventDefault();
-    const name = draft.trim();
-    if (!name) return;
-    addItem.mutate({ id: crypto.randomUUID(), name, addedBy: session.deviceId });
-    setDraft("");
+    if (typed) addName(typed);
   }
 
   return (
@@ -149,20 +160,89 @@ function Groceries() {
       </main>
 
       <Form className={s.addBar} onSubmit={add} data-vt="add-bar">
-        <TextField
-          label="Add item"
-          placeholder="e.g. oat milk"
-          value={draft}
-          onChange={setDraft}
-          maxLength={200}
-          className={s.addField}
-          inputProps={{ className: s.addInput, enterKeyHint: "done" }}
-        />
-        {/* Keeps focus (and the phone keyboard) on the field: otherwise the keyboard starts
-            closing mid-tap, the layout jumps, and the tap no longer lands on the button. */}
-        <Button type="submit" className={s.addButton} preventFocusOnPress>
-          Add
-        </Button>
+        {/* Suggestions show while focus is anywhere in here: the field, a suggestion or Add. */}
+        <div
+          className={s.focusArea}
+          onFocus={() => setTyping(true)}
+          onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setTyping(false)}
+        >
+          {typing && (typed || suggestions.length > 0) && (
+            <div className={s.suggest}>
+              {!typed ? (
+                <div className={s.quick}>
+                  <span className={`${ui.eyebrow} ${ui.muted}`}>{suggestions[0].count > 0 ? "You often get" : "Quick add"}</span>
+                  <div className={s.chips}>
+                    {suggestions.map((sg) => (
+                      <AriaButton key={sg.name} className={s.chip} preventFocusOnPress onPress={() => addName(sg.name)}>
+                        <Plus size={16} aria-hidden className={s.plus} />
+                        {sg.name}
+                      </AriaButton>
+                    ))}
+                  </div>
+                </div>
+              ) : suggestions.length === 0 ? (
+                <p className={s.newNote}>
+                  <strong>New to your list</strong>
+                  <span className={ui.muted}>Tap Add to put “{typed}” on it. Next time it's suggested here.</span>
+                </p>
+              ) : (
+                <ul className={s.suggestions} aria-label="Suggestions">
+                  {suggestions.map((sg) => {
+                    const name = (
+                      <span className={s.suggestName}>
+                        {sg.name.slice(0, sg.at)}
+                        <b>{sg.name.slice(sg.at, sg.at + lower(typed).length)}</b>
+                        {sg.name.slice(sg.at + lower(typed).length)}
+                      </span>
+                    );
+                    return (
+                      <li key={sg.name}>
+                        {!sg.item ? (
+                          <AriaButton className={s.suggestion} preventFocusOnPress onPress={() => addName(sg.name)}>
+                            <Plus size={20} aria-hidden className={s.plus} />
+                            {name}
+                            {sg.count > 0 && <span className={`${ui.muted} ${ui.small}`}>{sg.count}×</span>}
+                          </AriaButton>
+                        ) : sg.item.done ? (
+                          <div className={s.suggestion}>
+                            <ShoppingCart size={20} aria-hidden className={ui.muted} />
+                            <span className={s.stack}>
+                              {name}
+                              <span className={`${ui.muted} ${ui.small}`}>In the cart</span>
+                            </span>
+                            <Button variant="text" preventFocusOnPress onPress={() => addName(sg.name)}>
+                              Put back
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className={`${s.suggestion} ${ui.muted}`}>
+                            <Check size={20} aria-hidden />
+                            {name}
+                            <span className={`${s.badge} ${s.offline}`}>On the list</span>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
+          <TextField
+            label="Add item"
+            placeholder="e.g. havremælk"
+            value={draft}
+            onChange={setDraft}
+            maxLength={200}
+            className={s.addField}
+            inputProps={{ className: s.addInput, enterKeyHint: "done", autoComplete: "off" }}
+          />
+          {/* Keeps focus (and the phone keyboard) on the field: otherwise the keyboard starts
+              closing mid-tap, the layout jumps, and the tap no longer lands on the button. */}
+          <Button type="submit" className={s.addButton} preventFocusOnPress>
+            Add
+          </Button>
+        </div>
       </Form>
     </>
   );

@@ -9,6 +9,15 @@ export const itemsQuery = queryOptions({
   queryFn: fetchItems,
 });
 
+/**
+ * What this household has added before, most often first: the source of suggestions.
+ * Its key sits under "items", so invalidating the list after a change refreshes it too.
+ */
+export const historyQuery = queryOptions({
+  queryKey: ["items", "history"],
+  queryFn: async () => (await ok(api.items.history.$get())).json(),
+});
+
 /** What the list looks like on screen: order, names and ticks. */
 const looks = (items: Item[] = []) => JSON.stringify(items.map((i) => [i.id, i.name, i.done]));
 
@@ -18,6 +27,7 @@ const looks = (items: Item[] = []) => JSON.stringify(items.map((i) => [i.id, i.n
  * as pings too, but by then they're already on screen, so nothing animates twice.
  */
 export async function refreshItems(qc: QueryClient) {
+  qc.invalidateQueries(historyQuery); // the other phone may have added something new
   const fresh = await fetchItems();
   const write = () => qc.setQueryData(itemsQuery.queryKey, fresh);
   const current = qc.getQueryData(itemsQuery.queryKey) ?? [];

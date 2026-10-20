@@ -15,6 +15,13 @@
       "when": 1792486451439,
       "tag": "0001_device_names",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792493884764,
+      "tag": "0002_item_history",
+      "breakpoints": true
     }
   ]
 }
