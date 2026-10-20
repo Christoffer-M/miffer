@@ -20,7 +20,9 @@ const looks = (items: Item[] = []) => JSON.stringify(items.map((i) => [i.id, i.n
 export async function refreshItems(qc: QueryClient) {
   const fresh = await fetchItems();
   const write = () => qc.setQueryData(itemsQuery.queryKey, fresh);
-  const changed = looks(qc.getQueryData(itemsQuery.queryKey)) !== looks(fresh);
-  if (changed && location.pathname === "/groceries") animateListChange(write);
+  const current = qc.getQueryData(itemsQuery.queryKey) ?? [];
+  const changed = looks(current) !== looks(fresh);
+  const removing = current.some((i) => !fresh.some((f) => f.id === i.id));
+  if (changed && location.pathname === "/groceries") animateListChange(write, { removing });
   else write();
 }

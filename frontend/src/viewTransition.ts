@@ -11,11 +11,17 @@ const nextTask = () => new Promise((resolve) => setTimeout(resolve, 0));
 /** The marker that makes an item pop. Only ever on the item of the transition that's running. */
 const clearPopping = () => document.querySelectorAll("[data-popping]").forEach((el) => el.removeAttribute("data-popping"));
 
-/**
- * Runs `update` (a change to the items in the query cache) as an animated list change.
- * Pass `pop` with an item id to make that item pop as it moves.
- */
-export function animateListChange(update: () => void, pop?: string) {
+type Options = {
+  /** An item id: that item pops as it moves (it was just ticked or unticked). */
+  pop?: string;
+  /** Items are leaving the list: the rest waits until they've slid out before closing the gap. */
+  removing?: boolean;
+};
+
+const supportsTypes = () => CSS.supports("selector(:active-view-transition-type(a))");
+
+/** Runs `update` (a change to the items in the query cache) as an animated list change. */
+export function animateListChange(update: () => void, { pop, removing }: Options = {}) {
   if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) {
     update();
     return;
@@ -25,7 +31,7 @@ export function animateListChange(update: () => void, pop?: string) {
   const html = document.documentElement;
   running++;
   html.classList.add("list-transition");
-  const transition = document.startViewTransition(async () => {
+  const run = async () => {
     update();
     // React Query tells React about cache changes on a timer, and React then
     // renders right away. Waiting two tasks means the browser's "after"
@@ -34,7 +40,13 @@ export function animateListChange(update: () => void, pop?: string) {
     await nextTask();
     // Marked in the "after" state only, so just this item pops on its way.
     if (pop) document.querySelector(`[data-vt-item="${CSS.escape(pop)}"]`)?.setAttribute("data-popping", "");
-  });
+  };
+  // The "remove" type delays closing the gap (see tokens.css). Browsers without
+  // transition types still animate, just without the delay.
+  const transition =
+    removing && supportsTypes()
+      ? document.startViewTransition({ update: run, types: ["remove"] })
+      : document.startViewTransition(run);
   transition.finished.finally(() => {
     if (pop) document.querySelector(`[data-vt-item="${CSS.escape(pop)}"]`)?.removeAttribute("data-popping");
     if (--running === 0) html.classList.remove("list-transition");

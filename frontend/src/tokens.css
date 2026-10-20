@@ -126,9 +126,19 @@ html:active-view-transition-type(back)::view-transition-new(root) {
 ::view-transition-new(.item):only-child {
   animation: item-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-/* Deleted or cleared: shrinks away. */
+/* Deleted or cleared: slides out of the list to the left. */
 ::view-transition-old(.item):only-child {
-  animation: item-out 200ms ease-in both;
+  animation: item-out 280ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+/*
+ * Removing (the "remove" type): the rest of the list holds still until the item has
+ * slid most of the way out, then closes the gap. Groups hold their old spot while they wait.
+ */
+html:active-view-transition-type(remove)::view-transition-group(.item),
+html:active-view-transition-type(remove)::view-transition-group(todo-sheet),
+html:active-view-transition-type(remove)::view-transition-group(cart-head) {
+  animation-delay: 200ms;
+  animation-fill-mode: both;
 }
 /* Ticked or unticked: pops, then glides to its new list above the others. */
 ::view-transition-group(.popping) {
@@ -146,9 +156,12 @@ html:active-view-transition-type(back)::view-transition-new(root) {
   }
 }
 @keyframes item-out {
+  70% {
+    opacity: 1;
+  }
   to {
     opacity: 0;
-    transform: scale(0.9);
+    transform: translateX(-110%);
   }
 }
 @keyframes item-pop {

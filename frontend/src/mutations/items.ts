@@ -5,19 +5,23 @@ import { animateListChange } from "../viewTransition";
 
 /**
  * A change that shows (animated) on this phone at once, then gets confirmed by the server.
- * `pop` picks the item that should pop as it moves, e.g. the one being ticked.
+ * `pop` picks the item that should pop as it moves (the one being ticked);
+ * `removing` marks changes that take items off the list.
  */
 function useListMutation<V>(
   send: (v: V) => Promise<unknown>,
   apply: (items: Item[], v: V) => Item[],
-  pop?: (v: V) => string,
+  { pop, removing }: { pop?: (v: V) => string; removing?: boolean } = {},
 ) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: send,
     onMutate: async (v) => {
       await qc.cancelQueries(itemsQuery);
-      animateListChange(() => qc.setQueryData(itemsQuery.queryKey, (old = []) => apply(old, v)), pop?.(v));
+      animateListChange(() => qc.setQueryData(itemsQuery.queryKey, (old = []) => apply(old, v)), {
+        pop: pop?.(v),
+        removing,
+      });
     },
     // ponytail: no rollback; refetching puts the server's truth back either way.
     onSettled: () => qc.invalidateQueries(itemsQuery),
@@ -39,17 +43,19 @@ export const useSetDone = () =>
     ({ id, done }: { id: string; done: boolean }) =>
       ok(api.items[":id"].$patch({ param: { id }, json: { done } })),
     (items, { id, done }) => items.map((i) => (i.id === id ? { ...i, done } : i)),
-    ({ id }) => id,
+    { pop: ({ id }) => id },
   );
 
 export const useRemoveItem = () =>
   useListMutation(
     (id: string) => ok(api.items[":id"].$delete({ param: { id } })),
     (items, id) => items.filter((i) => i.id !== id),
+    { removing: true },
   );
 
 export const useClearDone = () =>
   useListMutation(
     (_: void) => ok(api.items.done.$delete()),
     (items) => items.filter((i) => !i.done),
+    { removing: true },
   );
