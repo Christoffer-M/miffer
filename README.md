@@ -31,8 +31,8 @@ Pull requests only run the checks. The server never needs the repo: just one fol
 `docker-compose.yml` and `.env`.
 
 The server is any VPS with Docker where nginx-proxy and acme-companion already run, on the
-Docker network `proxy`. nginx-proxy sends `/api/` to `backend` and everything else to
-`frontend`, and acme-companion gets the certificate.
+Docker network `proxy`. nginx-proxy sends `/api/` to `miffer-backend` and everything else to
+`miffer-frontend` (prefixed, because service names are DNS names on that shared network), and acme-companion gets the certificate.
 
 ### One-time setup
 
