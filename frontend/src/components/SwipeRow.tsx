@@ -90,10 +90,12 @@ export function SwipeRow({ children, right, left, className }: Props) {
     <div
       ref={rowRef}
       className={s.row}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerEnd}
-      onPointerCancel={onPointerEnd}
+      // Capture phase: React Aria stops pointerdown from bubbling out of the checkbox
+      // and buttons, so a swipe starting on them would never reach a normal listener.
+      onPointerDownCapture={onPointerDown}
+      onPointerMoveCapture={onPointerMove}
+      onPointerUpCapture={onPointerEnd}
+      onPointerCancelCapture={onPointerEnd}
       // A swipe must not also count as a tap on what's under the finger.
       onClickCapture={(e) => {
         if (!suppressClick.current) return;
