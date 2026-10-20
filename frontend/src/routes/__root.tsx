@@ -8,9 +8,9 @@ import { refreshItems } from "../queries/items";
 import s from "./__root.module.css";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  // A phone that hasn't linked up yet can only see the Us screen.
+  // A phone that hasn't linked up yet can only see the Us screen and the name screen after it.
   beforeLoad: ({ location }) => {
-    if (!session.token && location.pathname !== "/us") throw redirect({ to: "/us" });
+    if (!session.token && !["/us", "/name"].includes(location.pathname)) throw redirect({ to: "/us" });
   },
   component: Root,
 });

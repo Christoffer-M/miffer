@@ -52,6 +52,21 @@
   font-size: 14px;
 }
 
+/* A six-letter link code: the field on the Us screen and the card that shows a new one. */
+.codeBox {
+  height: 56px;
+  padding: 0 16px;
+  border: 1px solid var(--field-border);
+  border-radius: 12px;
+  background: var(--ground);
+  color: var(--ink);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
 .panel {
   padding: 20px;
   border-radius: 16px;
