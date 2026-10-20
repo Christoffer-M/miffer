@@ -101,6 +101,19 @@ html:active-view-transition-type(back)::view-transition-new(root) {
 .list-transition [data-vt="cart-head"] {
   view-transition-name: cart-head;
 }
+.list-transition [data-vt="list-header"] {
+  view-transition-name: list-header;
+}
+.list-transition [data-vt="add-bar"] {
+  view-transition-name: add-bar;
+}
+
+/* The header, add bar and tab bar stay on top, so items moving past the list's edges slide under them. */
+::view-transition-group(list-header),
+::view-transition-group(add-bar),
+::view-transition-group(tabs) {
+  z-index: 2;
+}
 
 ::view-transition-group(.item),
 ::view-transition-group(todo-sheet),

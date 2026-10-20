@@ -61,7 +61,7 @@ function Groceries() {
 
   return (
     <>
-      <header className={s.header}>
+      <header className={s.header} data-vt="list-header">
         <div className={ui.row}>
           <span className={ui.eyebrow}>miffer</span>
           <span className={`${s.badge} ${online ? s.synced : s.offline}`}>{online ? "Synced" : "Offline"}</span>
@@ -133,7 +133,7 @@ function Groceries() {
         )}
       </main>
 
-      <Form className={s.addBar} onSubmit={add}>
+      <Form className={s.addBar} onSubmit={add} data-vt="add-bar">
         <TextField
           label="Add item"
           placeholder="e.g. oat milk"
