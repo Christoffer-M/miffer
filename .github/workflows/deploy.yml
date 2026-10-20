@@ -114,7 +114,7 @@ jobs:
           cd $(printf %q "$DEPLOY_PATH")
           export TAG=$TAG
           echo $(printf %q "$GHCR_TOKEN") | docker login ghcr.io -u $(printf %q "$GHCR_USER") --password-stdin
-          docker compose pull backend frontend
+          docker compose pull miffer-backend miffer-frontend
           docker logout ghcr.io
           # ponytail: plain recreate, so miffer is down for a few seconds per deploy.
           # Start the new backend next to the old one before stopping it if that ever matters.

@@ -13,6 +13,10 @@ x-logging: &logging
     max-size: "10m"
     max-file: "3"
 
+# Service names are DNS names on every network a container joins, and `proxy` is
+# shared with every other app on the server. A bare `backend` there answered for
+# PugInspect's `backend` too (Oct 2026) and sent its API traffic here. Keep
+# anything on `proxy` prefixed with the app name.
 services:
   db:
     image: postgres:17-alpine
@@ -27,7 +31,7 @@ services:
       interval: 5s
     restart: unless-stopped
 
-  backend:
+  miffer-backend:
     # Built and pushed by CI from backend/Dockerfile; the server only pulls it.
     image: ghcr.io/christoffer-m/miffer-backend:${TAG:-latest}
     logging: *logging
@@ -48,7 +52,7 @@ services:
     networks: [default, proxy]
     restart: unless-stopped
 
-  frontend:
+  miffer-frontend:
     # Built and pushed by CI from frontend/Dockerfile.
     image: ghcr.io/christoffer-m/miffer-frontend:${TAG:-latest}
     logging: *logging
