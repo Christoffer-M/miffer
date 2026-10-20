@@ -4,7 +4,7 @@ import { useState } from "react";
 import { api, ok, session, useToken } from "../api";
 import { Wordmark } from "../brand";
 import ui from "../ui.module.css";
-import s from "./-us.module.css";
+import s from "./us.module.css";
 
 export const Route = createFileRoute("/us")({ component: Us });
 

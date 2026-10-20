@@ -5,7 +5,7 @@ import { Avatars, Wordmark } from "../brand";
 import { BasketIcon, ChevronIcon } from "../icons";
 import { itemsQuery } from "../items";
 import ui from "../ui.module.css";
-import s from "./-home.module.css";
+import s from "./index.module.css";
 
 export const Route = createFileRoute("/")({ component: Home });
 

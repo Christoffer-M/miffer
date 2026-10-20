@@ -6,7 +6,7 @@ import { Avatars } from "../brand";
 import { CloseIcon } from "../icons";
 import { itemsQuery, useAddItem, useClearDone, useRemoveItem, useSetDone } from "../items";
 import ui from "../ui.module.css";
-import s from "./-groceries.module.css";
+import s from "./groceries.module.css";
 
 export const Route = createFileRoute("/groceries")({ component: Groceries });
 

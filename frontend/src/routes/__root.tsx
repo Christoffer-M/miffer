@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { connectLive, session, useToken } from "../api";
 import { BasketIcon, HomeIcon, UsIcon } from "../icons";
 import { itemsQuery } from "../items";
-import s from "./-root.module.css";
+import s from "./__root.module.css";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   // A phone that hasn't linked up yet can only see the Us screen.
