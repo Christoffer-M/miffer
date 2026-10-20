@@ -170,7 +170,7 @@ function Groceries() {
             <div className={s.suggest}>
               {!typed ? (
                 <div className={s.quick}>
-                  <span className={`${ui.eyebrow} ${ui.muted}`}>{history.length ? "You often get" : "Quick add"}</span>
+                  <span className={`${ui.eyebrow} ${ui.muted}`}>{suggestions[0].count > 0 ? "You often get" : "Quick add"}</span>
                   <div className={s.chips}>
                     {suggestions.map((sg) => (
                       <AriaButton key={sg.name} className={s.chip} preventFocusOnPress onPress={() => addName(sg.name)}>

@@ -31,11 +31,16 @@ test("knows what's on the list or in the cart", () => {
   assert.equal(suggest("æb", history, starter, items)[0].item?.done, true);
 });
 
-test("nothing typed: recent history only, or the starter list for a new household", () => {
-  // Hakket oksekød is too old; the starter list doesn't fill up the row.
-  assert.deepEqual(names(suggest("", history, starter, items, 6, now)), ["Havremælk", "mælk"]);
+test("nothing typed: things added 3+ times lately, else the starter list", () => {
+  // Hakket oksekød is too old, Mel was added only twice; the starter list doesn't fill up the row.
+  const withMel = [...history, { name: "Mel", count: 2, lastAddedAt: daysAgo(1) }];
+  assert.deepEqual(names(suggest("", withMel, starter, items, 6, now)), ["Havremælk", "mælk"]);
   // Old things still come up when typed.
   assert.deepEqual(names(suggest("oks", history, starter, items, 5, now)), ["Hakket oksekød"]);
-  // No history yet: the starter list, minus what's on the list or in the cart.
+  // Nothing added 3 times yet: the starter list, minus what's on the list or in the cart.
   assert.deepEqual(names(suggest("", [], starter, items, 6, now)), ["Mælk", "Mel", "Æg"]);
+  assert.deepEqual(names(suggest("", withMel.slice(3), starter, items, 6, now)), ["Mælk", "Mel", "Æg"]);
+  // Everything added often is already on the list: also the starter list.
+  const allOnList = [{ id: "3", name: "Havremælk", done: false }, { id: "4", name: "mælk", done: true }];
+  assert.deepEqual(names(suggest("", history, starter, allOnList, 2, now)), ["Mel", "Mango"]);
 });

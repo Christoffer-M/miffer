@@ -1,6 +1,8 @@
 export const lower = (s: string) => s.toLocaleLowerCase("da");
 
-/** "You often get" leaves out things not added for this long, so old habits fade. */
+/** "You often get": things added at least this many times... */
+const OFTEN = 3;
+/** ...and not longer ago than this, so old habits fade. */
 const RECENT_MS = 90 * 24 * 60 * 60 * 1000;
 
 type ListItem = { id: string; name: string; done: boolean };
@@ -29,9 +31,9 @@ function matchAt(name: string, q: string) {
  * What to suggest for what's typed: the household's own history (most added first),
  * then the starter list. An exact name comes first, then names starting with the text,
  * then names with a later word starting with it, then names with it inside a word.
- * With nothing typed: what the household added in the last 3 months (most added first),
- * or the starter list if it has no history yet; either way, minus what's on the list or
- * in the cart.
+ * With nothing typed: what the household added at least 3 times, last within 3 months
+ * (most added first) and not on the list or in the cart; if there's none of that, the
+ * starter list (count 0), minus what's on the list or in the cart.
  */
 export function suggest<I extends ListItem>(
   query: string,
@@ -45,11 +47,11 @@ export function suggest<I extends ListItem>(
   const byName = new Map(items.map((i) => [lower(i.name), i]));
 
   if (!q) {
-    const usual = history.length
-      ? history.filter((h) => Date.parse(h.lastAddedAt) > now - RECENT_MS)
-      : starter.map((name) => ({ name, count: 0 }));
-    return usual
-      .filter((u) => !byName.has(lower(u.name)))
+    const addable = (u: { name: string }) => !byName.has(lower(u.name));
+    const often = history.filter(
+      (h) => h.count >= OFTEN && Date.parse(h.lastAddedAt) > now - RECENT_MS && addable(h),
+    );
+    return (often.length ? often : starter.map((name) => ({ name, count: 0 })).filter(addable))
       .slice(0, max)
       .map(({ name, count }) => ({ name, count, at: 0 }));
   }
