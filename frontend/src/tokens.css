@@ -1,0 +1,47 @@
+/* The only global CSS: design tokens and element defaults. Component styles live in *.module.css. */
+:root {
+  --ground: #f2f4f7;
+  --surface: #ffffff;
+  --ink: #14213d;
+  --muted: #4a5568;
+  --line: #dce1e8;
+  --line-soft: #e5e9ef;
+  --field-border: #7b8798;
+  --accent: #c2410c; /* buttons, labels: white text passes contrast */
+  --accent-bright: #ea580c; /* checkmarks, the wordmark dot */
+  --accent-tint: #ffedd5;
+  --you: #9a3412;
+  --partner: #1d4ed8;
+  --partner-tint: #dbeafe;
+  --display: "Bricolage Grotesque", "DM Sans", sans-serif;
+  --body: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--accent-bright);
+}

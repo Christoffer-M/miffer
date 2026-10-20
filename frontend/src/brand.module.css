@@ -1,0 +1,37 @@
+.wordmark {
+  font-family: var(--display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.dot {
+  color: var(--accent-bright);
+}
+
+.avatars {
+  display: flex;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  border: 2px solid var(--ground);
+}
+
+.you {
+  background: var(--accent-tint);
+  color: var(--you);
+}
+
+.partner {
+  margin-left: -8px;
+  background: var(--partner-tint);
+  color: var(--partner);
+}

@@ -1,0 +1,64 @@
+.us {
+  padding: 48px 24px 24px;
+  gap: 24px;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.intro h1 {
+  font-size: 38px;
+}
+.intro p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.panel label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.codeInput,
+.code {
+  height: 56px;
+  padding: 0 16px;
+  border: 1px solid var(--field-border);
+  border-radius: 12px;
+  background: var(--ground);
+  color: var(--ink);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.divider::before,
+.divider::after {
+  content: "";
+  flex-grow: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.hint {
+  margin: 0;
+  text-align: center;
+}

@@ -5,6 +5,8 @@ import { session } from "../api";
 import { Avatars } from "../brand";
 import { CloseIcon } from "../icons";
 import { itemsQuery, useAddItem, useClearDone, useRemoveItem, useSetDone } from "../items";
+import ui from "../ui.module.css";
+import s from "./-groceries.module.css";
 
 export const Route = createFileRoute("/groceries")({ component: Groceries });
 
@@ -44,35 +46,35 @@ function Groceries() {
 
   return (
     <>
-      <header className="list-header">
-        <div className="row between">
-          <span className="eyebrow">miffer</span>
-          <span className={online ? "badge synced" : "badge offline"}>{online ? "Synced" : "Offline"}</span>
+      <header className={s.header}>
+        <div className={ui.row}>
+          <span className={ui.eyebrow}>miffer</span>
+          <span className={`${s.badge} ${online ? s.synced : s.offline}`}>{online ? "Synced" : "Offline"}</span>
         </div>
-        <div className="row between end">
-          <h1 className="display">Groceries</h1>
+        <div className={`${ui.row} ${s.titleRow}`}>
+          <h1 className={ui.display}>Groceries</h1>
           <Avatars />
         </div>
-        <p className="muted">
+        <p className={ui.muted}>
           {todo.length} to get · {done.length} in the cart
         </p>
       </header>
 
       {!online && (
-        <div className="notice">
+        <div className={s.notice}>
           <strong>You're offline</strong>
           <span>Changes will sync when you reconnect.</span>
         </div>
       )}
 
-      <main className="content list">
-        {error && <p className="error">{error.message}</p>}
-        {!isPending && items.length === 0 && <p className="muted empty">Nothing on the list yet.</p>}
+      <main className={`${ui.content} ${s.list}`}>
+        {error && <p className={ui.error}>{error.message}</p>}
+        {!isPending && items.length === 0 && <p className={`${ui.muted} ${s.empty}`}>Nothing on the list yet.</p>}
 
         {todo.length > 0 && (
-          <ul className="sheet">
+          <ul className={s.sheet}>
             {todo.map((item) => (
-              <li key={item.id} className="item">
+              <li key={item.id} className={s.item}>
                 <label>
                   <input
                     type="checkbox"
@@ -81,10 +83,12 @@ function Groceries() {
                   />
                   <span>{item.name}</span>
                 </label>
-                <span className="muted small">{item.addedBy === session.deviceId ? "you" : "partner"}</span>
+                <span className={`${ui.muted} ${ui.small}`}>
+                  {item.addedBy === session.deviceId ? "you" : "partner"}
+                </span>
                 <button
                   type="button"
-                  className="icon-button"
+                  className={ui.iconButton}
                   aria-label={`Remove ${item.name}`}
                   onClick={() => removeItem.mutate(item.id)}
                 >
@@ -97,13 +101,13 @@ function Groceries() {
 
         {done.length > 0 && (
           <section>
-            <div className="row between section-head">
-              <span className="eyebrow muted">In the cart</span>
-              <button type="button" className="text-button" onClick={() => clearDone.mutate()}>
+            <div className={`${ui.row} ${s.sectionHead}`}>
+              <span className={`${ui.eyebrow} ${ui.muted}`}>In the cart</span>
+              <button type="button" className={ui.textButton} onClick={() => clearDone.mutate()}>
                 Clear
               </button>
             </div>
-            <ul className="done-list">
+            <ul className={s.doneList}>
               {done.map((item) => (
                 <li key={item.id}>
                   <label>
@@ -121,7 +125,7 @@ function Groceries() {
         )}
       </main>
 
-      <form className="add-bar" onSubmit={add}>
+      <form className={s.addBar} onSubmit={add}>
         <label>
           Add item
           <input
@@ -132,7 +136,7 @@ function Groceries() {
             onChange={(e) => setDraft(e.target.value)}
           />
         </label>
-        <button type="submit" className="button primary">
+        <button type="submit" className={`${ui.button} ${ui.primary}`}>
           Add
         </button>
       </form>

@@ -1,15 +1,17 @@
+import s from "./brand.module.css";
+
 export const Wordmark = () => (
-  <span className="wordmark">
-    miffer<span className="accent">.</span>
+  <span className={s.wordmark}>
+    miffer<span className={s.dot}>.</span>
   </span>
 );
 
 export const Avatars = () => (
-  <div className="avatars">
-    <span className="avatar you" title="You" aria-label="You">
+  <div className={s.avatars}>
+    <span className={`${s.avatar} ${s.you}`} title="You" aria-label="You">
       Y
     </span>
-    <span className="avatar partner" title="Partner" aria-label="Partner">
+    <span className={`${s.avatar} ${s.partner}`} title="Partner" aria-label="Partner">
       P
     </span>
   </div>
