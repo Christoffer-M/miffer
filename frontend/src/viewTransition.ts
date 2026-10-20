@@ -1,33 +1,28 @@
 // Grocery list animations. A list change runs as a View Transition: every item
 // has its own transition name (see [data-vt-item] in tokens.css), so the browser
-// moves each item from its old spot to its new one, even from the list into the
-// cart. The names are only switched on during list changes, so screen changes
-// still slide the whole screen.
+// animates each item leaving, arriving or shifting. The names are only switched
+// on during list changes, so screen changes still slide the whole screen.
+
+/**
+ * What kind of change this is, matching the swipes:
+ * - "remove": items leave by sliding left (delete, Clear).
+ * - "check": an item slides right out of its list and drops into the other (tick, put back).
+ * With either, the rest of the list waits until the item has slid out before closing the gap.
+ */
+export type ListChange = "remove" | "check";
 
 let running = 0;
 
 const nextTask = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-/** The marker that makes an item pop. Only ever on the item of the transition that's running. */
-const clearPopping = () => document.querySelectorAll("[data-popping]").forEach((el) => el.removeAttribute("data-popping"));
-
-type Options = {
-  /** An item id: that item pops as it moves (it was just ticked or unticked). */
-  pop?: string;
-  /** Items are leaving the list: the rest waits until they've slid out before closing the gap. */
-  removing?: boolean;
-};
-
 const supportsTypes = () => CSS.supports("selector(:active-view-transition-type(a))");
 
 /** Runs `update` (a change to the items in the query cache) as an animated list change. */
-export function animateListChange(update: () => void, { pop, removing }: Options = {}) {
+export function animateListChange(update: () => void, change?: ListChange) {
   if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) {
     update();
     return;
   }
-  // A marker left from an earlier change would make that item pop again.
-  clearPopping();
   const html = document.documentElement;
   running++;
   html.classList.add("list-transition");
@@ -38,17 +33,13 @@ export function animateListChange(update: () => void, { pop, removing }: Options
     // picture shows the new list, not the old one.
     await nextTask();
     await nextTask();
-    // Marked in the "after" state only, so just this item pops on its way.
-    if (pop) document.querySelector(`[data-vt-item="${CSS.escape(pop)}"]`)?.setAttribute("data-popping", "");
   };
-  // The "remove" type delays closing the gap (see tokens.css). Browsers without
-  // transition types still animate, just without the delay.
+  // Browsers without transition types still animate, just without the direction and delay.
   const transition =
-    removing && supportsTypes()
-      ? document.startViewTransition({ update: run, types: ["remove"] })
+    change && supportsTypes()
+      ? document.startViewTransition({ update: run, types: [change] })
       : document.startViewTransition(run);
   transition.finished.finally(() => {
-    if (pop) document.querySelector(`[data-vt-item="${CSS.escape(pop)}"]`)?.removeAttribute("data-popping");
     if (--running === 0) html.classList.remove("list-transition");
   });
 }

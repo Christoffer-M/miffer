@@ -31,10 +31,14 @@ function useOnline() {
   );
 }
 
-/** Lets an item animate between its old and new spot in list changes (see viewTransition.ts). */
-const animated = (id: string) => ({
+/**
+ * Lets an item animate in list changes (see viewTransition.ts). An item has a different
+ * name in the list than in the cart, so ticking it slides it out of one list and drops
+ * it into the other, instead of gliding between them.
+ */
+const animated = (id: string, list: "todo" | "cart") => ({
   "data-vt-item": id,
-  style: { "--vt-name": `item-${id}` } as CSSProperties,
+  style: { "--vt-name": `${list}-${id}` } as CSSProperties,
 });
 
 function Groceries() {
@@ -88,7 +92,7 @@ function Groceries() {
         {todo.length > 0 && (
           <ul className={s.sheet} aria-label="To get" data-vt="todo-sheet">
             {todo.map((item) => (
-              <li key={item.id} className={s.item} {...animated(item.id)}>
+              <li key={item.id} className={s.item} {...animated(item.id, "todo")}>
                 <SwipeRow
                   className={s.itemContent}
                   right={{ label: "Got it", icon: <Check size={20} aria-hidden />, onSwipe: () => setDone.mutate({ id: item.id, done: true }) }}
@@ -123,7 +127,7 @@ function Groceries() {
             </div>
             <ul className={s.doneList}>
               {done.map((item) => (
-                <li key={item.id} {...animated(item.id)}>
+                <li key={item.id} {...animated(item.id, "cart")}>
                   <SwipeRow
                     className={s.doneContent}
                     right={{ label: "Put back", icon: <Undo2 size={20} aria-hidden />, onSwipe: () => setDone.mutate({ id: item.id, done: false }) }}

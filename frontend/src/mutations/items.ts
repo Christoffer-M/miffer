@@ -1,27 +1,23 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ok, type Item } from "../api";
 import { itemsQuery } from "../queries/items";
-import { animateListChange } from "../viewTransition";
+import { animateListChange, type ListChange } from "../viewTransition";
 
 /**
  * A change that shows (animated) on this phone at once, then gets confirmed by the server.
- * `pop` picks the item that should pop as it moves (the one being ticked);
- * `removing` marks changes that take items off the list.
+ * `change` picks the animation: "check" slides right, "remove" slides left.
  */
 function useListMutation<V>(
   send: (v: V) => Promise<unknown>,
   apply: (items: Item[], v: V) => Item[],
-  { pop, removing }: { pop?: (v: V) => string; removing?: boolean } = {},
+  change?: ListChange,
 ) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: send,
     onMutate: async (v) => {
       await qc.cancelQueries(itemsQuery);
-      animateListChange(() => qc.setQueryData(itemsQuery.queryKey, (old = []) => apply(old, v)), {
-        pop: pop?.(v),
-        removing,
-      });
+      animateListChange(() => qc.setQueryData(itemsQuery.queryKey, (old = []) => apply(old, v)), change);
     },
     // ponytail: no rollback; refetching puts the server's truth back either way.
     onSettled: () => qc.invalidateQueries(itemsQuery),
@@ -43,19 +39,19 @@ export const useSetDone = () =>
     ({ id, done }: { id: string; done: boolean }) =>
       ok(api.items[":id"].$patch({ param: { id }, json: { done } })),
     (items, { id, done }) => items.map((i) => (i.id === id ? { ...i, done } : i)),
-    { pop: ({ id }) => id },
+    "check",
   );
 
 export const useRemoveItem = () =>
   useListMutation(
     (id: string) => ok(api.items[":id"].$delete({ param: { id } })),
     (items, id) => items.filter((i) => i.id !== id),
-    { removing: true },
+    "remove",
   );
 
 export const useClearDone = () =>
   useListMutation(
     (_: void) => ok(api.items.done.$delete()),
     (items) => items.filter((i) => !i.done),
-    { removing: true },
+    "remove",
   );

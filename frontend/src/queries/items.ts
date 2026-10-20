@@ -22,7 +22,10 @@ export async function refreshItems(qc: QueryClient) {
   const write = () => qc.setQueryData(itemsQuery.queryKey, fresh);
   const current = qc.getQueryData(itemsQuery.queryKey) ?? [];
   const changed = looks(current) !== looks(fresh);
-  const removing = current.some((i) => !fresh.some((f) => f.id === i.id));
-  if (changed && location.pathname === "/groceries") animateListChange(write, { removing });
+  // Match the animation to what happened on the other phone.
+  const removed = current.some((i) => !fresh.some((f) => f.id === i.id));
+  const checked = fresh.some((f) => current.some((i) => i.id === f.id && i.done !== f.done));
+  const change = removed ? "remove" : checked ? "check" : undefined;
+  if (changed && location.pathname === "/groceries") animateListChange(write, change);
   else write();
 }

@@ -85,15 +85,12 @@ html:active-view-transition-type(back)::view-transition-new(root) {
 
 /*
  * Grocery list changes (src/viewTransition.ts). While <html> has .list-transition,
- * every item has its own name, so the browser glides it from its old spot to its
- * new one, even from the list down into the cart.
+ * every item has its own name (different in the list and the cart), so the browser
+ * animates it leaving, arriving or shifting on its own.
  */
 .list-transition [data-vt-item] {
   view-transition-name: var(--vt-name);
   view-transition-class: item;
-}
-.list-transition [data-vt-item][data-popping] {
-  view-transition-class: item popping;
 }
 .list-transition [data-vt="todo-sheet"] {
   view-transition-name: todo-sheet;
@@ -122,31 +119,30 @@ html:active-view-transition-type(back)::view-transition-new(root) {
   animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* Added: drops in. */
+/* Arriving: drops in. */
 ::view-transition-new(.item):only-child {
   animation: item-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-/* Deleted or cleared: slides out of the list to the left. */
+/* Leaving: slides out to the left (delete, Clear)... */
 ::view-transition-old(.item):only-child {
-  animation: item-out 280ms cubic-bezier(0.4, 0, 1, 1) both;
+  animation: item-out-left 280ms cubic-bezier(0.4, 0, 1, 1) both;
 }
+/* ...or to the right when ticked or put back ("check"), like the swipe. */
+html:active-view-transition-type(check)::view-transition-old(.item):only-child {
+  animation-name: item-out-right;
+}
+
 /*
- * Removing (the "remove" type): the rest of the list holds still until the item has
- * slid most of the way out, then closes the gap. Groups hold their old spot while they wait.
+ * Removing or checking: the rest holds still until the item has slid most of the way
+ * out, then closes the gap, and a checked item drops into its new list. Waiting groups
+ * hold their old spot.
  */
-html:active-view-transition-type(remove)::view-transition-group(.item),
-html:active-view-transition-type(remove)::view-transition-group(todo-sheet),
-html:active-view-transition-type(remove)::view-transition-group(cart-head) {
+html:active-view-transition-type(remove, check)::view-transition-group(.item),
+html:active-view-transition-type(remove, check)::view-transition-group(todo-sheet),
+html:active-view-transition-type(remove, check)::view-transition-group(cart-head),
+html:active-view-transition-type(check)::view-transition-new(.item):only-child {
   animation-delay: 200ms;
   animation-fill-mode: both;
-}
-/* Ticked or unticked: pops, then glides to its new list above the others. */
-::view-transition-group(.popping) {
-  z-index: 1;
-  animation-duration: 440ms;
-}
-::view-transition-image-pair(.popping) {
-  animation: item-pop 440ms ease-out;
 }
 
 @keyframes item-in {
@@ -155,7 +151,7 @@ html:active-view-transition-type(remove)::view-transition-group(cart-head) {
     transform: translateY(-10px) scale(0.96);
   }
 }
-@keyframes item-out {
+@keyframes item-out-left {
   70% {
     opacity: 1;
   }
@@ -164,8 +160,12 @@ html:active-view-transition-type(remove)::view-transition-group(cart-head) {
     transform: translateX(-110%);
   }
 }
-@keyframes item-pop {
-  30% {
-    transform: scale(1.08);
+@keyframes item-out-right {
+  70% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(110%);
   }
 }
