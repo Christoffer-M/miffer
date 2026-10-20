@@ -32,6 +32,15 @@ export const useNewLinkCode = () =>
     mutationFn: async () => (await ok(api.households.code.$post())).json(),
   });
 
+/** Changes this phone's name. */
+export function useRename() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => ok(api.households.me.$patch({ json: { name } })),
+    onSuccess: () => qc.invalidateQueries(meQuery),
+  });
+}
+
 /** Removes a phone from the household. Removing this phone means leaving. */
 export function useRemoveMember() {
   const qc = useQueryClient();

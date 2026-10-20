@@ -2,11 +2,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useToken } from "../api";
 import { Avatar, Wordmark } from "../brand";
-import { CloseIcon } from "../icons";
+import { CloseIcon, PencilIcon } from "../icons";
 import {
   useJoinHousehold,
   useNewLinkCode,
   useRemoveMember,
+  useRename,
   useStartHousehold,
 } from "../mutations/household";
 import { useMembers } from "../queries/household";
@@ -122,10 +123,11 @@ function Household() {
           {members.map((m, i) => (
             <li key={m.id}>
               <Avatar name={m.name} index={i} />
-              <span className={s.memberName}>
-                {m.name}
-                {m.id === myId && <span className={ui.muted}> (this phone)</span>}
-              </span>
+              {m.id === myId ? (
+                <MyName name={m.name} />
+              ) : (
+                <span className={s.memberName}>{m.name}</span>
+              )}
               {m.id !== myId && (
                 <button
                   type="button"
@@ -168,6 +170,58 @@ function Household() {
         </button>
       )}
     </>
+  );
+}
+
+/** Your own row: your name with an edit button, or a small form while editing. */
+function MyName({ name }: { name: string }) {
+  const [draft, setDraft] = useState<string | null>(null); // null: not editing
+  const rename = useRename();
+
+  if (draft === null) {
+    return (
+      <>
+        <span className={s.memberName}>
+          {name}
+          <span className={ui.muted}> (this phone)</span>
+        </span>
+        <button
+          type="button"
+          className={ui.iconButton}
+          aria-label="Change your name"
+          onClick={() => setDraft(name === "Unnamed phone" ? "" : name)}
+        >
+          <PencilIcon />
+        </button>
+      </>
+    );
+  }
+
+  return (
+    <form
+      className={s.rename}
+      onSubmit={(e) => {
+        e.preventDefault();
+        rename.mutate(draft, { onSuccess: () => setDraft(null) });
+      }}
+    >
+      <input
+        aria-label="Your name"
+        className={s.textInput}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => e.key === "Escape" && setDraft(null)}
+        maxLength={40}
+        autoFocus
+      />
+      <button type="submit" className={ui.textButton} disabled={!draft.trim() || rename.isPending}>
+        Save
+      </button>
+      <button type="button" className={ui.textButton} onClick={() => setDraft(null)}>
+        Cancel
+      </button>
+      {rename.error && <p className={ui.error}>{rename.error.message}</p>}
+    </form>
   );
 }
 

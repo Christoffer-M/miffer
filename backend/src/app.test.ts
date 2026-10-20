@@ -63,6 +63,12 @@ test("a household can grow to a family, and a phone can be removed", async () =>
   expect(me.deviceId).toBe(ben.deviceId);
   expect(me.members.map((m: { name: string }) => m.name)).toEqual(["Anna", "Ben", "Kid"]);
 
+  // Renaming changes only your own name.
+  expect((await call("/households/me", { method: "PATCH", token: ben.token, body: { name: " Benny " } })).status).toBe(204);
+  expect((await call("/households/me", { method: "PATCH", token: ben.token, body: { name: "" } })).status).toBe(400);
+  const renamed = await (await call("/households/me", { token: anna.token })).json();
+  expect(renamed.members.map((m: { name: string }) => m.name)).toEqual(["Anna", "Benny", "Kid"]);
+
   // A stranger can't remove anyone.
   const stranger = await (await call("/households", { method: "POST", body: { name: "Eve" } })).json();
   await call(`/households/members/${kid.deviceId}`, { method: "DELETE", token: stranger.token });

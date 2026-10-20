@@ -80,6 +80,12 @@ const householdRoutes = new Hono<Env>()
       .orderBy(devices.createdAt);
     return c.json({ deviceId: c.var.deviceId, members });
   })
+  // Change this phone's name; everyone's member list updates live.
+  .patch("/me", auth, zValidator("json", z.object({ name })), async (c) => {
+    await db.update(devices).set({ name: c.req.valid("json").name }).where(eq(devices.id, c.var.deviceId));
+    notify(c.var.householdId, "members");
+    return c.body(null, 204);
+  })
   // Removing a phone revokes its token right away. Removing yourself is "leave".
   .delete("/members/:id", auth, zValidator("param", z.object({ id: z.uuid() })), async (c) => {
     await db

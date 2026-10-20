@@ -55,6 +55,27 @@
   font-weight: 400;
 }
 
+.rename {
+  flex-grow: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+}
+.rename input {
+  flex: 1 1 96px;
+  min-width: 0;
+  height: 44px;
+}
+.rename button {
+  padding: 0 8px;
+}
+.rename p {
+  flex-basis: 100%;
+}
+
 .codeInput,
 .code {
   height: 56px;
