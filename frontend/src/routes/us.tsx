@@ -180,7 +180,7 @@ function MyName({ name }: { name: string }) {
       <>
         <span className={s.memberName}>
           {name}
-          <span className={ui.muted}> (this phone)</span>
+          <span className={ui.muted}> (you)</span>
         </span>
         <Button
           variant="icon"
