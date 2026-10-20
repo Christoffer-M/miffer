@@ -80,3 +80,25 @@ test("a household can grow to a family, and a phone can be removed", async () =>
   const after = await (await call("/households/me", { token: anna.token })).json();
   expect(after.members).toHaveLength(2);
 });
+
+test("what a household adds becomes its suggestions, and stays after Clear", async () => {
+  const you = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  const add = (name: string, id = crypto.randomUUID()) =>
+    call("/items", { method: "POST", token: you.token, body: { id, name } });
+
+  const milk = crypto.randomUUID();
+  await add("mælk", milk);
+  await add("mælk", milk); // a retried request isn't counted twice
+  await call(`/items/${milk}`, { method: "PATCH", token: you.token, body: { done: true } });
+  await call("/items/done", { method: "DELETE", token: you.token });
+  await add("Mælk"); // the same thing, typed differently
+  await add("Rugbrød");
+
+  expect(await (await call("/items/history", { token: you.token })).json()).toEqual([
+    { name: "Mælk", count: 2, lastAddedAt: expect.any(String) },
+    { name: "Rugbrød", count: 1, lastAddedAt: expect.any(String) },
+  ]);
+
+  const stranger = await (await call("/households", { method: "POST", body: { name: "Eve" } })).json();
+  expect(await (await call("/items/history", { token: stranger.token })).json()).toEqual([]);
+});

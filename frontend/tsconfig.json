@@ -8,6 +8,7 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true, // for tests run straight by Node
     // "node" because the backend's types (AppType) are checked from here too.
     "types": ["vite/client", "node"]
   },

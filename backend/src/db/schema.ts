@@ -1,4 +1,4 @@
-import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const households = pgTable("households", {
   id: uuid().primaryKey().defaultRandom(),
@@ -32,4 +32,22 @@ export const items = pgTable(
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index().on(t.householdId)],
+);
+
+// Everything a household has added and how often, for suggestions. Unlike items it
+// survives Clear, so the list of usual things builds up over time.
+export const itemHistory = pgTable(
+  "item_history",
+  {
+    householdId: uuid()
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    // The name in lower case, so "Mælk" and "mælk" count as one thing.
+    key: text().notNull(),
+    // As it was last typed.
+    name: text().notNull(),
+    count: integer().notNull().default(1),
+    lastAddedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.householdId, t.key] })],
 );

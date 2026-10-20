@@ -121,12 +121,16 @@
 }
 
 .addBar {
+  position: relative; /* the suggestions sit on top of it */
   padding: 12px 20px;
   display: flex;
   gap: 8px;
   align-items: flex-end;
   background: var(--surface);
   border-top: 1px solid var(--line);
+}
+.focusArea {
+  display: contents; /* only there to catch focus; lays out as if absent */
 }
 .addField {
   flex-grow: 1;
@@ -140,4 +144,112 @@
 }
 .addButton {
   height: 44px;
+}
+
+/* Suggestions while typing: a card just above the add bar, over the list. */
+.suggest {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(100% + 8px);
+  max-height: calc(var(--app-height, 100dvh) - 200px); /* keeps clear of the header */
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow:
+    0 12px 32px rgb(20 33 61 / 14%),
+    0 2px 6px rgb(20 33 61 / 6%);
+}
+
+.suggestions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.suggestions li + li {
+  border-top: 1px solid var(--line-soft);
+}
+
+.suggestion {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 4px 0 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button.suggestion {
+  padding-right: 16px;
+}
+.suggestion[data-pressed] {
+  background: var(--ground);
+}
+.suggestion[data-focus-visible],
+.chip[data-focus-visible] {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.suggestName {
+  flex-grow: 1;
+}
+.stack {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+.suggestName b {
+  font-weight: 700;
+}
+
+.plus {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.quick {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--ground);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.chip[data-pressed] {
+  transform: scale(0.97);
+}
+
+.newNote {
+  margin: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 15px;
 }

@@ -1,13 +1,13 @@
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { zValidator } from "@hono/zod-validator";
-import { and, desc, eq, gt } from "drizzle-orm";
+import { and, desc, eq, gt, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
 import { db, schema } from "./db/index.js";
 import { notify } from "./live.js";
 
-const { households, devices, items } = schema;
+const { households, devices, items, itemHistory } = schema;
 
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O or 1/I mix-ups
 const CODE_TTL_MS = 10 * 60 * 1000;
@@ -117,15 +117,35 @@ const itemRoutes = new Hono<Env>()
       .orderBy(desc(items.createdAt));
     return c.json(rows);
   })
+  // What this household has added before, most often first: the suggestions.
+  .get("/history", async (c) => {
+    const rows = await db
+      .select({ name: itemHistory.name, count: itemHistory.count, lastAddedAt: itemHistory.lastAddedAt })
+      .from(itemHistory)
+      .where(eq(itemHistory.householdId, c.var.householdId))
+      .orderBy(desc(itemHistory.count), desc(itemHistory.lastAddedAt));
+    return c.json(rows);
+  })
   .post(
     "/",
     zValidator("json", z.object({ id: z.uuid(), name: z.string().trim().min(1).max(200) })),
     async (c) => {
       const { id, name } = c.req.valid("json");
-      await db
+      const added = await db
         .insert(items)
         .values({ id, name, householdId: c.var.householdId, addedBy: c.var.deviceId })
-        .onConflictDoNothing(); // a retried request is fine
+        .onConflictDoNothing() // a retried request is fine...
+        .returning({ id: items.id });
+      // ...and isn't counted twice.
+      if (added.length) {
+        await db
+          .insert(itemHistory)
+          .values({ householdId: c.var.householdId, key: name.toLocaleLowerCase("da"), name })
+          .onConflictDoUpdate({
+            target: [itemHistory.householdId, itemHistory.key],
+            set: { name, count: sql`${itemHistory.count} + 1`, lastAddedAt: new Date() },
+          });
+      }
       notify(c.var.householdId);
       return c.body(null, 204);
     },
