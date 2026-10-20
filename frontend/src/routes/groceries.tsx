@@ -2,11 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type CSSProperties, useState, useSyncExternalStore } from "react";
 import { Form } from "react-aria-components";
-import { X } from "lucide-react";
+import { Check, Trash2, Undo2, X } from "lucide-react";
 import { session } from "../api";
 import { Avatars } from "../brand";
 import { Button } from "../components/Button";
 import { Checkbox } from "../components/Checkbox";
+import { SwipeRow } from "../components/SwipeRow";
 import { TextField } from "../components/TextField";
 import { useAddItem, useClearDone, useRemoveItem, useSetDone } from "../mutations/items";
 import { useMembers } from "../queries/household";
@@ -88,17 +89,23 @@ function Groceries() {
           <ul className={s.sheet} aria-label="To get" data-vt="todo-sheet">
             {todo.map((item) => (
               <li key={item.id} className={s.item} {...animated(item.id)}>
-                <Checkbox
-                  className={s.check}
-                  isSelected={false}
-                  onChange={() => setDone.mutate({ id: item.id, done: true })}
+                <SwipeRow
+                  className={s.itemContent}
+                  right={{ label: "Got it", icon: <Check size={20} aria-hidden />, onSwipe: () => setDone.mutate({ id: item.id, done: true }) }}
+                  left={{ label: "Delete", icon: <Trash2 size={20} aria-hidden />, onSwipe: () => removeItem.mutate(item.id) }}
                 >
-                  {item.name}
-                </Checkbox>
-                <span className={`${ui.muted} ${ui.small}`}>{whoIs(item.addedBy)}</span>
-                <Button variant="icon" aria-label={`Remove ${item.name}`} onPress={() => removeItem.mutate(item.id)}>
-                  <X size={18} aria-hidden />
-                </Button>
+                  <Checkbox
+                    className={s.check}
+                    isSelected={false}
+                    onChange={() => setDone.mutate({ id: item.id, done: true })}
+                  >
+                    {item.name}
+                  </Checkbox>
+                  <span className={`${ui.muted} ${ui.small}`}>{whoIs(item.addedBy)}</span>
+                  <Button variant="icon" aria-label={`Remove ${item.name}`} onPress={() => removeItem.mutate(item.id)}>
+                    <X size={18} aria-hidden />
+                  </Button>
+                </SwipeRow>
               </li>
             ))}
           </ul>
@@ -117,13 +124,19 @@ function Groceries() {
             <ul className={s.doneList}>
               {done.map((item) => (
                 <li key={item.id} {...animated(item.id)}>
-                  <Checkbox
-                    className={`${s.check} ${s.doneCheck}`}
-                    isSelected
-                    onChange={() => setDone.mutate({ id: item.id, done: false })}
+                  <SwipeRow
+                    className={s.doneContent}
+                    right={{ label: "Put back", icon: <Undo2 size={20} aria-hidden />, onSwipe: () => setDone.mutate({ id: item.id, done: false }) }}
+                    left={{ label: "Delete", icon: <Trash2 size={20} aria-hidden />, onSwipe: () => removeItem.mutate(item.id) }}
                   >
-                    <s>{item.name}</s>
-                  </Checkbox>
+                    <Checkbox
+                      className={`${s.check} ${s.doneCheck}`}
+                      isSelected
+                      onChange={() => setDone.mutate({ id: item.id, done: false })}
+                    >
+                      <s>{item.name}</s>
+                    </Checkbox>
+                  </SwipeRow>
                 </li>
               ))}
             </ul>

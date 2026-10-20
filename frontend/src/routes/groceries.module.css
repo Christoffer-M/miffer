@@ -66,15 +66,21 @@
 .sheet {
   background: var(--surface);
   border-radius: 16px;
-  padding: 0 8px 0 16px;
+  overflow: hidden; /* keeps the swipe panels inside the rounded corners */
 }
 
 .item {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* The part of a row that slides when swiped; opaque so it hides the action panel underneath. */
+.itemContent {
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: 56px;
-  border-bottom: 1px solid var(--line-soft);
+  padding: 0 8px 0 16px;
+  background: var(--surface);
 }
 .item:last-child {
   border-bottom: 0;
@@ -87,8 +93,9 @@
   font-weight: 500;
 }
 
-.doneList {
+.doneContent {
   padding: 0 8px;
+  background: var(--ground);
 }
 .doneCheck {
   color: var(--muted);
