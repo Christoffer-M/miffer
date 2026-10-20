@@ -1,6 +1,6 @@
 .header {
   background: var(--ground); /* covers items that slide under it while animating */
-  padding: 40px 20px 16px;
+  padding: 16px 20px 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -15,6 +15,18 @@
 
 .titleRow {
   align-items: flex-end;
+}
+
+/* While the phone keyboard is open (see keyboard.ts): just the title, smaller, so the
+   list keeps a few more rows. The offline notice below still shows when it matters. */
+:global(html[data-keyboard]) .header {
+  padding: 8px 20px;
+}
+:global(html[data-keyboard]) .header > :not(.titleRow) {
+  display: none;
+}
+:global(html[data-keyboard]) .header h1 {
+  font-size: 26px;
 }
 
 .badge {
