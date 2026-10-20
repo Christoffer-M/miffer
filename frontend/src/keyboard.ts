@@ -1,8 +1,10 @@
 // Keeps the app exactly as tall as the part of the screen you can see, so the
 // on-screen keyboard shrinks the list instead of pushing the whole app up and
-// out of view. Android does this through the viewport meta tag
-// (interactive-widget=resizes-content); iOS doesn't support that, so this
-// follows the visual viewport and sizes the app with --app-height.
+// out of view. It follows the visual viewport and sizes the app with
+// --app-height, on Android too: there the page itself could resize instead
+// (interactive-widget=resizes-content), but a page resize cancels any running
+// View Transition, so a list animation would be lost whenever the keyboard's
+// height changes, like when Chrome's autofill bar above it closes.
 //
 // While the keyboard is open on a touch screen, <html> also gets data-keyboard,
 // which hides the tab bar so the list keeps a usable amount of room. It's based
