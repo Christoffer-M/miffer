@@ -1,7 +1,8 @@
-/* Full-height column: the middle scrolls, the add bar and tabs stay at the bottom. */
+/* Full-height column: the middle scrolls, the add bar and tabs stay at the bottom.
+   --app-height is the visible area (it shrinks when the keyboard opens, see keyboard.ts). */
 .screen {
   max-width: 480px;
-  height: 100dvh;
+  height: var(--app-height, 100dvh);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -27,6 +28,11 @@
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
+}
+
+/* While typing on a phone the keyboard takes half the screen; give the room to the list. */
+:global(html[data-typing]) .tabs {
+  display: none;
 }
 
 /* TanStack Router marks the current route's link with data-status="active". */
