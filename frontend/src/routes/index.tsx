@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ChevronRight, ShoppingBasket } from "lucide-react";
 import { session } from "../api";
 import { Avatars, Wordmark } from "../brand";
-import { BasketIcon, ChevronIcon } from "../icons";
 import { useMembers } from "../queries/household";
 import { itemsQuery } from "../queries/items";
 import ui from "../ui.module.css";
@@ -32,7 +32,7 @@ function Home() {
         <Link to="/groceries" className={s.card}>
           <div className={s.cardHead}>
             <span className={s.cardIcon}>
-              <BasketIcon />
+              <ShoppingBasket size={22} aria-hidden />
             </span>
             <div className={s.cardTitle}>
               <strong>Groceries</strong>
@@ -40,7 +40,7 @@ function Home() {
                 {todo.length} to get · {items.length - todo.length} in the cart
               </span>
             </div>
-            <ChevronIcon />
+            <ChevronRight size={20} aria-hidden />
           </div>
           {todo.length > 0 && (
             <div className={s.chips}>

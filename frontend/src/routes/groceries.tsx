@@ -2,12 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useSyncExternalStore } from "react";
 import { Form } from "react-aria-components";
+import { X } from "lucide-react";
 import { session } from "../api";
 import { Avatars } from "../brand";
 import { Button } from "../components/Button";
 import { Checkbox } from "../components/Checkbox";
 import { TextField } from "../components/TextField";
-import { CloseIcon } from "../icons";
 import { useAddItem, useClearDone, useRemoveItem, useSetDone } from "../mutations/items";
 import { useMembers } from "../queries/household";
 import { itemsQuery } from "../queries/items";
@@ -91,7 +91,7 @@ function Groceries() {
                 </Checkbox>
                 <span className={`${ui.muted} ${ui.small}`}>{whoIs(item.addedBy)}</span>
                 <Button variant="icon" aria-label={`Remove ${item.name}`} onPress={() => removeItem.mutate(item.id)}>
-                  <CloseIcon />
+                  <X size={18} aria-hidden />
                 </Button>
               </li>
             ))}

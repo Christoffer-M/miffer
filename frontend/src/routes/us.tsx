@@ -1,12 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Form } from "react-aria-components";
+import { Pencil, X } from "lucide-react";
 import { useToken } from "../api";
 import { Avatar, Wordmark } from "../brand";
 import { Button, buttonClass } from "../components/Button";
 import { Confirm } from "../components/Confirm";
 import { TextField } from "../components/TextField";
-import { CloseIcon, PencilIcon } from "../icons";
 import {
   useJoinHousehold,
   useNewLinkCode,
@@ -134,7 +134,7 @@ function Household() {
                     onConfirm={() => remove.mutate(m.id)}
                   >
                     <Button variant="icon" aria-label={`Remove ${m.name}`} isDisabled={remove.isPending}>
-                      <CloseIcon />
+                      <X size={18} aria-hidden />
                     </Button>
                   </Confirm>
                 </>
@@ -187,7 +187,7 @@ function MyName({ name }: { name: string }) {
           aria-label="Change your name"
           onPress={() => setDraft(name === "Unnamed phone" ? "" : name)}
         >
-          <PencilIcon />
+          <Pencil size={18} aria-hidden />
         </Button>
       </>
     );

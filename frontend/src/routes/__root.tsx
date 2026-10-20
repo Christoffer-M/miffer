@@ -1,8 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Link, Outlet, redirect } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { House, ShoppingBasket, Users } from "lucide-react";
 import { connectLive, session, useToken } from "../api";
-import { BasketIcon, HomeIcon, UsIcon } from "../icons";
 import { meQuery } from "../queries/household";
 import { itemsQuery } from "../queries/items";
 import s from "./__root.module.css";
@@ -33,15 +33,15 @@ function Root() {
       {token && (
         <nav className={s.tabs} aria-label="miffer">
           <Link to="/" className={s.tab} activeOptions={{ exact: true }}>
-            <HomeIcon />
+            <House size={22} aria-hidden />
             Home
           </Link>
           <Link to="/groceries" className={s.tab}>
-            <BasketIcon />
+            <ShoppingBasket size={22} aria-hidden />
             Groceries
           </Link>
           <Link to="/us" className={s.tab}>
-            <UsIcon />
+            <Users size={22} aria-hidden />
             Us
           </Link>
         </nav>
