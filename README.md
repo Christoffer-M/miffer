@@ -15,6 +15,9 @@ pnpm db      # Postgres on localhost:5432
 pnpm dev     # backend on :3000, frontend on http://localhost:5173
 ```
 
+The Us screen only offers notifications when the backend has `VAPID_PUBLIC_KEY` and
+`VAPID_PRIVATE_KEY` set (`npx web-push generate-vapid-keys` makes a pair).
+
 ```bash
 pnpm typecheck
 pnpm test    # backend tests, against the dev database
@@ -70,6 +73,9 @@ If `/srv` needs root: `sudo mkdir -p /srv/miffer && sudo chown $USER /srv/miffer
 | `DB_PASSWORD` | a long random string | Postgres password. Keep it: changing it later locks the app out of the existing database |
 | `DOMAIN` | `miffer.example.com` | Domain pointing at the server |
 | `PROXY_NETWORK` | `proxy` | Only if nginx-proxy's network isn't called `proxy` |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | from `npx web-push generate-vapid-keys` | Optional: turns on notifications when someone adds something. Keep them: new keys mean everyone has to turn notifications on again |
+
+On iPhones notifications need iOS 16.4+ and miffer added to the Home Screen; the Us screen says so.
 
 **In GitHub** (miffer repo → Settings → Environments → `production`), add these secrets:
 

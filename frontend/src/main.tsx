@@ -7,6 +7,8 @@ import { routeTree } from "./routeTree.gen";
 import "./tokens.css";
 
 fitAppToKeyboard();
+// Only for notifications (no caching). Registered up front so turning them on can subscribe right away.
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
 
 const queryClient = new QueryClient();
 

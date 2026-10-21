@@ -7,6 +7,7 @@ import { createMiddleware } from "hono/factory";
 import { z } from "zod";
 import { db, schema } from "./db/index.js";
 import { notify } from "./live.js";
+import { isPushEndpoint, pushAdded, pushKey } from "./push.js";
 
 const { households, devices, items, itemHistory, linkCodes } = schema;
 
@@ -130,14 +131,38 @@ const householdRoutes = new Hono<Env>()
       return c.json(linked, 201);
     },
   )
-  // This phone's id and everyone in the household, oldest first.
+  // This phone's id, everyone in the household (oldest first), and its notification setup.
   .get("/me", auth, async (c) => {
-    const members = await db
-      .select({ id: devices.id, name: devices.name })
+    const rows = await db
+      .select({ id: devices.id, name: devices.name, pushOn: sql<boolean>`${devices.push} is not null` })
       .from(devices)
       .where(eq(devices.householdId, c.var.householdId))
       .orderBy(devices.createdAt);
-    return c.json({ deviceId: c.var.deviceId, members });
+    const members = rows.map(({ id, name }) => ({ id, name }));
+    const pushOn = rows.find((r) => r.id === c.var.deviceId)?.pushOn ?? false;
+    return c.json({ deviceId: c.var.deviceId, members, pushKey, pushOn });
+  })
+  // Turn notifications on for this phone, with the browser's PushSubscription...
+  .put(
+    "/me/push",
+    auth,
+    zValidator(
+      "json",
+      z.object({
+        endpoint: z.url().max(1000).refine(isPushEndpoint, "Not a push service"),
+        keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }),
+      }),
+    ),
+    async (c) => {
+      const { endpoint, keys } = c.req.valid("json");
+      await db.update(devices).set({ push: { endpoint, keys } }).where(eq(devices.id, c.var.deviceId));
+      return c.body(null, 204);
+    },
+  )
+  // ...or off.
+  .delete("/me/push", auth, async (c) => {
+    await db.update(devices).set({ push: null }).where(eq(devices.id, c.var.deviceId));
+    return c.body(null, 204);
   })
   // Change this phone's name; everyone's member list updates live.
   .patch("/me", auth, zValidator("json", z.object({ name })), async (c) => {
@@ -199,6 +224,8 @@ const itemRoutes = new Hono<Env>()
             target: [itemHistory.householdId, itemHistory.key],
             set: { name, count: sql`${itemHistory.count} + 1`, lastAddedAt: new Date() },
           });
+        // Not awaited: a slow push service shouldn't hold up adding.
+        pushAdded(c.var.householdId, c.var.deviceId, name).catch((err) => console.error("push failed", err));
       }
       notify(c.var.householdId);
       return c.body(null, 204);
