@@ -1,8 +1,9 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext, Link, Outlet, redirect } from "@tanstack/react-router";
+import { createRootRouteWithContext, Link, Outlet, redirect, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { House, ShoppingBasket, Users } from "lucide-react";
 import { connectLive, session, useToken } from "../api";
+import { AskForNotifications } from "../components/AskForNotifications";
 import { meQuery } from "../queries/household";
 import { refreshItems } from "../queries/items";
 import s from "./__root.module.css";
@@ -18,6 +19,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function Root() {
   const { queryClient } = Route.useRouteContext();
   const token = useToken();
+  const path = useLocation({ select: (l) => l.pathname });
 
   useEffect(() => {
     if (!token) return;
@@ -30,6 +32,8 @@ function Root() {
   return (
     <div className={s.screen}>
       <Outlet />
+      {/* Not over the name screen, where a new household's code is waiting to be shared. */}
+      {token && path !== "/name" && <AskForNotifications />}
       {token && (
         <nav className={s.tabs} aria-label="miffer">
           <Link to="/" className={s.tab} activeOptions={{ exact: true }}>
