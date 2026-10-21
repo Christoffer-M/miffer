@@ -1,3 +1,4 @@
+import type { PushSubscription } from "web-push";
 import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const households = pgTable("households", {
@@ -23,7 +24,7 @@ export const devices = pgTable("devices", {
   tokenHash: text().notNull().unique(),
   name: text().notNull().default(""),
   // Where to send this phone notifications (a browser PushSubscription), or null when they're off.
-  push: jsonb().$type<{ endpoint: string; keys: { p256dh: string; auth: string } }>(),
+  push: jsonb().$type<PushSubscription>(),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 

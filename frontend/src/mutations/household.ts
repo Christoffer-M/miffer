@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { InferRequestType } from "hono/client";
 import { api, ok, session } from "../api";
 import { meQuery } from "../queries/household";
 
@@ -65,20 +66,30 @@ export function useSetPush(pushKey: string | null | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (on: boolean) => {
-      await navigator.serviceWorker.register("/sw.js");
-      const reg = await navigator.serviceWorker.ready; // subscribing needs it active
+      // Registered at startup (main.tsx), so this doesn't wait and the tap still counts as one:
+      // iPhones only ask for permission straight from a tap.
+      const reg = await navigator.serviceWorker.ready;
       if (!on) {
         await (await reg.pushManager.getSubscription())?.unsubscribe();
         return ok(api.households.me.push.$delete());
       }
-      if ((await Notification.requestPermission()) !== "granted") {
-        throw new Error("Notifications are blocked for miffer. Allow them in your phone's settings, then try again.");
-      }
-      const key = Uint8Array.from(atob(pushKey!.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
-      const json = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
-      return ok(api.households.me.push.$put({ json }));
+      const options = {
+        userVisibleOnly: true,
+        applicationServerKey: Uint8Array.from(atob(pushKey!.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0)),
+      };
+      const sub = await reg.pushManager.subscribe(options).catch(async (err) => {
+        if (Notification.permission !== "granted") {
+          throw new Error("Notifications are blocked for miffer. Allow them in your phone's settings, then try again.");
+        }
+        // Subscribed earlier with other server keys: drop that one and start over.
+        if (err?.name !== "InvalidStateError") throw err;
+        await (await reg.pushManager.getSubscription())?.unsubscribe();
+        return reg.pushManager.subscribe(options);
+      });
+      return ok(api.households.me.push.$put({ json: sub.toJSON() as SavedSubscription }));
     },
     onSuccess: () => qc.invalidateQueries(meQuery),
   });
 }
+
+type SavedSubscription = InferRequestType<typeof api.households.me.push.$put>["json"];

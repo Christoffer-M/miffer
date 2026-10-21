@@ -1,8 +1,16 @@
 // Needs Postgres running: `pnpm db` from the repo root.
 import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { afterAll, beforeAll, expect, test } from "vitest";
+import { afterAll, beforeAll, expect, test, vi } from "vitest";
+import webpush from "web-push";
 import { app } from "./app.js";
 import { db, sql } from "./db/index.js";
+
+// A throwaway key pair, only so push.ts turns notifications on. Set before it's imported.
+vi.hoisted(() => {
+  process.env.VAPID_PUBLIC_KEY =
+    "BFboTDHfxJXoeI1Mo01jA5MgTUCTTaw3TMVQjedY42rtMqYpvBlbBKasuxQxuGBZKjPpgqXdxGo8OU1MS-_-6rA";
+  process.env.VAPID_PRIVATE_KEY = "r5JiyoGcuNrkZVAvQYcPfsC-rfXROnsF1Nl61-hGyXA";
+});
 
 process.env.TRUST_PROXY = "true"; // the tests stand in for nginx-proxy and set X-Real-IP themselves
 
@@ -153,11 +161,46 @@ test("a phone can turn notifications on and off, but only to a real push service
   expect((await subscribe("https://fcm.googleapis.com/fcm/send/abc")).status).toBe(204);
   expect(await pushOn()).toBe(true);
   // Anything else would have the server POST wherever a caller likes.
-  for (const bad of ["http://fcm.googleapis.com/x", "https://evilgoogleapis.com/x", "https://db:5432/", "nope"]) {
+  for (const bad of [
+    "http://fcm.googleapis.com/x",
+    "https://evilgoogleapis.com/x",
+    "https://storage.googleapis.com/someones-bucket/x",
+    "https://db:5432/",
+    "nope",
+  ]) {
     expect((await subscribe(bad)).status).toBe(400);
   }
   expect((await call("/households/me/push", { method: "DELETE", token: anna.token })).status).toBe(204);
   expect(await pushOn()).toBe(false);
+});
+
+test("adding something notifies everyone else with notifications on, and gone ones are cleared", async () => {
+  const send = vi.spyOn(webpush, "sendNotification").mockResolvedValue({ statusCode: 201, body: "", headers: {} });
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  const ben = await (await call("/households/join", { method: "POST", body: { code: anna.code, name: "Ben" } })).json();
+  const endpoint = `https://fcm.googleapis.com/fcm/send/${ben.deviceId}`;
+  await call("/households/me/push", { method: "PUT", token: ben.token, body: { endpoint, keys: { p256dh: "k", auth: "a" } } });
+  const add = (token: string, name: string) =>
+    call("/items", { method: "POST", token, body: { id: crypto.randomUUID(), name } });
+
+  await add(anna.token, "Milk");
+  await vi.waitFor(() =>
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ endpoint }), JSON.stringify({ body: "Anna added Milk" }), expect.anything()),
+  );
+
+  // Not to the phone that added it.
+  send.mockClear();
+  await add(ben.token, "Eggs");
+  await new Promise((r) => setTimeout(r, 100));
+  expect(send).not.toHaveBeenCalled();
+
+  // The push service says Ben's subscription is gone.
+  send.mockRejectedValue(Object.assign(new Error("gone"), { statusCode: 410 }));
+  await add(anna.token, "Bread");
+  await vi.waitFor(async () =>
+    expect((await (await call("/households/me", { token: ben.token })).json()).pushOn).toBe(false),
+  );
+  send.mockRestore();
 });
 
 // Last: it uses up everyone's tries for this window.

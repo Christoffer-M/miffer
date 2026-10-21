@@ -133,13 +133,14 @@ const householdRoutes = new Hono<Env>()
   )
   // This phone's id, everyone in the household (oldest first), and its notification setup.
   .get("/me", auth, async (c) => {
-    const members = await db
-      .select({ id: devices.id, name: devices.name })
+    const rows = await db
+      .select({ id: devices.id, name: devices.name, pushOn: sql<boolean>`${devices.push} is not null` })
       .from(devices)
       .where(eq(devices.householdId, c.var.householdId))
       .orderBy(devices.createdAt);
-    const [me] = await db.select({ push: devices.push }).from(devices).where(eq(devices.id, c.var.deviceId));
-    return c.json({ deviceId: c.var.deviceId, members, pushKey, pushOn: !!me?.push });
+    const members = rows.map(({ id, name }) => ({ id, name }));
+    const pushOn = rows.find((r) => r.id === c.var.deviceId)?.pushOn ?? false;
+    return c.json({ deviceId: c.var.deviceId, members, pushKey, pushOn });
   })
   // Turn notifications on for this phone, with the browser's PushSubscription...
   .put(
