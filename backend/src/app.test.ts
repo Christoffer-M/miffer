@@ -143,6 +143,23 @@ test("several invites can be out at once, and each links one phone", async () =>
   expect((await join(anna.code, "Max")).status).toBe(201); // the code from starting the household still works too
 });
 
+test("a phone can turn notifications on and off, but only to a real push service", async () => {
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  const pushOn = async () => (await (await call("/households/me", { token: anna.token })).json()).pushOn;
+  const subscribe = (endpoint: string) =>
+    call("/households/me/push", { method: "PUT", token: anna.token, body: { endpoint, keys: { p256dh: "k", auth: "a" } } });
+
+  expect(await pushOn()).toBe(false);
+  expect((await subscribe("https://fcm.googleapis.com/fcm/send/abc")).status).toBe(204);
+  expect(await pushOn()).toBe(true);
+  // Anything else would have the server POST wherever a caller likes.
+  for (const bad of ["http://fcm.googleapis.com/x", "https://evilgoogleapis.com/x", "https://db:5432/", "nope"]) {
+    expect((await subscribe(bad)).status).toBe(400);
+  }
+  expect((await call("/households/me/push", { method: "DELETE", token: anna.token })).status).toBe(204);
+  expect(await pushOn()).toBe(false);
+});
+
 // Last: it uses up everyone's tries for this window.
 test("faking a new address for each guess still runs into a cap", async () => {
   let fresh = 0;

@@ -3,6 +3,7 @@
 # runs `docker compose up -d`. Settings come from .env next to this file:
 #   DB_PASSWORD  Postgres password (keep it the same after the first start)
 #   DOMAIN       the domain nginx-proxy routes to miffer
+#   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY  for notifications (optional, see README)
 #   TAG          image tag to run; the deploy sets it to the commit it built (default: latest)
 name: miffer
 
@@ -38,6 +39,10 @@ services:
     environment:
       DATABASE_URL: postgres://miffer:${DB_PASSWORD}@db:5432/miffer
       TRUST_PROXY: "true" # nginx-proxy sets X-Real-IP, which the join rate limit goes by
+      # Notifications; without the keys the app just doesn't offer them.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: https://${DOMAIN}
       VIRTUAL_HOST: ${DOMAIN:?set DOMAIN in .env}
       VIRTUAL_PATH: /api/
       VIRTUAL_PORT: "3000"

@@ -1,4 +1,4 @@
-import { boolean, index, integer, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const households = pgTable("households", {
   id: uuid().primaryKey().defaultRandom(),
@@ -22,6 +22,8 @@ export const devices = pgTable("devices", {
     .references(() => households.id, { onDelete: "cascade" }),
   tokenHash: text().notNull().unique(),
   name: text().notNull().default(""),
+  // Where to send this phone notifications (a browser PushSubscription), or null when they're off.
+  push: jsonb().$type<{ endpoint: string; keys: { p256dh: string; auth: string } }>(),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 

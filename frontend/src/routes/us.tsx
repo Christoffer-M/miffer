@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Form } from "react-aria-components";
@@ -9,8 +9,8 @@ import { Button } from "../components/Button";
 import { CodeCard } from "../components/CodeCard";
 import { Confirm } from "../components/Confirm";
 import { TextField } from "../components/TextField";
-import { useNewLinkCode, useRemoveMember, useRename } from "../mutations/household";
-import { codeQuery, useMembers } from "../queries/household";
+import { canPush, useNewLinkCode, useRemoveMember, useRename, useSetPush } from "../mutations/household";
+import { codeQuery, meQuery, useMembers } from "../queries/household";
 import ui from "../ui.module.css";
 import s from "./us.module.css";
 
@@ -130,6 +130,8 @@ function Household() {
       </section>
       {newCode.data && <CodeCard code={newCode.data.code} />}
 
+      <Notifications />
+
       {myId && (
         <Confirm
           title="Leave this household?"
@@ -141,6 +143,34 @@ function Household() {
         </Confirm>
       )}
     </>
+  );
+}
+
+/** Turning on notifications for when someone else adds something. Hidden if the server has none set up. */
+function Notifications() {
+  const { data } = useQuery(meQuery);
+  const setPush = useSetPush(data?.pushKey);
+  if (!data?.pushKey) return null;
+
+  return (
+    <section className={ui.panel} aria-labelledby="notifications">
+      <h2 id="notifications" className={s.panelTitle}>
+        Notifications
+      </h2>
+      <span className={`${ui.muted} ${ui.small}`}>
+        {!canPush
+          ? "To get a notification when someone adds something, add miffer to your Home Screen and open it from there."
+          : data.pushOn
+            ? "This phone gets a notification when someone else adds something."
+            : "Get a notification when someone else adds something."}
+      </span>
+      {canPush && (
+        <Button variant="outline" onPress={() => setPush.mutate(!data.pushOn)} isDisabled={setPush.isPending}>
+          {data.pushOn ? "Turn off" : "Turn on"}
+        </Button>
+      )}
+      {setPush.error && <p className={ui.error}>{setPush.error.message}</p>}
+    </section>
   );
 }
 

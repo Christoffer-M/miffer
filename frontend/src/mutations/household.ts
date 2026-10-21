@@ -56,3 +56,29 @@ export function useRemoveMember() {
     },
   });
 }
+
+/** Whether this browser can get notifications at all. iPhones need miffer added to the Home Screen first. */
+export const canPush = "PushManager" in window && "serviceWorker" in navigator;
+
+/** Turns notifications for things others add on or off for this phone. */
+export function useSetPush(pushKey: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (on: boolean) => {
+      await navigator.serviceWorker.register("/sw.js");
+      const reg = await navigator.serviceWorker.ready; // subscribing needs it active
+      if (!on) {
+        await (await reg.pushManager.getSubscription())?.unsubscribe();
+        return ok(api.households.me.push.$delete());
+      }
+      if ((await Notification.requestPermission()) !== "granted") {
+        throw new Error("Notifications are blocked for miffer. Allow them in your phone's settings, then try again.");
+      }
+      const key = Uint8Array.from(atob(pushKey!.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+      const json = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
+      return ok(api.households.me.push.$put({ json }));
+    },
+    onSuccess: () => qc.invalidateQueries(meQuery),
+  });
+}
