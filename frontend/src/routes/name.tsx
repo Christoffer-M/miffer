@@ -9,6 +9,7 @@ import { CodeCard } from "../components/CodeCard";
 import { TextField } from "../components/TextField";
 import { useJoinHousehold, useStartHousehold } from "../mutations/household";
 import { codeQuery, isWrongCode } from "../queries/household";
+import cc from "../components/CodeCard.module.css";
 import ui from "../ui.module.css";
 import s from "./us.module.css"; // the same layout as the Us screen this follows on from
 
@@ -30,6 +31,41 @@ function useCode() {
   const hash = useLocation({ select: (l) => l.hash });
   const code = new URLSearchParams(hash.replace(/^#/, "")).get("code");
   return code === null ? undefined : code.trim().toUpperCase();
+}
+
+// Chat apps (Messenger, Instagram, WeChat, ...) open links in their own browser, which keeps
+// its own storage and can't install the app. Linking up there would spend the code on a phone
+// that can't open the installed app, so these get sent to the real browser first.
+// ponytail: user-agent sniffing, add apps here as people run into them.
+const inAppBrowser = /FBAN|FBAV|FB_IAB|Instagram|Line\/|MicroMessenger|Snapchat|musical_ly|BytedanceWebview/i.test(
+  navigator.userAgent,
+);
+
+/** In a chat app's browser: how to get to the real one, with the link to paste there. */
+function OpenInBrowser() {
+  const [copied, setCopied] = useState<boolean>();
+  const copy = () =>
+    navigator.clipboard.writeText(location.href).then(
+      () => setCopied(true),
+      () => setCopied(false),
+    );
+
+  return (
+    <div className={ui.panel}>
+      <p className={ui.muted}>
+        This opened inside a chat app, which can't add miffer to your home screen. Tap ⋯ or the share icon and
+        choose <b>Open in browser</b>, then continue there.
+      </p>
+      <Button variant="outline" onPress={copy}>
+        {copied ? "Link copied" : "Copy link instead"}
+      </Button>
+      {copied === false && (
+        <p className={`${ui.small} ${cc.link}`}>
+          Couldn't copy it. Paste this into your browser: <span>{location.href}</span>
+        </p>
+      )}
+    </div>
+  );
 }
 
 function Name() {
@@ -63,7 +99,9 @@ function Name() {
             : `${joining ? "You're joining a household." : "You're starting a new household."} Your name shows next to what you add.`}
         </p>
       </div>
-      {newCode ? (
+      {inAppBrowser ? (
+        <OpenInBrowser />
+      ) : newCode ? (
         <CodeCard
           code={newCode}
           after={
