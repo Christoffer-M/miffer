@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { type CSSProperties, useState, useSyncExternalStore } from "react";
+import { type CSSProperties, useEffect, useState, useSyncExternalStore } from "react";
 import { Button as AriaButton, Form } from "react-aria-components";
 import { Check, Plus, Trash2, Undo2, X } from "lucide-react";
-import { session } from "../api";
+import { type Item, session } from "../api";
 import { Avatars } from "../brand";
 import { Button } from "../components/Button";
 import { Checkbox } from "../components/Checkbox";
 import { SwipeRow } from "../components/SwipeRow";
 import { TextField } from "../components/TextField";
-import { useAddItem, useClearDone, useRemoveItem, useSetDone } from "../mutations/items";
+import { useAddItem, useClearDone, useRemoveItem, useRestoreItems, useSetDone } from "../mutations/items";
 import { useMembers } from "../queries/household";
 import { historyQuery, itemsQuery } from "../queries/items";
 import { starterItems } from "../groceries.da";
@@ -43,6 +43,9 @@ const animated = (id: string, list: "todo" | "cart") => ({
   style: { "--vt-name": `${list}-${id}` } as CSSProperties,
 });
 
+/** How long Undo stays up after removing something. */
+const UNDO_MS = 6000;
+
 function Groceries() {
   const { data: items = [], isPending, error } = useQuery(itemsQuery);
   const online = useOnline();
@@ -51,9 +54,18 @@ function Groceries() {
   const setDone = useSetDone();
   const removeItem = useRemoveItem();
   const clearDone = useClearDone();
+  const restoreItems = useRestoreItems();
   const { data: history = [] } = useQuery(historyQuery);
   const [draft, setDraft] = useState("");
   const [typing, setTyping] = useState(false);
+  // What was removed last, for Undo. A new removal takes its place.
+  const [removed, setRemoved] = useState<Item[]>([]);
+
+  useEffect(() => {
+    if (!removed.length) return;
+    const timer = setTimeout(() => setRemoved([]), UNDO_MS);
+    return () => clearTimeout(timer);
+  }, [removed]);
 
   const todo = items.filter((i) => !i.done);
   const done = items.filter((i) => i.done);
@@ -66,6 +78,21 @@ function Groceries() {
     if (!existing) addItem.mutate({ id: crypto.randomUUID(), name, addedBy: session.deviceId });
     else if (existing.done) setDone.mutate({ id: existing.id, done: false });
     setDraft("");
+  }
+
+  function remove(item: Item) {
+    removeItem.mutate(item.id);
+    setRemoved([item]);
+  }
+
+  function clear() {
+    clearDone.mutate();
+    setRemoved(done);
+  }
+
+  function undo() {
+    restoreItems.mutate(removed);
+    setRemoved([]);
   }
 
   function add(e: React.FormEvent) {
@@ -107,7 +134,7 @@ function Groceries() {
                 <SwipeRow
                   className={s.itemContent}
                   right={{ label: "Got it", icon: <Check size={20} aria-hidden />, onSwipe: () => setDone.mutate({ id: item.id, done: true }) }}
-                  left={{ label: "Delete", icon: <Trash2 size={20} aria-hidden />, onSwipe: () => removeItem.mutate(item.id) }}
+                  left={{ label: "Delete", icon: <Trash2 size={20} aria-hidden />, onSwipe: () => remove(item) }}
                 >
                   <Checkbox
                     className={s.check}
@@ -117,7 +144,7 @@ function Groceries() {
                     {item.name}
                   </Checkbox>
                   <span className={`${ui.muted} ${ui.small}`}>{whoIs(item.addedBy)}</span>
-                  <Button variant="icon" aria-label={`Remove ${item.name}`} onPress={() => removeItem.mutate(item.id)}>
+                  <Button variant="icon" aria-label={`Remove ${item.name}`} onPress={() => remove(item)}>
                     <X size={18} aria-hidden />
                   </Button>
                 </SwipeRow>
@@ -132,7 +159,7 @@ function Groceries() {
               <h2 id="in-cart" className={`${ui.eyebrow} ${ui.muted} ${s.sectionTitle}`}>
                 In the cart
               </h2>
-              <Button variant="text" onPress={() => clearDone.mutate()}>
+              <Button variant="text" onPress={clear}>
                 Clear
               </Button>
             </div>
@@ -142,7 +169,7 @@ function Groceries() {
                   <SwipeRow
                     className={s.doneContent}
                     right={{ label: "Put back", icon: <Undo2 size={20} aria-hidden />, onSwipe: () => setDone.mutate({ id: item.id, done: false }) }}
-                    left={{ label: "Delete", icon: <Trash2 size={20} aria-hidden />, onSwipe: () => removeItem.mutate(item.id) }}
+                    left={{ label: "Delete", icon: <Trash2 size={20} aria-hidden />, onSwipe: () => remove(item) }}
                   >
                     <Checkbox
                       className={`${s.check} ${s.doneCheck}`}
@@ -160,6 +187,21 @@ function Groceries() {
       </main>
 
       <Form className={s.addBar} onSubmit={add} data-vt="add-bar">
+        {/* Floats just above the bar, over the list, so nothing moves when it comes and goes.
+            Always there (empty when there's nothing to undo) so screen readers announce it. */}
+        <div className={s.undoSlot} role="status">
+          {removed.length > 0 && (
+            <div className={s.undo}>
+              <span className={s.undoText}>
+                {removed.length === 1 ? `Removed ${removed[0].name}` : `Cleared ${removed.length} items`}
+              </span>
+              <Button variant="text" className={s.undoButton} onPress={undo}>
+                <Undo2 size={18} aria-hidden />
+                Undo
+              </Button>
+            </div>
+          )}
+        </div>
         {/* Suggestions show while focus is anywhere in here: the field, a suggestion or Add. */}
         <div
           className={s.focusArea}

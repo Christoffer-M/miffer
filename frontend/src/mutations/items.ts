@@ -15,6 +15,8 @@ function useListMutation<V>(
   const qc = useQueryClient();
   return useMutation({
     mutationFn: send,
+    // Sent one at a time, in order, so an Undo can't reach the server before the delete it undoes.
+    scope: { id: "items" },
     onMutate: async (v) => {
       await qc.cancelQueries(itemsQuery);
       animateListChange(() => qc.setQueryData(itemsQuery.queryKey, (old = []) => apply(old, v)), change);
@@ -54,4 +56,19 @@ export const useClearDone = () =>
     (_: void) => ok(api.items.done.$delete()),
     (items) => items.filter((i) => !i.done),
     "remove",
+  );
+
+/** Undo: puts removed items back as they were, in their old place in the list. */
+export const useRestoreItems = () =>
+  useListMutation(
+    (removed: Item[]) =>
+      ok(
+        api.items.restore.$post({
+          json: removed.map(({ id, name, done, addedBy, createdAt }) => ({ id, name, done, addedBy, createdAt })),
+        }),
+      ),
+    (items, removed) =>
+      [...items.filter((i) => !removed.some((r) => r.id === i.id)), ...removed].sort((a, b) =>
+        b.createdAt.localeCompare(a.createdAt),
+      ),
   );
