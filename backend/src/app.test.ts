@@ -114,6 +114,38 @@ test("what a household adds becomes its suggestions, and stays after Clear", asy
   expect(await (await call("/items/history", { token: stranger.token })).json()).toEqual([]);
 });
 
+test("undo puts removed items back as they were", async () => {
+  const you = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  const add = (id: string, name: string) => call("/items", { method: "POST", token: you.token, body: { id, name } });
+  const list = async () => (await call("/items", { token: you.token })).json();
+
+  const milk = crypto.randomUUID();
+  const bread = crypto.randomUUID();
+  await add(milk, "Mælk");
+  await add(bread, "Rugbrød");
+  await call(`/items/${milk}`, { method: "PATCH", token: you.token, body: { done: true } });
+  const before = await list();
+
+  await call(`/items/${milk}`, { method: "DELETE", token: you.token });
+  const removed = before.find((i: { id: string }) => i.id === milk);
+  const restore = (body: unknown, token = you.token) => call("/items/restore", { method: "POST", token, body });
+  expect((await restore([removed])).status).toBe(204);
+  expect((await restore([removed])).status).toBe(204); // a retry is fine
+  expect(await list()).toEqual(before.map((i: object) => ({ ...i, updatedAt: expect.any(String) })));
+
+  // Suggestions don't count it as added again.
+  const history = await (await call("/items/history", { token: you.token })).json();
+  expect(history.find((h: { name: string }) => h.name === "Mælk").count).toBe(1);
+
+  // Nobody outside the household can be named as the one who added it, or take over an item.
+  const stranger = await (await call("/households", { method: "POST", body: { name: "Eve" } })).json();
+  const eggs = { id: crypto.randomUUID(), name: "Æg", done: false, addedBy: stranger.deviceId, createdAt: new Date().toISOString() };
+  await restore([eggs]);
+  expect((await list()).find((i: { id: string }) => i.id === eggs.id).addedBy).toBeNull();
+  await restore([{ ...removed, name: "Stolen" }], stranger.token);
+  expect(await (await call("/items", { token: stranger.token })).json()).toEqual([]);
+});
+
 test("guessing codes gets cut off after a few tries, per address", async () => {
   const guess = (ip: string) =>
     call("/households/join", { method: "POST", ip, body: { code: "ZZZZZZ", name: "Eve" } });

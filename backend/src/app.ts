@@ -231,6 +231,47 @@ const itemRoutes = new Hono<Env>()
       return c.body(null, 204);
     },
   )
+  // Undo: puts removed items back as they were, with the same tick, who added them and place in
+  // the list. It isn't a new add, so suggestions don't count it.
+  .post(
+    "/restore",
+    zValidator(
+      "json",
+      z
+        .array(
+          z.object({
+            id: z.uuid(),
+            name: z.string().trim().min(1).max(200),
+            done: z.boolean(),
+            addedBy: z.uuid().nullable(),
+            createdAt: z.iso.datetime(),
+          }),
+        )
+        .min(1)
+        .max(500),
+    ),
+    async (c) => {
+      // Only someone in this household can have added it; anyone else (or a phone removed since) is dropped.
+      const members = await db
+        .select({ id: devices.id })
+        .from(devices)
+        .where(eq(devices.householdId, c.var.householdId));
+      const member = new Set(members.map((m) => m.id));
+      await db
+        .insert(items)
+        .values(
+          c.req.valid("json").map((i) => ({
+            ...i,
+            householdId: c.var.householdId,
+            addedBy: i.addedBy && member.has(i.addedBy) ? i.addedBy : null,
+            createdAt: new Date(i.createdAt),
+          })),
+        )
+        .onConflictDoNothing(); // already back (a retry), or someone else's id: left as it is
+      notify(c.var.householdId);
+      return c.body(null, 204);
+    },
+  )
   .patch("/:id", itemParam, zValidator("json", z.object({ done: z.boolean() })), async (c) => {
     await db
       .update(items)
