@@ -8,8 +8,9 @@ import { z } from "zod";
 import { db, schema } from "./db/index.js";
 import { notify } from "./live.js";
 import { isPushEndpoint, pushAdded, pushKey } from "./push.js";
+import { complete } from "./reminders.js";
 
-const { households, devices, items, itemHistory, linkCodes } = schema;
+const { households, devices, items, itemHistory, linkCodes, reminders } = schema;
 
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O or 1/I mix-ups
 const CODE_TTL_MS = 24 * 60 * 60 * 1000; // long enough for an invite link to sit in a chat
@@ -138,7 +139,7 @@ const householdRoutes = new Hono<Env>()
       .from(devices)
       .where(eq(devices.householdId, c.var.householdId))
       .orderBy(devices.createdAt);
-    const members = rows.map(({ id, name }) => ({ id, name }));
+    const members = rows.map(({ id, name, pushOn }) => ({ id, name, pushOn }));
     const pushOn = rows.find((r) => r.id === c.var.deviceId)?.pushOn ?? false;
     return c.json({ deviceId: c.var.deviceId, members, pushKey, pushOn });
   })
@@ -296,10 +297,107 @@ const itemRoutes = new Hono<Env>()
     return c.body(null, 204);
   });
 
+const isTimeZone = (timeZone: string) => {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const reminderFields = z.object({
+  title: z.string().trim().min(1).max(200),
+  notes: z.string().trim().max(2000),
+  remindAt: z.iso.datetime().nullable(),
+  repeat: z.enum(["day", "week", "month"]).nullable(),
+  // Who it's for, or null for everyone.
+  forDevice: z.uuid().nullable(),
+  timeZone: z.string().max(64).refine(isTimeZone, "Unknown time zone"),
+});
+const reminderParam = zValidator("param", z.object({ id: z.uuid() }));
+const NOT_A_MEMBER = "That phone isn't in your household.";
+
+const isMember = async (householdId: string, deviceId: string) =>
+  (
+    await db
+      .select({ id: devices.id })
+      .from(devices)
+      .where(and(eq(devices.id, deviceId), eq(devices.householdId, householdId)))
+  ).length > 0;
+
+const reminderRoutes = new Hono<Env>()
+  .use(auth)
+  .get("/", async (c) => {
+    const rows = await db
+      .select()
+      .from(reminders)
+      .where(eq(reminders.householdId, c.var.householdId))
+      .orderBy(reminders.createdAt);
+    return c.json(rows);
+  })
+  .post("/", zValidator("json", reminderFields.extend({ id: z.uuid() })), async (c) => {
+    const { remindAt, ...rest } = c.req.valid("json");
+    if (rest.forDevice && !(await isMember(c.var.householdId, rest.forDevice))) return c.json({ error: NOT_A_MEMBER }, 400);
+    await db
+      .insert(reminders)
+      .values({
+        ...rest,
+        remindAt: remindAt ? new Date(remindAt) : null,
+        householdId: c.var.householdId,
+        createdBy: c.var.deviceId,
+      })
+      .onConflictDoNothing(); // a retried request
+    notify(c.var.householdId, "reminders");
+    return c.body(null, 204);
+  })
+  // Edit, snooze, or put back from Done. A new time sends it again when that comes.
+  .patch(
+    "/:id",
+    reminderParam,
+    zValidator("json", reminderFields.extend({ snoozedUntil: z.iso.datetime(), done: z.literal(false) }).partial()),
+    async (c) => {
+      const { remindAt, snoozedUntil, ...rest } = c.req.valid("json");
+      if (rest.forDevice && !(await isMember(c.var.householdId, rest.forDevice))) return c.json({ error: NOT_A_MEMBER }, 400);
+      const changes = {
+        ...rest,
+        ...(remindAt !== undefined && { remindAt: remindAt ? new Date(remindAt) : null, snoozedUntil: null, notified: false }),
+        ...(snoozedUntil && { snoozedUntil: new Date(snoozedUntil), notified: false }),
+      };
+      if (Object.keys(changes).length) {
+        await db
+          .update(reminders)
+          .set(changes)
+          .where(and(eq(reminders.id, c.req.valid("param").id), eq(reminders.householdId, c.var.householdId)));
+      }
+      notify(c.var.householdId, "reminders");
+      return c.body(null, 204);
+    },
+  )
+  .post("/:id/done", reminderParam, async (c) => {
+    await complete(c.var.householdId, c.req.valid("param").id);
+    notify(c.var.householdId, "reminders");
+    return c.body(null, 204);
+  })
+  // Registered before "/:id" so "done" isn't read as an id.
+  .delete("/done", async (c) => {
+    await db.delete(reminders).where(and(eq(reminders.householdId, c.var.householdId), eq(reminders.done, true)));
+    notify(c.var.householdId, "reminders");
+    return c.body(null, 204);
+  })
+  .delete("/:id", reminderParam, async (c) => {
+    await db
+      .delete(reminders)
+      .where(and(eq(reminders.id, c.req.valid("param").id), eq(reminders.householdId, c.var.householdId)));
+    notify(c.var.householdId, "reminders");
+    return c.body(null, 204);
+  });
+
 export const app = new Hono()
   .basePath("/api")
   .get("/health", (c) => c.text("ok"))
   .route("/households", householdRoutes)
-  .route("/items", itemRoutes);
+  .route("/items", itemRoutes)
+  .route("/reminders", reminderRoutes);
 
 export type AppType = typeof app;

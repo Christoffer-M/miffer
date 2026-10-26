@@ -5,6 +5,7 @@ import type { WSContext } from "hono/ws";
 import { app, deviceForToken } from "./app.js";
 import { db, sql } from "./db/index.js";
 import { startHeartbeat, subscribe, unsubscribe } from "./live.js";
+import { fireDue } from "./reminders.js";
 
 await migrate(db, { migrationsFolder: "./drizzle" });
 
@@ -45,7 +46,14 @@ const server = serve({ fetch: app.fetch, port }, () => console.log(`backend list
 injectWebSocket(server);
 const heartbeat = startHeartbeat();
 
+// ponytail: looks every 30s, so a reminder can be up to 30s late. Fine to run in more than one
+// process: fireDue marks and picks up in one statement, so nothing is sent twice.
+const checkReminders = () => fireDue().catch((err) => console.error("reminders failed", err));
+checkReminders(); // anything that came due while the server was down goes out now, late
+const reminderTimer = setInterval(checkReminders, 30_000);
+
 process.on("SIGTERM", () => {
   clearInterval(heartbeat);
+  clearInterval(reminderTimer);
   server.close(() => sql.end().then(() => process.exit(0)));
 });

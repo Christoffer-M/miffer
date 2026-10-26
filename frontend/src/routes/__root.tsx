@@ -1,11 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Link, Outlet, redirect, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { House, ShoppingBasket, Users } from "lucide-react";
+import { Bell, House, ShoppingBasket, Users } from "lucide-react";
 import { connectLive, session, useToken } from "../api";
 import { AskForNotifications } from "../components/AskForNotifications";
 import { meQuery } from "../queries/household";
 import { refreshItems } from "../queries/items";
+import { remindersQuery } from "../queries/reminders";
 import s from "./__root.module.css";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -25,6 +26,7 @@ function Root() {
     if (!token) return;
     return connectLive((what) => {
       if (what === "items") refreshItems(queryClient).catch(() => {});
+      else if (what === "reminders") queryClient.invalidateQueries(remindersQuery);
       else queryClient.invalidateQueries(meQuery);
     });
   }, [token, queryClient]);
@@ -43,6 +45,10 @@ function Root() {
           <Link to="/groceries" className={s.tab}>
             <ShoppingBasket size={22} aria-hidden />
             Groceries
+          </Link>
+          <Link to="/reminders" className={s.tab}>
+            <Bell size={22} aria-hidden />
+            Reminders
           </Link>
           <Link to="/us" className={s.tab}>
             <Users size={22} aria-hidden />

@@ -1,0 +1,189 @@
+.header {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.header h1 {
+  font-size: 38px;
+}
+.header p {
+  margin: 0;
+  font-size: 14px;
+}
+.titleRow {
+  align-items: flex-end;
+}
+
+.list {
+  padding: 0 12px 16px;
+  gap: 0;
+}
+.empty {
+  padding: 24px 8px;
+  line-height: 1.5;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 16px;
+}
+.sectionTitle {
+  margin: 0;
+  padding: 4px 8px 0;
+}
+
+/* The title and time: opens the reminder for editing. */
+.open {
+  flex-grow: 1;
+  min-width: 0;
+  min-height: 52px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.open[data-focus-visible] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.soon {
+  color: #9a3412;
+  font-weight: 600;
+}
+
+/* Due: dark like the Undo bar, so it stands out from what's coming up. */
+.dueCard {
+  padding: 8px 14px 14px 16px;
+  border-radius: 16px;
+  background: var(--ink);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.dueCheck span {
+  border-color: #cbd5e1;
+  background: transparent;
+}
+.dueTitle {
+  font-size: 17px;
+  font-weight: 600;
+}
+.dueMeta {
+  color: #cbd5e1;
+}
+.snooze {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.snoozeLabel {
+  font-size: 13px;
+  color: #cbd5e1;
+}
+.snoozeChip {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 0.28);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.snoozeChip[data-pressed] {
+  background: rgb(255 255 255 / 0.2);
+}
+.snoozeChip[data-focus-visible] {
+  outline: 2px solid var(--accent-tint);
+  outline-offset: 2px;
+}
+
+.sheet,
+.doneList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sheet {
+  background: var(--surface);
+  border-radius: 16px;
+}
+.item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 0 14px 0 16px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.item:last-child {
+  border-bottom: 0;
+}
+.itemTitle {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Who it's for: small overlapping avatars. */
+.for {
+  display: flex;
+  flex-shrink: 0;
+}
+.for > span {
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+  border-color: var(--surface);
+}
+.for > span + span {
+  margin-left: -8px;
+}
+
+.doneHead {
+  padding: 0 0 0 8px;
+}
+.doneList li {
+  padding: 0 8px;
+}
+.doneCheck {
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.addBar {
+  padding: 12px 20px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+.addButton {
+  width: 100%;
+}

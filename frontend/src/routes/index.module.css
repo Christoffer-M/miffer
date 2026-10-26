@@ -58,3 +58,34 @@
   background: var(--ground);
   font-size: 14px;
 }
+
+.reminders {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.reminder {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 12px;
+  font-size: 15px;
+}
+.reminder > :last-child {
+  flex-shrink: 0;
+  font-size: 13px;
+}
+/* Due: dark like on the Reminders screen. */
+.due {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: #fff;
+}
+.due strong {
+  font-weight: 600;
+}
+.due > :last-child {
+  color: #cbd5e1;
+}
