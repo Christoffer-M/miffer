@@ -23,6 +23,7 @@ export function fitAppToKeyboard() {
   const touch = matchMedia("(pointer: coarse)");
   let fullHeight = 0;
   let width = 0;
+  let height = 0;
 
   const fit = () => {
     // Rotating the phone gives a new keyboard-less height to measure against.
@@ -33,6 +34,11 @@ export function fitAppToKeyboard() {
     fullHeight = Math.max(fullHeight, vv.height);
     html.style.setProperty("--app-height", `${vv.height}px`);
     html.toggleAttribute("data-keyboard", touch.matches && vv.height < fullHeight - KEYBOARD_MIN);
+    // When the keyboard opens, the field you're typing in can end up below the
+    // fold of whatever it scrolls in, like a field low in a tall sheet: scroll it back.
+    const field = document.activeElement;
+    if (vv.height < height && field?.matches("input, textarea")) field.scrollIntoView({ block: "nearest" });
+    height = vv.height;
     // iOS scrolls the page to show the focused field. The app already fits
     // above the keyboard, so undo that scroll instead of losing the header.
     if (vv.offsetTop > 0 || window.scrollY > 0) window.scrollTo(0, 0);
