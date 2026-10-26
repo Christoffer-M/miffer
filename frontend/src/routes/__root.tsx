@@ -26,7 +26,10 @@ function Root() {
     if (!token) return;
     return connectLive((what) => {
       if (what === "items") refreshItems(queryClient).catch(() => {});
-      else if (what === "reminders") queryClient.invalidateQueries(remindersQuery);
+      // Not while this phone's own changes are on their way: the last one refetches anyway.
+      else if (what === "reminders") {
+        if (!queryClient.isMutating({ mutationKey: ["reminders"] })) queryClient.invalidateQueries(remindersQuery);
+      }
       else queryClient.invalidateQueries(meQuery);
     });
   }, [token, queryClient]);

@@ -55,5 +55,21 @@ export const snoozeTimes = (now = new Date()) => [
   { label: "Tomorrow", at: at(now, 1, 9) },
 ];
 
+/**
+ * The first repeat after now (or after `from`, when ticked off early), on this phone's clock.
+ * Only for showing it at once: the server works out the real one in the reminder's time zone.
+ */
+export function nextTime(from: Date, repeat: keyof typeof REPEATS, now = new Date()) {
+  const after = Math.max(now.getTime(), from.getTime());
+  for (let n = 1; ; n++) {
+    const next = new Date(from);
+    if (repeat === "month") {
+      next.setMonth(from.getMonth() + n);
+      if (next.getDate() !== from.getDate()) next.setDate(0); // the 31st in a short month: its last day, as Postgres does
+    } else next.setDate(from.getDate() + n * (repeat === "week" ? 7 : 1));
+    if (next.getTime() > after) return next;
+  }
+}
+
 /** For <input type="datetime-local">: local time, to the minute. */
 export const toLocalInput = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * MINUTE).toISOString().slice(0, 16);

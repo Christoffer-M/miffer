@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { formatWhen, quickTimes, sortReminders, toLocalInput } from "./reminders.ts";
+import { formatWhen, nextTime, quickTimes, sortReminders, toLocalInput } from "./reminders.ts";
 
 // Local times, so the tests pass in any time zone. 26 Oct 2026 is a Monday.
 const now = new Date(2026, 9, 26, 12, 30, 45);
@@ -37,4 +37,14 @@ test("due, then coming up soonest first with snoozes counted, then done", () => 
   assert.deepEqual(due.map((x) => x.id), ["due"]);
   assert.deepEqual(upcoming.map((x) => x.id), ["snoozed", "thursday", "no time"]);
   assert.deepEqual(done.map((x) => x.id), ["finished"]);
+});
+
+test("the next repeat: after now, or after its time when ticked off early", () => {
+  const local = (d: Date) => toLocalInput(d);
+  // Last Monday at 18:00, weekly: today at 18:00, still ahead at 12:30.
+  assert.equal(local(nextTime(new Date(2026, 9, 19, 18), "week", now)), "2026-10-26T18:00");
+  // Daily, due tomorrow but ticked off today: the day after.
+  assert.equal(local(nextTime(new Date(2026, 9, 27, 9), "day", now)), "2026-10-28T09:00");
+  // Monthly on the 31st: the last day of a short month.
+  assert.equal(local(nextTime(new Date(2026, 9, 31, 9), "month", now)), "2026-11-30T09:00");
 });
