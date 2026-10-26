@@ -370,6 +370,33 @@ const reminderRoutes = new Hono<Env>()
     notify(c.var.householdId, "reminders");
     return c.body(null, 204);
   })
+  // Undo of Done or Snooze: puts it back exactly as it was. Still sent, so it's due again without buzzing again.
+  .put(
+    "/:id/state",
+    reminderParam,
+    zValidator(
+      "json",
+      z.object({
+        remindAt: z.iso.datetime().nullable(),
+        snoozedUntil: z.iso.datetime().nullable(),
+        notified: z.boolean(),
+        done: z.boolean(),
+      }),
+    ),
+    async (c) => {
+      const { remindAt, snoozedUntil, ...rest } = c.req.valid("json");
+      await db
+        .update(reminders)
+        .set({
+          ...rest,
+          remindAt: remindAt ? new Date(remindAt) : null,
+          snoozedUntil: snoozedUntil ? new Date(snoozedUntil) : null,
+        })
+        .where(and(eq(reminders.id, c.req.valid("param").id), eq(reminders.householdId, c.var.householdId)));
+      notify(c.var.householdId, "reminders");
+      return c.body(null, 204);
+    },
+  )
   // Registered before "/:id" so "done" isn't read as an id.
   .delete("/done", async (c) => {
     await db.delete(reminders).where(and(eq(reminders.householdId, c.var.householdId), eq(reminders.done, true)));

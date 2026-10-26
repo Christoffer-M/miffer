@@ -15,7 +15,7 @@ import {
 } from "../mutations/reminders";
 import { useMembers } from "../queries/household";
 import { remindersQuery } from "../queries/reminders";
-import { clock, dueAt, formatWhen, REPEATS, snoozeTimes, sortReminders } from "../reminders";
+import { clock, dueAt, formatBack, formatWhen, REPEATS, snoozeTimes, sortReminders } from "../reminders";
 import ui from "../ui.module.css";
 import s from "./reminders.module.css";
 
@@ -187,11 +187,7 @@ function When({ reminder: r }: { reminder: Reminder }) {
     return (
       <span className={`${s.meta} ${s.soon}`}>
         <AlarmClock size={14} aria-hidden />
-        {/* "back at 13:17" today, "back tomorrow 09:00", "back Thu 17:30" */}
-        Snoozed · back{" "}
-        {formatWhen(new Date(r.snoozedUntil))
-          .replace(/^Today /, "at ")
-          .replace(/^(Tomorrow|Yesterday)/, (day) => day.toLowerCase())}
+        Snoozed · back {formatBack(new Date(r.snoozedUntil))}
       </span>
     );
   }

@@ -274,6 +274,7 @@ test("reminders reach who they're for once, snooze, and repeat on the wall clock
 
   // Done with a repeating one: it moves on to the next Monday after now, still 18:00 local
   // whether or not the clocks have changed since.
+  const [beforeDone] = await list();
   expect((await call(`/reminders/${trash}/done`, { method: "POST", token: ben.token })).status).toBe(204);
   const [next] = await list();
   const local = (iso: string) =>
@@ -282,6 +283,16 @@ test("reminders reach who they're for once, snooze, and repeat on the wall clock
   expect(local(next.remindAt)).toBe("Mon 18:00");
   expect(Date.parse(next.remindAt) - Date.now()).toBeGreaterThan(0);
   expect(Date.parse(next.remindAt) - Date.now()).toBeLessThanOrEqual(7 * 24 * HOUR);
+
+  // Undo: back to due as it was, and not sent a second time.
+  send.mockClear();
+  const { remindAt, snoozedUntil, notified, done } = beforeDone;
+  const restore = { method: "PUT", token: anna.token, body: { remindAt, snoozedUntil, notified, done } };
+  expect((await call(`/reminders/${trash}/state`, restore)).status).toBe(204);
+  await fireDue();
+  expect(send).not.toHaveBeenCalled();
+  expect(await list()).toEqual([expect.objectContaining({ remindAt, notified: true, done: false })]);
+  await call(`/reminders/${trash}/done`, { method: "POST", token: ben.token });
 
   // Ticked off before it's due: skips to the one after.
   const plants = crypto.randomUUID();

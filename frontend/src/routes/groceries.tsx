@@ -191,11 +191,11 @@ function Groceries() {
             Always there (empty when there's nothing to undo) so screen readers announce it. */}
         <div className={s.undoSlot} role="status">
           {removed.length > 0 && (
-            <div className={s.undo}>
-              <span className={s.undoText}>
+            <div className={ui.undo}>
+              <span className={ui.undoText}>
                 {removed.length === 1 ? `Removed ${removed[0].name}` : `Cleared ${removed.length} items`}
               </span>
-              <Button variant="text" className={s.undoButton} onPress={undo}>
+              <Button variant="text" className={ui.undoButton} onPress={undo}>
                 <Undo2 size={18} aria-hidden />
                 Undo
               </Button>

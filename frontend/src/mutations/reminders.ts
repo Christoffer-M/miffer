@@ -59,6 +59,15 @@ export const useCompleteReminder = () =>
       ),
   );
 
+export type ReminderState = InferRequestType<(typeof api.reminders)[":id"]["state"]["$put"]>["json"];
+
+/** Undo of Done or Snooze: puts back its times and whether it was sent or done. */
+export const useRestoreReminder = () =>
+  useReminderMutation(
+    ({ id, ...json }: ReminderState & { id: string }) => ok(api.reminders[":id"].state.$put({ param: { id }, json })),
+    (list, { id, ...state }) => update(list, id, () => state),
+  );
+
 export const useDeleteReminder = () =>
   useReminderMutation(
     (id: string) => ok(api.reminders[":id"].$delete({ param: { id } })),

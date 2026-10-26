@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Bell, House, ShoppingBasket, Users } from "lucide-react";
 import { connectLive, session, useToken } from "../api";
 import { AskForNotifications } from "../components/AskForNotifications";
+import { DueReminders } from "../components/DueReminders";
 import { changesPending } from "../mutations/settle";
 import { meQuery } from "../queries/household";
 import { refreshItems } from "../queries/items";
@@ -39,6 +40,8 @@ function Root() {
       <Outlet />
       {/* Not over the name screen, where a new household's code is waiting to be shared. */}
       {token && path !== "/name" && <AskForNotifications />}
+      {/* After the notifications sheet, so a due reminder comes up on top of it. */}
+      {token && path !== "/name" && <DueReminders />}
       {token && (
         <nav className={s.tabs} aria-label="miffer">
           <Link to="/" className={s.tab} activeOptions={{ exact: true }}>

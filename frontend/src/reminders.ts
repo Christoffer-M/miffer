@@ -21,6 +21,16 @@ export function sortReminders<R extends Times>(list: R[]) {
   };
 }
 
+/** What's due for this phone (for it or for everyone), oldest first, with `first` (a tapped notification's) ahead. */
+export function dueFor<R extends Times & { id: string; forDevice: string | null }>(
+  list: R[],
+  deviceId: string,
+  first?: string | null,
+) {
+  const due = sortReminders(list).due.filter((r) => !r.forDevice || r.forDevice === deviceId);
+  return [...due.filter((r) => r.id === first), ...due.filter((r) => r.id !== first)];
+}
+
 export const clock = (d: Date) => d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 const at = (from: Date, days: number, hour: number) =>
@@ -38,6 +48,12 @@ export function formatWhen(when: Date, now = new Date()) {
     : when.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   return `${date} ${clock(when)}`;
 }
+
+/** For "back …": "at 13:17" today, "tomorrow 09:00", "Thu 17:30". */
+export const formatBack = (when: Date, now = new Date()) =>
+  formatWhen(when, now)
+    .replace(/^Today /, "at ")
+    .replace(/^(Tomorrow|Yesterday)/, (day) => day.toLowerCase());
 
 /** Now plus some minutes, on the minute. */
 const later = (now: Date, minutes: number) => new Date(Math.floor(now.getTime() / MINUTE) * MINUTE + minutes * MINUTE);
