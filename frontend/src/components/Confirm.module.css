@@ -1,6 +1,11 @@
+/* As tall as the visible area, not the whole screen: the page doesn't resize for the
+   phone keyboard (see keyboard.ts), so with inset: 0 the sheet would sit behind it. */
 .overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--app-height, 100dvh);
   z-index: 10;
   display: flex;
   align-items: flex-end;
