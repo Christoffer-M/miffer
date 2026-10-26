@@ -8,7 +8,7 @@ import { z } from "zod";
 import { db, schema } from "./db/index.js";
 import { notify } from "./live.js";
 import { isPushEndpoint, pushAdded, pushKey } from "./push.js";
-import { complete } from "./reminders.js";
+import { complete, isTimeZone } from "./reminders.js";
 
 const { households, devices, items, itemHistory, linkCodes, reminders } = schema;
 
@@ -296,15 +296,6 @@ const itemRoutes = new Hono<Env>()
     notify(c.var.householdId);
     return c.body(null, 204);
   });
-
-const isTimeZone = (timeZone: string) => {
-  try {
-    new Intl.DateTimeFormat("en", { timeZone });
-    return true;
-  } catch {
-    return false;
-  }
-};
 
 const reminderFields = z.object({
   title: z.string().trim().min(1).max(200),

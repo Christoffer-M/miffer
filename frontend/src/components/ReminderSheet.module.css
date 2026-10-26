@@ -66,14 +66,6 @@
   padding-left: 8px;
 }
 
-/* A smaller avatar inside a chip. */
-.mini > span {
-  width: 26px;
-  height: 26px;
-  font-size: 12px;
-  border: 0;
-}
-
 .textarea {
   font: inherit; /* textareas don't take the page's font by default */
   height: auto;

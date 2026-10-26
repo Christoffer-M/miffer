@@ -3,6 +3,7 @@ import type { InferRequestType } from "hono/client";
 import { api, ok, type Reminder } from "../api";
 import { remindersQuery } from "../queries/reminders";
 import { nextTime } from "../reminders";
+import { refetchWhenLast } from "./settle";
 
 export type NewReminder = InferRequestType<typeof api.reminders.$post>["json"];
 export type ReminderChanges = InferRequestType<(typeof api.reminders)[":id"]["$patch"]>["json"];
@@ -23,11 +24,8 @@ function useReminderMutation<V>(send: (v: V) => Promise<unknown>, apply?: (list:
       await qc.cancelQueries(remindersQuery);
       qc.setQueryData(remindersQuery.queryKey, (old = []) => apply(old, v));
     },
-    // Refetched once the last change in line is done: sooner would show changes still waiting
-    // as undone for a moment. ponytail: no rollback; the refetch puts the server's truth back.
-    onSettled: () => {
-      if (qc.isMutating({ mutationKey: ["reminders"] }) === 1) return qc.invalidateQueries(remindersQuery);
-    },
+    // ponytail: no rollback; refetching puts the server's truth back either way.
+    onSettled: () => refetchWhenLast(qc, "reminders", () => qc.invalidateQueries(remindersQuery)),
   });
 }
 

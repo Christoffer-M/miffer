@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Bell, House, ShoppingBasket, Users } from "lucide-react";
 import { connectLive, session, useToken } from "../api";
 import { AskForNotifications } from "../components/AskForNotifications";
+import { changesPending } from "../mutations/settle";
 import { meQuery } from "../queries/household";
 import { refreshItems } from "../queries/items";
 import { remindersQuery } from "../queries/reminders";
@@ -25,12 +26,11 @@ function Root() {
   useEffect(() => {
     if (!token) return;
     return connectLive((what) => {
-      if (what === "items") refreshItems(queryClient).catch(() => {});
-      // Not while this phone's own changes are on their way: the last one refetches anyway.
-      else if (what === "reminders") {
-        if (!queryClient.isMutating({ mutationKey: ["reminders"] })) queryClient.invalidateQueries(remindersQuery);
-      }
-      else queryClient.invalidateQueries(meQuery);
+      if (what === "members") queryClient.invalidateQueries(meQuery);
+      // Not while this phone's own changes are on their way: the last one refetches (settle.ts).
+      else if (changesPending(queryClient, what)) return;
+      else if (what === "items") refreshItems(queryClient).catch(() => {});
+      else queryClient.invalidateQueries(remindersQuery);
     });
   }, [token, queryClient]);
 

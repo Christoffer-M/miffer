@@ -35,7 +35,7 @@ function showReminder({ reminder, title, body }) {
 
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
-  const { reminder, url = "/groceries" } = e.notification.data ?? {};
+  const { reminder, url } = e.notification.data ?? {};
   e.waitUntil(reminder && e.action ? act(reminder, e.action) : open(url));
 });
 
@@ -56,14 +56,16 @@ async function act(id, action) {
   if (!token || !res?.ok) return open("/reminders");
 }
 
+/** Brings the app forward, on that screen if there is one (reminders); else opens it on Groceries. */
 function open(url) {
   return (
     self.clients
       // Uncontrolled too: the page that registered this worker isn't controlled until it reloads.
       .matchAll({ type: "window", includeUncontrolled: true })
       .then(([win]) => {
-        if (!win) return self.clients.openWindow(url);
-        win.postMessage({ open: url }); // main.tsx takes it to that screen
+        if (!win) return self.clients.openWindow(url ?? "/groceries");
+        // An app that's already open stays where it is for something added, as it always has.
+        if (url) win.postMessage({ open: url }); // main.tsx takes it to that screen
         return win.focus();
       })
   );

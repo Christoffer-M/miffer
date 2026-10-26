@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ok, type Item } from "../api";
 import { itemsQuery } from "../queries/items";
 import { animateListChange, type ListChange } from "../viewTransition";
+import { refetchWhenLast } from "./settle";
 
 /**
  * A change that shows (animated) on this phone at once, then gets confirmed by the server.
@@ -15,6 +16,7 @@ function useListMutation<V>(
   const qc = useQueryClient();
   return useMutation({
     mutationFn: send,
+    mutationKey: ["items"],
     // Sent one at a time, in order, so an Undo can't reach the server before the delete it undoes.
     scope: { id: "items" },
     onMutate: async (v) => {
@@ -22,7 +24,7 @@ function useListMutation<V>(
       animateListChange(() => qc.setQueryData(itemsQuery.queryKey, (old = []) => apply(old, v)), change);
     },
     // ponytail: no rollback; refetching puts the server's truth back either way.
-    onSettled: () => qc.invalidateQueries(itemsQuery),
+    onSettled: () => refetchWhenLast(qc, "items", () => qc.invalidateQueries(itemsQuery)),
   });
 }
 

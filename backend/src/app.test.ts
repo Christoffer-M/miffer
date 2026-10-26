@@ -3,7 +3,8 @@ import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { afterAll, beforeAll, expect, test, vi } from "vitest";
 import webpush from "web-push";
 import { app } from "./app.js";
-import { db, sql } from "./db/index.js";
+import { eq, sql as q } from "drizzle-orm";
+import { db, schema, sql } from "./db/index.js";
 import { fireDue } from "./reminders.js";
 
 // A throwaway key pair, only so push.ts turns notifications on. Set before it's imported.
@@ -311,7 +312,51 @@ test("reminders reach who they're for once, snooze, and repeat on the wall clock
   await call(`/reminders/${trash}`, { method: "DELETE", token: stranger.token });
   await call(`/reminders/${trash}`, { method: "PATCH", token: stranger.token, body: { title: "Hacked" } });
   expect(await list()).toEqual([expect.objectContaining({ id: trash, title: "Take out the trash" })]);
-  expect((await add({ id: crypto.randomUUID(), title: "x", remindAt: null, timeZone: "Mars/Olympus" })).status).toBe(400);
+  for (const timeZone of ["Mars/Olympus", "+01:00"]) {
+    expect((await add({ id: crypto.randomUUID(), title: "x", remindAt: null, timeZone })).status).toBe(400);
+  }
+  send.mockRestore();
+});
+
+test("a repeating reminder nobody ticks off still comes round, and edits make it wait again", async () => {
+  const send = vi.spyOn(webpush, "sendNotification").mockResolvedValue({ statusCode: 201, body: "", headers: {} });
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  const endpoint = `https://fcm.googleapis.com/fcm/send/${anna.deviceId}`;
+  await call("/households/me/push", { method: "PUT", token: anna.token, body: { endpoint, keys: { p256dh: "k", auth: "a" } } });
+  const DAY = 24 * 60 * 60 * 1000;
+  const id = crypto.randomUUID();
+  const get = async () => (await (await call("/reminders", { token: anna.token })).json())[0];
+  const sends = () => send.mock.calls.filter(([sub]) => sub.endpoint === endpoint).length;
+  const patch = (body: object) => call(`/reminders/${id}`, { method: "PATCH", token: anna.token, body });
+
+  // Daily, set three days in the past: sent once, from its latest time, not once for each day missed.
+  const fields = { title: "Feed the cat", notes: "", repeat: "day", forDevice: null, timeZone: "Europe/Copenhagen" };
+  await call("/reminders", { method: "POST", token: anna.token, body: { id, ...fields, remindAt: new Date(Date.now() - 3 * DAY).toISOString() } });
+  await fireDue();
+  await fireDue();
+  expect(sends()).toBe(1);
+  const latest = Date.parse((await get()).remindAt);
+  expect(Date.now() - latest).toBeLessThan(DAY);
+
+  // Never ticked off: a day later it's sent again.
+  const { reminders } = schema;
+  await db.update(reminders).set({ remindAt: q`${reminders.remindAt} - interval '1 day'` }).where(eq(reminders.id, id));
+  await fireDue();
+  expect(sends()).toBe(2);
+  expect(await get()).toMatchObject({ notified: true, done: false });
+
+  // A snooze or a new time makes it wait again; a new time also ends the snooze.
+  await patch({ snoozedUntil: new Date(Date.now() + DAY).toISOString() });
+  expect(await get()).toMatchObject({ notified: false, snoozedUntil: expect.any(String) });
+  const later = new Date(Date.now() + 2 * DAY).toISOString();
+  await patch({ remindAt: later, repeat: null });
+  expect(await get()).toMatchObject({ notified: false, snoozedUntil: null, remindAt: later });
+
+  // Done, then put back.
+  await call(`/reminders/${id}/done`, { method: "POST", token: anna.token });
+  expect(await get()).toMatchObject({ done: true });
+  await patch({ done: false });
+  expect(await get()).toMatchObject({ done: false, remindAt: later });
   send.mockRestore();
 });
 

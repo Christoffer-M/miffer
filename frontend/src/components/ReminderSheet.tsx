@@ -55,11 +55,6 @@ export function ReminderSheet({ reminder, onClose }: { reminder?: Reminder; onCl
   // Who won't hear about it: only worth saying when it has a time and the server can send at all.
   const recipients = forDevice ? members.filter((m) => m.id === forDevice) : members;
   const silent = me?.pushKey && remindAt ? recipients.filter((m) => !m.pushOn) : [];
-  const avatar = (id: string, name: string) => (
-    <span className={s.mini}>
-      <Avatar name={name} index={members.findIndex((m) => m.id === id)} />
-    </span>
-  );
 
   function save(e: FormEvent) {
     e.preventDefault();
@@ -171,7 +166,7 @@ export function ReminderSheet({ reminder, onClose }: { reminder?: Reminder; onCl
                 >
                   {members.map((m) => (
                     <ToggleButton key={m.id} id={m.id} className={`${s.chip} ${s.withAvatar}`}>
-                      {avatar(m.id, m.name)}
+                      <Avatar name={m.name} index={members.indexOf(m)} small />
                       {m.id === myId ? "Me" : m.name}
                     </ToggleButton>
                   ))}

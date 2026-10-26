@@ -165,13 +165,19 @@ function About({ reminder: r }: { reminder: Reminder }) {
   return (
     <>
       {from && from !== "you" && <span>· from {from}</span>}
-      {r.repeat && (
-        <>
-          <span aria-hidden>·</span>
-          <Repeat size={14} aria-hidden />
-          {REPEATS[r.repeat]}
-        </>
-      )}
+      <Repeats reminder={r} />
+    </>
+  );
+}
+
+/** "· weekly" with its icon, for a repeating one. */
+function Repeats({ reminder: r }: { reminder: Reminder }) {
+  if (!r.repeat) return null;
+  return (
+    <>
+      <span aria-hidden>·</span>
+      <Repeat size={14} aria-hidden />
+      {REPEATS[r.repeat]}
     </>
   );
 }
@@ -181,7 +187,11 @@ function When({ reminder: r }: { reminder: Reminder }) {
     return (
       <span className={`${s.meta} ${s.soon}`}>
         <AlarmClock size={14} aria-hidden />
-        Snoozed · back {formatWhen(new Date(r.snoozedUntil)).replace(/^Today /, "at ")}
+        {/* "back at 13:17" today, "back tomorrow 09:00", "back Thu 17:30" */}
+        Snoozed · back{" "}
+        {formatWhen(new Date(r.snoozedUntil))
+          .replace(/^Today /, "at ")
+          .replace(/^(Tomorrow|Yesterday)/, (day) => day.toLowerCase())}
       </span>
     );
   }
@@ -190,13 +200,7 @@ function When({ reminder: r }: { reminder: Reminder }) {
     <span className={s.meta}>
       <Clock size={14} aria-hidden />
       {formatWhen(new Date(r.remindAt))}
-      {r.repeat && (
-        <>
-          <span aria-hidden>·</span>
-          <Repeat size={14} aria-hidden />
-          {REPEATS[r.repeat]}
-        </>
-      )}
+      <Repeats reminder={r} />
     </span>
   );
 }
@@ -209,7 +213,7 @@ function For({ reminder: r }: { reminder: Reminder }) {
   return (
     <span className={s.for} aria-label={r.forDevice ? `For ${whoIs(r.forDevice)}` : "For everyone"}>
       {shown.map((m) => (
-        <Avatar key={m.id} name={m.name} index={members.indexOf(m)} />
+        <Avatar key={m.id} name={m.name} index={members.indexOf(m)} small />
       ))}
     </span>
   );

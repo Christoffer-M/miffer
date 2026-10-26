@@ -1,4 +1,5 @@
 import type { PushSubscription } from "web-push";
+import { sql } from "drizzle-orm";
 import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const households = pgTable("households", {
@@ -70,7 +71,13 @@ export const reminders = pgTable(
     done: boolean().notNull().default(false),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index().on(t.householdId)],
+  (t) => [
+    index().on(t.householdId),
+    // For the check every 30s: only what's still waiting to be sent, by when it's due.
+    index("reminders_waiting_index")
+      .on(sql`coalesce(${t.snoozedUntil}, ${t.remindAt})`)
+      .where(sql`not ${t.notified} and not ${t.done}`),
+  ],
 );
 
 // Everything a household has added and how often, for suggestions. Unlike items it

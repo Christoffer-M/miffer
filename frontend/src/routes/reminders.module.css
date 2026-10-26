@@ -159,9 +159,6 @@
   flex-shrink: 0;
 }
 .for > span {
-  width: 26px;
-  height: 26px;
-  font-size: 12px;
   border-color: var(--surface);
 }
 .for > span + span {
