@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GroceriesRouteImport } from './routes/groceries'
 import { Route as NameRouteImport } from './routes/name'
+import { Route as RemindersRouteImport } from './routes/reminders'
 import { Route as UsRouteImport } from './routes/us'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +30,11 @@ const NameRoute = NameRouteImport.update({
   path: '/name',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RemindersRoute = RemindersRouteImport.update({
+  id: '/reminders',
+  path: '/reminders',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsRoute = UsRouteImport.update({
   id: '/us',
   path: '/us',
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/groceries': typeof GroceriesRoute
   '/name': typeof NameRoute
+  '/reminders': typeof RemindersRoute
   '/us': typeof UsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/groceries': typeof GroceriesRoute
   '/name': typeof NameRoute
+  '/reminders': typeof RemindersRoute
   '/us': typeof UsRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/groceries': typeof GroceriesRoute
   '/name': typeof NameRoute
+  '/reminders': typeof RemindersRoute
   '/us': typeof UsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/groceries' | '/name' | '/us'
+  fullPaths: '/' | '/groceries' | '/name' | '/reminders' | '/us'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/groceries' | '/name' | '/us'
-  id: '__root__' | '/' | '/groceries' | '/name' | '/us'
+  to: '/' | '/groceries' | '/name' | '/reminders' | '/us'
+  id: '__root__' | '/' | '/groceries' | '/name' | '/reminders' | '/us'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   GroceriesRoute: typeof GroceriesRoute
   NameRoute: typeof NameRoute
+  RemindersRoute: typeof RemindersRoute
   UsRoute: typeof UsRoute
 }
 
@@ -92,6 +102,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reminders': {
+      id: '/reminders'
+      path: '/reminders'
+      fullPath: '/reminders'
+      preLoaderRoute: typeof RemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/us': {
       id: '/us'
       path: '/us'
@@ -106,6 +123,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   GroceriesRoute: GroceriesRoute,
   NameRoute: NameRoute,
+  RemindersRoute: RemindersRoute,
   UsRoute: UsRoute,
 }
 export const routeTree = rootRouteImport

@@ -11,9 +11,10 @@ export const Wordmark = () => (
 const COLORS = [s.c0, s.c1, s.c2, s.c3, s.c4];
 const SHOWN = 4;
 
-export function Avatar({ name, index }: { name: string; index: number }) {
+/** A member's initial in their colour. Small: in a row or a chip. */
+export function Avatar({ name, index, small }: { name: string; index: number; small?: boolean }) {
   return (
-    <span className={`${s.avatar} ${COLORS[index % COLORS.length]}`} title={name} aria-hidden="true">
+    <span className={`${s.avatar} ${COLORS[index % COLORS.length]} ${small ? s.small : ""}`} title={name} aria-hidden="true">
       {name.trim().charAt(0).toUpperCase() || "?"}
     </span>
   );

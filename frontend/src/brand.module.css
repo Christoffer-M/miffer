@@ -26,6 +26,12 @@
   border: 2px solid var(--ground);
 }
 
+.small {
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+}
+
 .avatars .avatar + .avatar {
   margin-left: -8px;
 }

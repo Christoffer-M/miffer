@@ -1,6 +1,6 @@
 # miffer
 
-A shared grocery list for two phones, kept in sync live.
+A shared grocery list and reminders for two phones, kept in sync live.
 
 - `frontend/`: React + Vite + TanStack Router + TanStack Query. Installable as a PWA; Tauri comes later.
 - `backend/`: Hono on Node, Drizzle + Postgres, plus a WebSocket that tells phones when their list changed.

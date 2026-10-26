@@ -1,4 +1,5 @@
 import type { PushSubscription } from "web-push";
+import { sql } from "drizzle-orm";
 import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const households = pgTable("households", {
@@ -43,6 +44,40 @@ export const items = pgTable(
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index().on(t.householdId)],
+);
+
+export const reminders = pgTable(
+  "reminders",
+  {
+    // Made on the phone, like items.
+    id: uuid().primaryKey(),
+    householdId: uuid()
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    title: text().notNull(),
+    notes: text().notNull().default(""),
+    // Who gets the nudge; null means everyone in the household.
+    forDevice: uuid().references(() => devices.id, { onDelete: "set null" }),
+    createdBy: uuid().references(() => devices.id, { onDelete: "set null" }),
+    // When it's due, or null for a plain to-do. A repeating one moves on from here when it's done.
+    remindAt: timestamp({ withTimezone: true }),
+    repeat: text({ enum: ["day", "week", "month"] }),
+    // The creator's time zone, so "every day at 18:00" stays at 18:00 when the clocks change.
+    timeZone: text().notNull().default("UTC"),
+    // Snoozing only pushes this nudge back; the repeat keeps counting from remindAt.
+    snoozedUntil: timestamp({ withTimezone: true }),
+    // Sent for the current remindAt (or snooze); it shows as due until it's done or snoozed.
+    notified: boolean().notNull().default(false),
+    done: boolean().notNull().default(false),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index().on(t.householdId),
+    // For the check every 30s: only what's still waiting to be sent, by when it's due.
+    index("reminders_waiting_index")
+      .on(sql`coalesce(${t.snoozedUntil}, ${t.remindAt})`)
+      .where(sql`not ${t.notified} and not ${t.done}`),
+  ],
 );
 
 // Everything a household has added and how often, for suggestions. Unlike items it

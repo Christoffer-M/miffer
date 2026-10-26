@@ -146,7 +146,7 @@ function Household() {
   );
 }
 
-/** Turning on notifications for when someone else adds something. Hidden if the server has none set up. */
+/** Turning on notifications for adds and reminders. Hidden if the server has none set up. */
 function Notifications() {
   const { data } = useQuery(meQuery);
   const setPush = useSetPush(data?.pushKey);
@@ -159,10 +159,10 @@ function Notifications() {
       </h2>
       <span className={`${ui.muted} ${ui.small}`}>
         {!canPush
-          ? "To get a notification when someone adds something, add miffer to your Home Screen and open it from there."
+          ? "To get notifications for the list and reminders, add miffer to your Home Screen and open it from there."
           : data.pushOn
-            ? "This phone gets a notification when someone else adds something."
-            : "Get a notification when someone else adds something."}
+            ? "This phone gets a notification when someone else adds something, and when a reminder is due."
+            : "Get a notification when someone else adds something, and when a reminder is due."}
       </span>
       {canPush && (
         <Button variant="outline" onPress={() => setPush.mutate(!data.pushOn)} isDisabled={setPush.isPending}>

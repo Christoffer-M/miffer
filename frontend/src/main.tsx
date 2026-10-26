@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { shareTokenWithWorker } from "./api";
 import { fitAppToKeyboard } from "./keyboard";
 import { routeTree } from "./routeTree.gen";
 import "./tokens.css";
@@ -9,11 +10,12 @@ import "./tokens.css";
 fitAppToKeyboard();
 // Only for notifications (no caching). Registered up front so turning them on can subscribe right away.
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
+shareTokenWithWorker();
 
 const queryClient = new QueryClient();
 
 // Tabs in bar order: moving right slides the new screen in from the right, and back again.
-const TABS = ["/", "/groceries", "/us"];
+const TABS = ["/", "/groceries", "/reminders", "/us"];
 
 const router = createRouter({
   routeTree,
@@ -28,6 +30,11 @@ const router = createRouter({
       return [to > from ? "forward" : "back"];
     },
   },
+});
+
+// A tapped notification brings an already open app to the screen it's about (sw.js).
+navigator.serviceWorker?.addEventListener("message", (e) => {
+  if (typeof e.data?.open === "string") router.navigate({ to: e.data.open });
 });
 
 declare module "@tanstack/react-router" {

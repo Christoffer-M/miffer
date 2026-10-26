@@ -1,0 +1,1 @@
+CREATE INDEX "reminders_waiting_index" ON "reminders" USING btree (coalesce("snoozed_until", "remind_at")) WHERE not "reminders"."notified" and not "reminders"."done";

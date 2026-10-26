@@ -28,7 +28,9 @@ export function AskForNotifications() {
           <Heading slot="title" className={s.title}>
             Know when something's added?
           </Heading>
-          <p className={s.message}>Get a notification when someone in your household adds to the list.</p>
+          <p className={s.message}>
+            Get a notification when someone in your household adds to the list, and when a reminder is due.
+          </p>
           {setPush.error && <p className={ui.error}>{setPush.error.message}</p>}
           <div className={s.actions}>
             <Button variant="outline" onPress={() => setNotNow(true)}>
