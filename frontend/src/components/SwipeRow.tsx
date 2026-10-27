@@ -1,14 +1,20 @@
 import { type PointerEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import s from "./SwipeRow.module.css";
 
-type Action = { label: string; icon: ReactNode; onSwipe: () => void };
+type Action = {
+  label: string;
+  icon: ReactNode;
+  onSwipe: () => void;
+  /** The panel's colour, instead of green (right) or red (left). White text on it must pass 4.5:1. */
+  color?: string;
+};
 
 type Props = {
   children: ReactNode;
-  /** Revealed and run when swiping right. */
-  right: Action;
-  /** Revealed and run when swiping left. */
-  left: Action;
+  /** Revealed and run when swiping right. Without it the row doesn't move right. */
+  right?: Action;
+  /** Revealed and run when swiping left. Without it the row doesn't move left. */
+  left?: Action;
   /** Class for the sliding part, e.g. its layout and background. */
   className?: string;
 };
@@ -78,7 +84,7 @@ export function SwipeRow({ children, right, left, className }: Props) {
       if (e.type === "pointerup" && d.dx !== 0 && (d.armed || flick)) {
         // Stay where the finger left it: the list animation carries the row on from here.
         setArmed(true);
-        (d.dx > 0 ? actions.current.right : actions.current.left).onSwipe();
+        (d.dx > 0 ? actions.current.right : actions.current.left)?.onSwipe();
       } else {
         // Spring back (the CSS transition animates it); the panel goes once it's home.
         content.style.transform = "";
@@ -137,7 +143,7 @@ export function SwipeRow({ children, right, left, className }: Props) {
     d.lastX = e.clientX;
     d.lastT = e.timeStamp;
 
-    d.dx = Math.max(-d.width, Math.min(d.width, mx));
+    d.dx = Math.max(left ? -d.width : 0, Math.min(right ? d.width : 0, mx));
     content.style.transform = `translateX(${d.dx}px)`;
 
     // Only these two reach React, and only when they change.
@@ -154,7 +160,7 @@ export function SwipeRow({ children, right, left, className }: Props) {
     }
   }
 
-  const action = side === "right" ? right : left;
+  const action = side === "right" ? right : side === "left" ? left : undefined;
 
   return (
     <div
@@ -172,8 +178,13 @@ export function SwipeRow({ children, right, left, className }: Props) {
         e.stopPropagation();
       }}
     >
-      {side && (
-        <div className={`${s.under} ${side === "right" ? s.right : s.left}`} data-armed={armed || undefined} aria-hidden="true">
+      {action && (
+        <div
+          className={`${s.under} ${side === "right" ? s.right : s.left}`}
+          style={{ background: action.color }}
+          data-armed={armed || undefined}
+          aria-hidden="true"
+        >
           <span className={s.action}>
             {action.icon}
             {action.label}

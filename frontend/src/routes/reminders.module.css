@@ -71,10 +71,14 @@
   font-weight: 600;
 }
 
-/* Due: dark like the Undo bar, so it stands out from what's coming up. */
+/* Due: dark like the Undo bar, so it stands out from what's coming up.
+   The card slides when swiped; the item around it keeps the swipe panels inside its corners. */
+.dueItem {
+  border-radius: 16px;
+  overflow: hidden;
+}
 .dueCard {
   padding: 8px 14px 14px 16px;
-  border-radius: 16px;
   background: var(--ink);
   color: #fff;
   display: flex;
@@ -118,8 +122,12 @@
   font-weight: 500;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 80ms ease-out,
+    background 120ms;
 }
 .snoozeChip[data-pressed] {
+  transform: scale(0.95);
   background: rgb(255 255 255 / 0.2);
 }
 .snoozeChip[data-focus-visible] {
@@ -136,17 +144,34 @@
 .sheet {
   background: var(--surface);
   border-radius: 16px;
+  overflow: hidden; /* keeps the swipe panels inside the rounded corners */
 }
 .item {
+  border-bottom: 1px solid var(--line-soft);
+}
+.item:last-child {
+  border-bottom: 0;
+}
+/* During list animations each row is drawn on its own layer, outside the card's
+   clipping, so the top and bottom rows carry the card's rounded corners themselves. */
+.item:first-child {
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  overflow: hidden;
+}
+.item:last-child {
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+  overflow: hidden;
+}
+/* The part of a row that slides when swiped; opaque so it hides the action panel underneath. */
+.itemContent {
   display: flex;
   align-items: center;
   gap: 14px;
   min-height: 64px;
   padding: 0 14px 0 16px;
-  border-bottom: 1px solid var(--line-soft);
-}
-.item:last-child {
-  border-bottom: 0;
+  background: var(--surface);
 }
 .itemTitle {
   font-size: 16px;
@@ -168,8 +193,9 @@
 .doneHead {
   padding: 0 0 0 8px;
 }
-.doneList li {
+.doneContent {
   padding: 0 8px;
+  background: var(--ground);
 }
 .doneCheck {
   color: var(--muted);

@@ -84,19 +84,17 @@ html:active-view-transition-type(back)::view-transition-new(root) {
 }
 
 /*
- * Grocery list changes (src/viewTransition.ts). While <html> has .list-transition,
- * every item has its own name (different in the list and the cart), so the browser
- * animates it leaving, arriving or shifting on its own.
+ * Grocery and reminder list changes (src/viewTransition.ts). While <html> has .list-transition,
+ * every item has its own name (different in each list), so the browser animates it leaving,
+ * arriving or shifting on its own. Blocks are the cards and headings around the items.
  */
 .list-transition [data-vt-item] {
   view-transition-name: var(--vt-name);
   view-transition-class: item;
 }
-.list-transition [data-vt="todo-sheet"] {
-  view-transition-name: todo-sheet;
-}
-.list-transition [data-vt="cart-head"] {
-  view-transition-name: cart-head;
+.list-transition [data-vt-block] {
+  view-transition-name: var(--vt-name);
+  view-transition-class: block;
 }
 .list-transition [data-vt="list-header"] {
   view-transition-name: list-header;
@@ -114,22 +112,28 @@ html:active-view-transition-type(back)::view-transition-new(root) {
  */
 .list-transition::view-transition-old(root),
 .list-transition::view-transition-old(list-header),
-.list-transition::view-transition-old(add-bar) {
+.list-transition::view-transition-old(add-bar),
+.list-transition::view-transition-old(overlay) {
   display: none;
 }
 .list-transition::view-transition-new(root),
 .list-transition::view-transition-new(list-header),
-.list-transition::view-transition-new(add-bar) {
+.list-transition::view-transition-new(add-bar),
+.list-transition::view-transition-new(overlay) {
   animation: none;
 }
 /* Same for items that stay: they don't change, they only move. Fading their old picture
    into the new one also went wrong on Android: on the first add after focusing the field,
    Chrome dropped the old pictures as its autofill bar closed, so every row vanished and
-   faded back in. Arriving and leaving items (:only-child) still animate below. */
-.list-transition::view-transition-old(.item):not(:only-child) {
+   faded back in. Arriving and leaving items (:only-child) still animate below.
+   (Not written as :not(:only-child): Chrome never matches :not() on these pseudo-elements.) */
+.list-transition::view-transition-old(.item) {
   display: none;
 }
-.list-transition::view-transition-new(.item):not(:only-child) {
+.list-transition::view-transition-old(.item):only-child {
+  display: block;
+}
+.list-transition::view-transition-new(.item) {
   animation: none;
 }
 
@@ -139,10 +143,13 @@ html:active-view-transition-type(back)::view-transition-new(root) {
 ::view-transition-group(tabs) {
   z-index: 2;
 }
+/* An open sheet (Confirm.module.css) stays over all of it, as a due reminder is dealt with on Reminders. */
+::view-transition-group(overlay) {
+  z-index: 3;
+}
 
 ::view-transition-group(.item),
-::view-transition-group(todo-sheet),
-::view-transition-group(cart-head) {
+::view-transition-group(.block) {
   animation-duration: 340ms;
   animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -166,8 +173,7 @@ html:active-view-transition-type(check)::view-transition-old(.item):only-child {
  * hold their old spot.
  */
 html:active-view-transition-type(remove, check)::view-transition-group(.item),
-html:active-view-transition-type(remove, check)::view-transition-group(todo-sheet),
-html:active-view-transition-type(remove, check)::view-transition-group(cart-head),
+html:active-view-transition-type(remove, check)::view-transition-group(.block),
 html:active-view-transition-type(check)::view-transition-new(.item):only-child {
   animation-delay: 200ms;
   animation-fill-mode: both;

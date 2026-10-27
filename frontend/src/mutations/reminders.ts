@@ -1,18 +1,24 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { InferRequestType } from "hono/client";
 import { api, ok, type Reminder } from "../api";
-import { remindersQuery } from "../queries/reminders";
+import { refreshReminders, remindersQuery } from "../queries/reminders";
 import { nextTime } from "../reminders";
+import { animateListChange, type ListChange } from "../viewTransition";
 import { refetchWhenLast } from "./settle";
 
 export type NewReminder = InferRequestType<typeof api.reminders.$post>["json"];
 export type ReminderChanges = InferRequestType<(typeof api.reminders)[":id"]["$patch"]>["json"];
 
 /**
- * A change that shows on this phone at once (`apply`), then gets confirmed by the server.
- * Without `apply` the list just refetches once the server has it.
+ * A change that shows on this phone at once (`apply`, animated on the Reminders screen), then gets
+ * confirmed by the server. Without `apply` the list just refetches once the server has it.
+ * `change` picks the animation, as for groceries: "check" slides right, "remove" slides left.
  */
-function useReminderMutation<V, R>(send: (v: V) => Promise<R>, apply?: (list: Reminder[], v: V) => Reminder[]) {
+function useReminderMutation<V, R>(
+  send: (v: V) => Promise<R>,
+  apply?: (list: Reminder[], v: V) => Reminder[],
+  change?: (v: V) => ListChange | undefined,
+) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: send,
@@ -22,10 +28,13 @@ function useReminderMutation<V, R>(send: (v: V) => Promise<R>, apply?: (list: Re
     onMutate: async (v) => {
       if (!apply) return;
       await qc.cancelQueries(remindersQuery);
-      qc.setQueryData(remindersQuery.queryKey, (old = []) => apply(old, v));
+      const write = () => qc.setQueryData(remindersQuery.queryKey, (old = []) => apply(old, v));
+      if (location.pathname === "/reminders") animateListChange(write, change?.(v));
+      else write();
     },
     // ponytail: no rollback; refetching puts the server's truth back either way.
-    onSettled: () => refetchWhenLast(qc, "reminders", () => qc.invalidateQueries(remindersQuery)),
+    onSettled: () =>
+      refetchWhenLast(qc, "reminders", () => refreshReminders(qc).catch(() => qc.invalidateQueries(remindersQuery))),
   });
 }
 
@@ -45,6 +54,8 @@ export const useChangeReminder = () =>
         ...(remindAt !== undefined && { remindAt, snoozedUntil: null, notified: false }),
         ...(snoozedUntil && { snoozedUntil, notified: false }),
       })),
+    // Snoozing and putting back slide it across to where it goes now, like ticking it off.
+    ({ snoozedUntil, done }) => (snoozedUntil || done === false ? "check" : undefined),
   );
 
 /** Ticks it off; a repeating one moves on to its next time instead. Resolves to its times on the server after. */
@@ -57,6 +68,7 @@ export const useCompleteReminder = () =>
           ? { remindAt: nextTime(new Date(r.remindAt), r.repeat).toISOString(), snoozedUntil: null, notified: false }
           : { done: true, snoozedUntil: null },
       ),
+    () => "check",
   );
 
 type ReminderState = InferRequestType<(typeof api.reminders)[":id"]["state"]["$put"]>["json"];
@@ -77,10 +89,12 @@ export const useDeleteReminder = () =>
   useReminderMutation(
     (id: string) => ok(api.reminders[":id"].$delete({ param: { id } })),
     (list, id) => list.filter((r) => r.id !== id),
+    () => "remove",
   );
 
 export const useClearDoneReminders = () =>
   useReminderMutation(
     (_: void) => ok(api.reminders.done.$delete()),
     (list) => list.filter((r) => !r.done),
+    () => "remove",
   );

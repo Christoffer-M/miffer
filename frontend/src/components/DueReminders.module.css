@@ -26,6 +26,39 @@
   align-self: center;
 }
 
+/* The reminder itself: swipes, and slides in as the next one comes up. It reaches a little
+   past its padding so the swipe panel and the Edit button's focus ring aren't clipped. */
+.card {
+  margin: -6px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.cardContent {
+  padding: 6px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+.next {
+  animation: card-next 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.back {
+  animation: card-back 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes card-next {
+  from {
+    opacity: 0;
+    transform: translateX(40%);
+  }
+}
+@keyframes card-back {
+  from {
+    opacity: 0;
+    transform: translateX(-40%);
+  }
+}
+
 .head {
   display: flex;
   align-items: center;
@@ -127,7 +160,10 @@
   font-weight: 600;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 80ms ease-out;
+  transition:
+    transform 80ms ease-out,
+    background 120ms,
+    border-color 120ms;
 }
 .chip[data-pressed] {
   transform: scale(0.97);
@@ -171,4 +207,11 @@
   left: 12px;
   right: 12px;
   bottom: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .next,
+  .back {
+    animation: none;
+  }
 }

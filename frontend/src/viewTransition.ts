@@ -1,4 +1,6 @@
-// Grocery list animations. A list change runs as a View Transition: every item
+import type { CSSProperties } from "react";
+
+// Grocery and reminder list animations. A list change runs as a View Transition: every item
 // has its own transition name (see [data-vt-item] in tokens.css), so the browser
 // animates each item leaving, arriving or shifting. The names are only switched
 // on during list changes, so screen changes still slide the whole screen.
@@ -39,7 +41,21 @@ export function animateListChange(update: () => void, change?: ListChange) {
     change && supportsTypes()
       ? document.startViewTransition({ update: run, types: [change] })
       : document.startViewTransition(run);
+  // A skipped transition (the app in the background, or another one starting) still updates; just no animation.
+  transition.ready.catch(() => {});
   transition.finished.finally(() => {
     if (--running === 0) html.classList.remove("list-transition");
   });
 }
+
+/** Lets an item animate in list changes: `name` is its own, different in each list it can be in (tokens.css). */
+export const animatedItem = (name: string) => ({
+  "data-vt-item": "",
+  style: { "--vt-name": name } as CSSProperties,
+});
+
+/** The same for a card or heading around the items, so it glides along as they come and go. */
+export const animatedBlock = (name: string) => ({
+  "data-vt-block": "",
+  style: { "--vt-name": name } as CSSProperties,
+});

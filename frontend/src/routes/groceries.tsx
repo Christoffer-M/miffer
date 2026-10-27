@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { type CSSProperties, useContext, useEffect, useState, useSyncExternalStore } from "react";
+import { useContext, useEffect, useState, useSyncExternalStore } from "react";
 import { Button as AriaButton, Form } from "react-aria-components";
 import { Check, Plus, Trash2, Undo2, X } from "lucide-react";
 import { type Item, session } from "../api";
@@ -15,6 +15,7 @@ import { useMembers } from "../queries/household";
 import { historyQuery, itemsQuery } from "../queries/items";
 import { starterItems } from "../groceries.da";
 import { lower, suggest } from "../suggest";
+import { animatedBlock, animatedItem } from "../viewTransition";
 import ui from "../ui.module.css";
 import s from "./groceries.module.css";
 
@@ -39,10 +40,7 @@ function useOnline() {
  * name in the list than in the cart, so ticking it slides it out of one list and drops
  * it into the other, instead of gliding between them.
  */
-const animated = (id: string, list: "todo" | "cart") => ({
-  "data-vt-item": id,
-  style: { "--vt-name": `${list}-${id}` } as CSSProperties,
-});
+const animated = (id: string, list: "todo" | "cart") => animatedItem(`${list}-${id}`);
 
 /** How long Undo stays up after removing something. */
 const UNDO_MS = 6000;
@@ -130,7 +128,7 @@ function Groceries() {
         {!isPending && items.length === 0 && <p className={`${ui.muted} ${s.empty}`}>Nothing on the list yet.</p>}
 
         {todo.length > 0 && (
-          <ul className={s.sheet} aria-label="To get" data-vt="todo-sheet">
+          <ul className={s.sheet} aria-label="To get" {...animatedBlock("todo-sheet")}>
             {todo.map((item) => (
               <li key={item.id} className={s.item} {...animated(item.id, "todo")}>
                 <SwipeRow
@@ -157,7 +155,7 @@ function Groceries() {
 
         {done.length > 0 && (
           <section aria-labelledby="in-cart">
-            <div className={`${ui.row} ${s.sectionHead}`} data-vt="cart-head">
+            <div className={`${ui.row} ${s.sectionHead}`} {...animatedBlock("cart-head")}>
               <h2 id="in-cart" className={`${ui.eyebrow} ${ui.muted} ${s.sectionTitle}`}>
                 In the cart
               </h2>

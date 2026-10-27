@@ -50,13 +50,45 @@
   font-weight: 500;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 80ms ease-out,
+    background 150ms,
+    border-color 150ms,
+    color 150ms;
 }
 /* React Aria marks state with data attributes. */
+.chip[data-pressed] {
+  transform: scale(0.95);
+}
 .chip[data-selected] {
   background: var(--accent-tint);
   border-color: var(--accent);
   color: #9a3412; /* passes 4.5:1 on the tint */
   font-weight: 600;
+  animation: picked 220ms cubic-bezier(0.2, 0.8, 0.2, 1.4);
+}
+@keyframes picked {
+  from {
+    transform: scale(0.92);
+  }
+}
+
+/* Repeat and the notifications hint ease in when they come up. */
+.reveal {
+  animation: reveal 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip[data-selected],
+  .reveal {
+    animation: none;
+  }
 }
 .chip[data-focus-visible] {
   outline: 2px solid var(--accent);

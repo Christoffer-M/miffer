@@ -11,6 +11,7 @@ import { remindersQuery } from "../queries/reminders";
 import { dueAt, dueFor, formatBack, formatDue, nextTime, REPEATS, SNOOZES } from "../reminders";
 import { Button } from "./Button";
 import { ReminderSheet } from "./ReminderSheet";
+import { SwipeRow } from "./SwipeRow";
 import { UndoBar } from "./UndoBar";
 import confirm from "./Confirm.module.css";
 import ui from "../ui.module.css";
@@ -28,7 +29,9 @@ if (tappedAtStart) {
   history.replaceState(history.state, "", startUrl);
 }
 
-const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+const [, inAnHour] = SNOOZES;
+
+const capitalize =(text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /**
  * What's due for this phone, one at a time, as soon as the app opens: Done, Snooze, or Not now.
@@ -78,8 +81,12 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
   const [shown, setShown] = useState(due);
   if (due && due !== shown) setShown(due);
   const at = queue.indexOf(shown!);
+  // Which way the next one slides in: on from Done, Snooze or Skip, back for Undo. Not when the sheet opens.
+  const [moved, setMoved] = useState<"next" | "back" | null>(null);
+  if (!due && moved) setMoved(null);
 
   function done(r: Reminder) {
+    setMoved("next");
     const next = r.repeat && r.remindAt && nextTime(new Date(r.remindAt), r.repeat);
     const after = complete.mutateAsync(r.id);
     after.catch(() => {}); // the refetch shows it wasn't done; an Undo then finds nothing to undo
@@ -88,6 +95,7 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
 
   function snooze(r: Reminder, until: Date) {
     const snoozedUntil = until.toISOString();
+    setMoved("next");
     change.mutate({ id: r.id, snoozedUntil });
     const after = Promise.resolve({ remindAt: r.remindAt, snoozedUntil, done: false });
     setUndo({ before: r, after, text: `Snoozed, back ${formatBack(until)}` });
@@ -98,7 +106,13 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
     const { id, remindAt, snoozedUntil, notified, done } = undo.before;
     restore.mutate({ id, remindAt, snoozedUntil, notified, done, ifStill: undo.after });
     setShownId(id);
+    if (due) setMoved("back");
     setUndo(null);
+  }
+
+  function skip() {
+    setShownId(queue[(at + 1) % queue.length].id);
+    setMoved("next");
   }
 
   // In the sheet while it's open (the screen behind can't be tapped then), else above the tab bar.
@@ -125,45 +139,59 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
                 <div className={s.handle} aria-hidden />
                 <div role="status">{due && undoBar}</div>
               </div>
-              <div className={s.head}>
-                <span className={s.bell}>
-                  <Bell size={20} aria-hidden />
-                </span>
-                <div className={s.when}>
-                  <span className={ui.eyebrow}>Due · {formatDue(new Date(dueAt(shown)!))}</span>
-                  {queue.length > 1 && (
-                    <span className={s.count}>
-                      {at + 1} of {queue.length}
+              {/* Swipes like a due card on the Reminders screen: right for Done, left to snooze. */}
+              <div key={shown.id} className={`${s.card} ${moved ? s[moved] : ""}`}>
+                <SwipeRow
+                  className={s.cardContent}
+                  right={{ label: "Done", icon: <Check size={20} aria-hidden />, onSwipe: () => done(shown) }}
+                  left={{
+                    label: `Snooze ${inAnHour.label}`,
+                    icon: <AlarmClock size={20} aria-hidden />,
+                    color: "var(--accent)",
+                    onSwipe: () => snooze(shown, inAnHour.at()),
+                  }}
+                >
+                  <div className={s.head}>
+                    <span className={s.bell}>
+                      <Bell size={20} aria-hidden className={ui.ring} />
                     </span>
-                  )}
-                </div>
-                <Button variant="icon" aria-label="Edit reminder" onPress={() => setEditing(shown)}>
-                  <Pencil size={20} aria-hidden />
-                </Button>
-              </div>
+                    <div className={s.when}>
+                      <span className={ui.eyebrow}>Due · {formatDue(new Date(dueAt(shown)!))}</span>
+                      {queue.length > 1 && (
+                        <span className={s.count}>
+                          {at + 1} of {queue.length}
+                        </span>
+                      )}
+                    </div>
+                    <Button variant="icon" aria-label="Edit reminder" onPress={() => setEditing(shown)}>
+                      <Pencil size={20} aria-hidden />
+                    </Button>
+                  </div>
 
-              <div className={s.body}>
-                <Heading slot="title" className={s.title}>
-                  {shown.title}
-                </Heading>
-                {(sender || shown.repeat) && (
-                  <p className={s.meta}>
-                    {sender && (
-                      <>
-                        {senderMember && <Avatar name={senderMember.name} index={members.indexOf(senderMember)} small />}
-                        <span>From {sender}</span>
-                      </>
+                  <div className={s.body}>
+                    <Heading slot="title" className={s.title}>
+                      {shown.title}
+                    </Heading>
+                    {(sender || shown.repeat) && (
+                      <p className={s.meta}>
+                        {sender && (
+                          <>
+                            {senderMember && <Avatar name={senderMember.name} index={members.indexOf(senderMember)} small />}
+                            <span>From {sender}</span>
+                          </>
+                        )}
+                        {sender && shown.repeat && <span aria-hidden>·</span>}
+                        {shown.repeat && (
+                          <>
+                            <Repeat size={14} aria-hidden />
+                            <span>{capitalize(REPEATS[shown.repeat])}</span>
+                          </>
+                        )}
+                      </p>
                     )}
-                    {sender && shown.repeat && <span aria-hidden>·</span>}
-                    {shown.repeat && (
-                      <>
-                        <Repeat size={14} aria-hidden />
-                        <span>{capitalize(REPEATS[shown.repeat])}</span>
-                      </>
-                    )}
-                  </p>
-                )}
-                {shown.notes && <p className={s.notes}>{shown.notes}</p>}
+                    {shown.notes && <p className={s.notes}>{shown.notes}</p>}
+                  </div>
+                </SwipeRow>
               </div>
 
               <div className={s.actions}>
@@ -189,7 +217,7 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
                     Not now
                   </Button>
                   {queue.length > 1 && (
-                    <Button variant="text" className={s.skip} onPress={() => setShownId(queue[(at + 1) % queue.length].id)}>
+                    <Button variant="text" className={s.skip} onPress={skip}>
                       Skip
                       <ChevronRight size={18} strokeWidth={2.5} aria-hidden />
                     </Button>
