@@ -9,7 +9,7 @@ import { UndoSpot } from "../components/UndoBar";
 import { changesPending } from "../mutations/settle";
 import { meQuery } from "../queries/household";
 import { refreshItems } from "../queries/items";
-import { remindersQuery } from "../queries/reminders";
+import { refreshReminders } from "../queries/reminders";
 import s from "./__root.module.css";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -33,7 +33,7 @@ function Root() {
       // Not while this phone's own changes are on their way: the last one refetches (settle.ts).
       else if (changesPending(queryClient, what)) return;
       else if (what === "items") refreshItems(queryClient).catch(() => {});
-      else queryClient.invalidateQueries(remindersQuery);
+      else refreshReminders(queryClient).catch(() => {});
     });
   }, [token, queryClient]);
 

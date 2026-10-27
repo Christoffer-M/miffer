@@ -12,6 +12,10 @@
   justify-content: center;
   background: rgb(20 33 61 / 0.45);
 }
+/* A list animating behind an open sheet stays behind it (tokens.css). */
+:global(.list-transition) .overlay {
+  view-transition-name: overlay;
+}
 
 .sheet {
   width: 100%;

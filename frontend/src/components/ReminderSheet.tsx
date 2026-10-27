@@ -124,7 +124,7 @@ export function ReminderSheet({ reminder, onClose }: { reminder?: Reminder; onCl
             </div>
 
             {remindAt && (
-              <div className={s.group}>
+              <div className={`${s.group} ${s.reveal}`}>
                 <span id={ids.repeat} className={field.label}>
                   Repeat
                 </span>
@@ -178,7 +178,7 @@ export function ReminderSheet({ reminder, onClose }: { reminder?: Reminder; onCl
             )}
 
             {silent.map((m) => (
-              <p key={m.id} className={s.hint}>
+              <p key={m.id} className={`${s.hint} ${s.reveal}`}>
                 <BellOff size={18} aria-hidden className={s.hintIcon} />
                 <span>
                   {m.id === myId

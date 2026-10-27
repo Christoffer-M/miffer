@@ -112,8 +112,34 @@
     transform: translateY(8px);
   }
 }
+
+/* A due reminder's bell: rings now and then. */
+.ring {
+  transform-origin: 50% 10%;
+  animation: ring 4s ease-in-out infinite;
+}
+@keyframes ring {
+  0%,
+  12%,
+  100% {
+    transform: rotate(0);
+  }
+  2%,
+  6% {
+    transform: rotate(16deg);
+  }
+  4%,
+  8% {
+    transform: rotate(-16deg);
+  }
+  10% {
+    transform: rotate(6deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .undo {
+  .undo,
+  .ring {
     animation: none;
   }
 }
