@@ -15,7 +15,7 @@ import {
 } from "../mutations/reminders";
 import { useMembers } from "../queries/household";
 import { remindersQuery } from "../queries/reminders";
-import { clock, dueAt, formatBack, formatWhen, REPEATS, snoozeTimes, sortReminders } from "../reminders";
+import { clock, dueAt, formatBack, formatWhen, REPEATS, SNOOZES, sortReminders } from "../reminders";
 import ui from "../ui.module.css";
 import s from "./reminders.module.css";
 
@@ -76,11 +76,11 @@ function Reminders() {
                 </div>
                 <div className={s.snooze} role="group" aria-label={`Snooze ${r.title}`}>
                   <span className={s.snoozeLabel}>Snooze</span>
-                  {snoozeTimes().map((t) => (
+                  {SNOOZES.map((t) => (
                     <AriaButton
                       key={t.label}
                       className={s.snoozeChip}
-                      onPress={() => change.mutate({ id: r.id, snoozedUntil: t.at.toISOString() })}
+                      onPress={() => change.mutate({ id: r.id, snoozedUntil: t.at().toISOString() })}
                     >
                       {t.label}
                     </AriaButton>

@@ -7,12 +7,17 @@
 }
 
 .dialog {
+  --gap: 18px;
   outline: none;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--gap);
 }
 
+.top {
+  display: flex;
+  flex-direction: column;
+}
 .handle {
   width: 40px;
   height: 4px;
@@ -151,22 +156,19 @@
 }
 
 .undoInSheet {
+  margin-top: var(--gap);
   box-shadow: none;
 }
-/* An empty status line takes no room in the sheet's column (but stays there, so it's announced when it fills). */
-.dialog > [role="status"]:empty {
-  margin-bottom: -18px;
-}
 
-/* Undo floats just above the tab bar, over whatever screen is open. */
+/* Sits between the screen and the tabs and takes no room: Undo floats just above the tabs
+   (or the bottom, while the keyboard hides them), over whatever screen is open. */
 .undoSlot {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: calc(80px + env(safe-area-inset-bottom));
+  position: relative;
   z-index: 5;
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 0 12px;
-  pointer-events: none; /* the empty slot doesn't block taps on the screen */
+}
+.undoSlot > * {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 8px;
 }

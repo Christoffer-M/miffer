@@ -1,15 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button as AriaButton, Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
-import { AlarmClock, Bell, Check, ChevronRight, Pencil, Repeat, Undo2 } from "lucide-react";
+import { AlarmClock, Bell, Check, ChevronRight, Pencil, Repeat } from "lucide-react";
 import { type Reminder, session } from "../api";
 import { Avatar } from "../brand";
-import { useChangeReminder, useCompleteReminder, useRestoreReminder } from "../mutations/reminders";
+import { type ReminderTimes, useChangeReminder, useCompleteReminder, useRestoreReminder } from "../mutations/reminders";
 import { useMembers } from "../queries/household";
 import { remindersQuery } from "../queries/reminders";
-import { dueAt, dueFor, formatBack, formatWhen, nextTime, REPEATS, snoozeTimes } from "../reminders";
+import { dueAt, dueFor, formatBack, formatDue, nextTime, REPEATS, SNOOZES } from "../reminders";
 import { Button } from "./Button";
 import { ReminderSheet } from "./ReminderSheet";
+import { UndoBar } from "./UndoBar";
 import confirm from "./Confirm.module.css";
 import ui from "../ui.module.css";
 import s from "./DueReminders.module.css";
@@ -18,15 +20,22 @@ import s from "./DueReminders.module.css";
 const UNDO_MS = 6000;
 
 // A tapped notification opens the app with ?reminder=<id> (sw.js): that one comes first.
-const tappedAtStart = new URLSearchParams(location.search).get("reminder");
+// Taken off the address before the router reads it, so a reload doesn't put it first again.
+const startUrl = new URL(location.href);
+const tappedAtStart = startUrl.searchParams.get("reminder");
+if (tappedAtStart) {
+  startUrl.searchParams.delete("reminder");
+  history.replaceState(history.state, "", startUrl);
+}
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /**
  * What's due for this phone, one at a time, as soon as the app opens: Done, Snooze, or Not now.
  * Not now puts them off until the app is opened again; anything that comes due meanwhile still shows.
+ * Undo shows just above the tabs, or in `undoSpot` when the screen has a bar of its own there (UndoBar.tsx).
  */
-export function DueReminders() {
+export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
   const { data = [] } = useQuery(remindersQuery);
   const { members, myId, whoIs } = useMembers();
   const complete = useCompleteReminder();
@@ -36,8 +45,8 @@ export function DueReminders() {
   const [shownId, setShownId] = useState<string | null>(null);
   const [notNow, setNotNow] = useState<string[]>([]);
   const [editing, setEditing] = useState<Reminder | null>(null);
-  // The last one dealt with, as it was before, for Undo.
-  const [undo, setUndo] = useState<{ before: Reminder; text: string } | null>(null);
+  // The last one dealt with: as it was before, and as Done or Snooze left it (once that's through), for Undo.
+  const [undo, setUndo] = useState<{ before: Reminder; after: Promise<ReminderTimes>; text: string } | null>(null);
 
   useEffect(() => {
     const opened = () => document.visibilityState === "visible" && setNotNow([]);
@@ -72,36 +81,33 @@ export function DueReminders() {
 
   function done(r: Reminder) {
     const next = r.repeat && r.remindAt && nextTime(new Date(r.remindAt), r.repeat);
-    setUndo({ before: r, text: next ? `Done, back ${formatBack(next)}` : `Done: ${r.title}` });
-    complete.mutate(r.id);
+    const after = complete.mutateAsync(r.id);
+    after.catch(() => {}); // the refetch shows it wasn't done; an Undo then finds nothing to undo
+    setUndo({ before: r, after, text: next ? `Done, back ${formatBack(next)}` : `Done: ${r.title}` });
   }
 
   function snooze(r: Reminder, until: Date) {
-    setUndo({ before: r, text: `Snoozed, back ${formatBack(until)}` });
-    change.mutate({ id: r.id, snoozedUntil: until.toISOString() });
+    const snoozedUntil = until.toISOString();
+    change.mutate({ id: r.id, snoozedUntil });
+    const after = Promise.resolve({ remindAt: r.remindAt, snoozedUntil, done: false });
+    setUndo({ before: r, after, text: `Snoozed, back ${formatBack(until)}` });
   }
 
   function undoLast() {
     if (!undo) return;
     const { id, remindAt, snoozedUntil, notified, done } = undo.before;
-    restore.mutate({ id, remindAt, snoozedUntil, notified, done });
+    restore.mutate({ id, remindAt, snoozedUntil, notified, done, ifStill: undo.after });
     setShownId(id);
     setUndo(null);
   }
 
   // In the sheet while it's open (the screen behind can't be tapped then), else above the tab bar.
-  const undoBar = undo && (
-    <div className={`${ui.undo} ${due ? s.undoInSheet : ""}`}>
-      <span className={ui.undoText}>{undo.text}</span>
-      <Button variant="text" className={ui.undoButton} onPress={undoLast}>
-        <Undo2 size={18} aria-hidden />
-        Undo
-      </Button>
-    </div>
-  );
+  const undoBar = undo && <UndoBar text={undo.text} onUndo={undoLast} className={due ? s.undoInSheet : ""} />;
 
+  // Who it's from, unless it's this phone's own.
   const from = shown?.createdBy && whoIs(shown.createdBy);
-  const fromMember = members.find((m) => m.id === shown?.createdBy);
+  const sender = from && from !== "you" ? from : null;
+  const senderMember = sender ? members.find((m) => m.id === shown?.createdBy) : undefined;
 
   return (
     <>
@@ -114,14 +120,17 @@ export function DueReminders() {
         <Modal className={`${confirm.sheet} ${s.sheet}`}>
           {shown && (
             <Dialog className={s.dialog}>
-              <div className={s.handle} aria-hidden />
-              <div role="status">{due && undoBar}</div>
+              {/* One item in the column, so the empty status line under the handle takes no room. */}
+              <div className={s.top}>
+                <div className={s.handle} aria-hidden />
+                <div role="status">{due && undoBar}</div>
+              </div>
               <div className={s.head}>
                 <span className={s.bell}>
                   <Bell size={20} aria-hidden />
                 </span>
                 <div className={s.when}>
-                  <span className={ui.eyebrow}>Due · {formatWhen(new Date(dueAt(shown)!)).replace(/^Today /, "")}</span>
+                  <span className={ui.eyebrow}>Due · {formatDue(new Date(dueAt(shown)!))}</span>
                   {queue.length > 1 && (
                     <span className={s.count}>
                       {at + 1} of {queue.length}
@@ -137,15 +146,15 @@ export function DueReminders() {
                 <Heading slot="title" className={s.title}>
                   {shown.title}
                 </Heading>
-                {((from && from !== "you") || shown.repeat) && (
+                {(sender || shown.repeat) && (
                   <p className={s.meta}>
-                    {from && from !== "you" && (
+                    {sender && (
                       <>
-                        {fromMember && <Avatar name={fromMember.name} index={members.indexOf(fromMember)} small />}
-                        <span>From {from}</span>
+                        {senderMember && <Avatar name={senderMember.name} index={members.indexOf(senderMember)} small />}
+                        <span>From {sender}</span>
                       </>
                     )}
-                    {from && from !== "you" && shown.repeat && <span aria-hidden>·</span>}
+                    {sender && shown.repeat && <span aria-hidden>·</span>}
                     {shown.repeat && (
                       <>
                         <Repeat size={14} aria-hidden />
@@ -168,8 +177,8 @@ export function DueReminders() {
                     Snooze
                   </span>
                   <div className={s.snoozeTimes}>
-                    {snoozeTimes().map((t) => (
-                      <AriaButton key={t.label} className={s.chip} onPress={() => snooze(shown, t.at)}>
+                    {SNOOZES.map((t) => (
+                      <AriaButton key={t.label} className={s.chip} onPress={() => snooze(shown, t.at())}>
                         {t.label}
                       </AriaButton>
                     ))}
@@ -196,8 +205,9 @@ export function DueReminders() {
 
       {/* Always there (empty when there's nothing to undo) so screen readers announce it. */}
       <div className={s.undoSlot} role="status">
-        {!due && undoBar}
+        {!due && !undoSpot && undoBar}
       </div>
+      {!due && undoSpot && undoBar && createPortal(undoBar, undoSpot)}
     </>
   );
 }

@@ -36,24 +36,25 @@ const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).ge
 const at = (from: Date, days: number, hour: number) =>
   new Date(from.getFullYear(), from.getMonth(), from.getDate() + days, hour);
 
-/** "Today 18:00", "Tomorrow 09:00", "Thu 17:30" within the week, else "1 Nov 09:00". */
-export function formatWhen(when: Date, now = new Date()) {
+/** The day and time, with `near` as the words for yesterday, today and tomorrow. */
+function withDay(when: Date, now: Date, near: [string, string, string]) {
   // Rounded: a day with a clock change is 23 or 25 hours long.
   const days = Math.round((day(when) - day(now)) / (24 * HOUR));
   const date =
-    days === 0 ? "Today"
-    : days === 1 ? "Tomorrow"
-    : days === -1 ? "Yesterday"
+    Math.abs(days) <= 1 ? near[days + 1]
     : days > 1 && days < 7 ? when.toLocaleDateString("en-GB", { weekday: "short" })
     : when.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-  return `${date} ${clock(when)}`;
+  return `${date} ${clock(when)}`.trim();
 }
 
+/** "Today 18:00", "Tomorrow 09:00", "Thu 17:30" within the week, else "1 Nov 09:00". */
+export const formatWhen = (when: Date, now = new Date()) => withDay(when, now, ["Yesterday", "Today", "Tomorrow"]);
+
 /** For "back …": "at 13:17" today, "tomorrow 09:00", "Thu 17:30". */
-export const formatBack = (when: Date, now = new Date()) =>
-  formatWhen(when, now)
-    .replace(/^Today /, "at ")
-    .replace(/^(Tomorrow|Yesterday)/, (day) => day.toLowerCase());
+export const formatBack = (when: Date, now = new Date()) => withDay(when, now, ["yesterday", "at", "tomorrow"]);
+
+/** For "Due · …": just the time today, "13:17", else "Yesterday 18:00", "Thu 17:30". */
+export const formatDue = (when: Date, now = new Date()) => withDay(when, now, ["Yesterday", "", "Tomorrow"]);
 
 /** Now plus some minutes, on the minute. */
 const later = (now: Date, minutes: number) => new Date(Math.floor(now.getTime() / MINUTE) * MINUTE + minutes * MINUTE);
@@ -65,10 +66,11 @@ export const quickTimes = (now = new Date()) => [
   { label: "Tomorrow 09:00", at: at(now, 1, 9) },
 ];
 
-export const snoozeTimes = (now = new Date()) => [
-  { label: "10 min", at: later(now, 10) },
-  { label: "1 hour", at: later(now, 60) },
-  { label: "Tomorrow", at: at(now, 1, 9) },
+/** Each works out its time when it's picked, so a screen left open a while doesn't snooze into the past. */
+export const SNOOZES = [
+  { label: "10 min", at: (now = new Date()) => later(now, 10) },
+  { label: "1 hour", at: (now = new Date()) => later(now, 60) },
+  { label: "Tomorrow", at: (now = new Date()) => at(now, 1, 9) },
 ];
 
 /**

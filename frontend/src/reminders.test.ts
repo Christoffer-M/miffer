@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { dueFor, formatBack, formatWhen, nextTime, quickTimes, sortReminders, toLocalInput } from "./reminders.ts";
+import { dueFor, formatBack, formatDue, formatWhen, nextTime, quickTimes, sortReminders, toLocalInput } from "./reminders.ts";
 
 // Local times, so the tests pass in any time zone. 26 Oct 2026 is a Monday.
 const now = new Date(2026, 9, 26, 12, 30, 45);
@@ -57,6 +57,8 @@ test("back again: at a time today, else the day", () => {
   assert.equal(formatBack(new Date(2026, 9, 26, 13, 17), now), "at 13:17");
   assert.equal(formatBack(new Date(2026, 9, 27, 9), now), "tomorrow 09:00");
   assert.equal(formatBack(new Date(2026, 9, 29, 17, 30), now), "Thu 17:30");
+  assert.equal(formatDue(new Date(2026, 9, 26, 9), now), "09:00");
+  assert.equal(formatDue(new Date(2026, 9, 25, 18), now), "Yesterday 18:00");
 });
 
 test("the next repeat: after now, or after its time when ticked off early", () => {

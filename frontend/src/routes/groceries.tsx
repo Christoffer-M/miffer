@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { type CSSProperties, useEffect, useState, useSyncExternalStore } from "react";
+import { type CSSProperties, useContext, useEffect, useState, useSyncExternalStore } from "react";
 import { Button as AriaButton, Form } from "react-aria-components";
 import { Check, Plus, Trash2, Undo2, X } from "lucide-react";
 import { type Item, session } from "../api";
@@ -9,6 +9,7 @@ import { Button } from "../components/Button";
 import { Checkbox } from "../components/Checkbox";
 import { SwipeRow } from "../components/SwipeRow";
 import { TextField } from "../components/TextField";
+import { UndoBar, UndoSpot } from "../components/UndoBar";
 import { useAddItem, useClearDone, useRemoveItem, useRestoreItems, useSetDone } from "../mutations/items";
 import { useMembers } from "../queries/household";
 import { historyQuery, itemsQuery } from "../queries/items";
@@ -50,6 +51,7 @@ function Groceries() {
   const { data: items = [], isPending, error } = useQuery(itemsQuery);
   const online = useOnline();
   const { whoIs } = useMembers();
+  const offerUndoSpot = useContext(UndoSpot);
   const addItem = useAddItem();
   const setDone = useSetDone();
   const removeItem = useRemoveItem();
@@ -191,16 +193,13 @@ function Groceries() {
             Always there (empty when there's nothing to undo) so screen readers announce it. */}
         <div className={s.undoSlot} role="status">
           {removed.length > 0 && (
-            <div className={ui.undo}>
-              <span className={ui.undoText}>
-                {removed.length === 1 ? `Removed ${removed[0].name}` : `Cleared ${removed.length} items`}
-              </span>
-              <Button variant="text" className={ui.undoButton} onPress={undo}>
-                <Undo2 size={18} aria-hidden />
-                Undo
-              </Button>
-            </div>
+            <UndoBar
+              text={removed.length === 1 ? `Removed ${removed[0].name}` : `Cleared ${removed.length} items`}
+              onUndo={undo}
+            />
           )}
+          {/* A due reminder's Undo goes here too, rather than over the add bar. */}
+          <div ref={offerUndoSpot} className={s.undoSpot} />
         </div>
         {/* Suggestions show while focus is anywhere in here: the field, a suggestion or Add. */}
         <div
