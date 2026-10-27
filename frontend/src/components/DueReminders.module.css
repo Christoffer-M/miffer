@@ -1,0 +1,174 @@
+/* Builds on the Confirm sheet; scrolls on a short phone instead of running off the top. */
+.sheet {
+  max-height: calc(var(--app-height, 100dvh) - 24px);
+  overflow-y: auto;
+  padding-top: 10px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.dialog {
+  --gap: 18px;
+  outline: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.top {
+  display: flex;
+  flex-direction: column;
+}
+.handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  align-self: center;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bell {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent-tint);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.when {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.meta {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.notes {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--ground);
+  font-size: 15px;
+  line-height: 1.45;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.done {
+  height: 56px;
+  font-size: 17px;
+}
+
+.snooze {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.snoozeLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.snoozeTimes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+/* Like the chips in the reminder sheet. React Aria marks state with data attributes. */
+.chip {
+  min-height: 48px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--ground);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 80ms ease-out;
+}
+.chip[data-pressed] {
+  transform: scale(0.97);
+  background: var(--accent-tint);
+  border-color: var(--accent);
+}
+.chip[data-focus-visible] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.notNow {
+  color: var(--muted);
+  font-size: 15px;
+}
+.skip {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 15px;
+}
+
+.undoInSheet {
+  margin-top: var(--gap);
+  box-shadow: none;
+}
+
+/* Sits between the screen and the tabs and takes no room: Undo floats just above the tabs
+   (or the bottom, while the keyboard hides them), over whatever screen is open. */
+.undoSlot {
+  position: relative;
+  z-index: 5;
+}
+.undoSlot > * {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 8px;
+}

@@ -1,7 +1,8 @@
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import { zValidator } from "@hono/zod-validator";
-import { and, desc, eq, gt, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lte, sql } from "drizzle-orm";
+import type { PgColumn } from "drizzle-orm/pg-core";
 import { type Context, Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
@@ -307,7 +308,15 @@ const reminderFields = z.object({
   timeZone: z.string().max(64).refine(isTimeZone, "Unknown time zone"),
 });
 const reminderParam = zValidator("param", z.object({ id: z.uuid() }));
+// Where a reminder stands, for Undo.
+const reminderTimes = z.object({
+  remindAt: z.iso.datetime().nullable(),
+  snoozedUntil: z.iso.datetime().nullable(),
+  done: z.boolean(),
+});
 const NOT_A_MEMBER = "That phone isn't in your household.";
+const NO_REMINDER = "That reminder is gone.";
+const CHANGED_SINCE = "Someone changed that reminder since.";
 
 const isMember = async (householdId: string, deviceId: string) =>
   (
@@ -365,11 +374,41 @@ const reminderRoutes = new Hono<Env>()
       return c.body(null, 204);
     },
   )
+  // Answers with its times as they are now, so an Undo can tell whether anything changed it since.
   .post("/:id/done", reminderParam, async (c) => {
-    await complete(c.var.householdId, c.req.valid("param").id);
+    const now = await complete(c.var.householdId, c.req.valid("param").id);
+    if (!now) return c.json({ error: NO_REMINDER }, 404);
     notify(c.var.householdId, "reminders");
-    return c.body(null, 204);
+    return c.json(now);
   })
+  // Undo of Done or Snooze: puts it back exactly as it was. Still sent, so it's due again without buzzing again.
+  // Only while it's as this phone left it (`ifStill`): a change from another phone since then wins.
+  .put(
+    "/:id/state",
+    reminderParam,
+    zValidator("json", reminderTimes.extend({ notified: z.boolean(), ifStill: reminderTimes })),
+    async (c) => {
+      const { remindAt, snoozedUntil, ifStill, ...rest } = c.req.valid("json");
+      const when = (iso: string | null) => (iso ? new Date(iso) : null);
+      const is = (column: PgColumn, iso: string | null) => (iso ? eq(column, new Date(iso)) : isNull(column));
+      const restored = await db
+        .update(reminders)
+        .set({ ...rest, remindAt: when(remindAt), snoozedUntil: when(snoozedUntil) })
+        .where(
+          and(
+            eq(reminders.id, c.req.valid("param").id),
+            eq(reminders.householdId, c.var.householdId),
+            is(reminders.remindAt, ifStill.remindAt),
+            is(reminders.snoozedUntil, ifStill.snoozedUntil),
+            eq(reminders.done, ifStill.done),
+          ),
+        )
+        .returning({ id: reminders.id });
+      if (!restored.length) return c.json({ error: CHANGED_SINCE }, 409);
+      notify(c.var.householdId, "reminders");
+      return c.body(null, 204);
+    },
+  )
   // Registered before "/:id" so "done" isn't read as an id.
   .delete("/done", async (c) => {
     await db.delete(reminders).where(and(eq(reminders.householdId, c.var.householdId), eq(reminders.done, true)));

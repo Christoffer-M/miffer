@@ -12,7 +12,7 @@ export type ReminderChanges = InferRequestType<(typeof api.reminders)[":id"]["$p
  * A change that shows on this phone at once (`apply`), then gets confirmed by the server.
  * Without `apply` the list just refetches once the server has it.
  */
-function useReminderMutation<V>(send: (v: V) => Promise<unknown>, apply?: (list: Reminder[], v: V) => Reminder[]) {
+function useReminderMutation<V, R>(send: (v: V) => Promise<R>, apply?: (list: Reminder[], v: V) => Reminder[]) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: send,
@@ -47,16 +47,30 @@ export const useChangeReminder = () =>
       })),
   );
 
-/** Ticks it off; a repeating one moves on to its next time instead. */
+/** Ticks it off; a repeating one moves on to its next time instead. Resolves to its times on the server after. */
 export const useCompleteReminder = () =>
   useReminderMutation(
-    (id: string) => ok(api.reminders[":id"].done.$post({ param: { id } })),
+    async (id: string) => (await ok(api.reminders[":id"].done.$post({ param: { id } }))).json(),
     (list, id) =>
       update(list, id, (r) =>
         r.repeat && r.remindAt
           ? { remindAt: nextTime(new Date(r.remindAt), r.repeat).toISOString(), snoozedUntil: null, notified: false }
           : { done: true, snoozedUntil: null },
       ),
+  );
+
+type ReminderState = InferRequestType<(typeof api.reminders)[":id"]["state"]["$put"]>["json"];
+export type ReminderTimes = ReminderState["ifStill"];
+
+/**
+ * Undo of Done or Snooze: puts back its times and whether it was sent or done, if it's still
+ * as Done or Snooze left it (`ifStill`, known once that's through). Else the refetch shows what changed.
+ */
+export const useRestoreReminder = () =>
+  useReminderMutation(
+    async ({ id, ifStill, ...json }: Omit<ReminderState, "ifStill"> & { id: string; ifStill: Promise<ReminderTimes> }) =>
+      ok(api.reminders[":id"].state.$put({ param: { id }, json: { ...json, ifStill: await ifStill } })),
+    (list, { id, remindAt, snoozedUntil, notified, done }) => update(list, id, () => ({ remindAt, snoozedUntil, notified, done })),
   );
 
 export const useDeleteReminder = () =>

@@ -1,9 +1,11 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Link, Outlet, redirect, useLocation } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Bell, House, ShoppingBasket, Users } from "lucide-react";
 import { connectLive, session, useToken } from "../api";
 import { AskForNotifications } from "../components/AskForNotifications";
+import { DueReminders } from "../components/DueReminders";
+import { UndoSpot } from "../components/UndoBar";
 import { changesPending } from "../mutations/settle";
 import { meQuery } from "../queries/household";
 import { refreshItems } from "../queries/items";
@@ -22,6 +24,7 @@ function Root() {
   const { queryClient } = Route.useRouteContext();
   const token = useToken();
   const path = useLocation({ select: (l) => l.pathname });
+  const [undoSpot, setUndoSpot] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -36,9 +39,13 @@ function Root() {
 
   return (
     <div className={s.screen}>
-      <Outlet />
+      <UndoSpot value={setUndoSpot}>
+        <Outlet />
+      </UndoSpot>
       {/* Not over the name screen, where a new household's code is waiting to be shared. */}
       {token && path !== "/name" && <AskForNotifications />}
+      {/* After the notifications sheet, so a due reminder comes up on top of it. Just above the tabs, for its Undo. */}
+      {token && path !== "/name" && <DueReminders undoSpot={undoSpot} />}
       {token && (
         <nav className={s.tabs} aria-label="miffer">
           <Link to="/" className={s.tab} activeOptions={{ exact: true }}>

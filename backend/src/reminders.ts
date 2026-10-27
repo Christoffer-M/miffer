@@ -35,9 +35,12 @@ const nextTime = sql`(select t at time zone ${reminders.timeZone} from ${series(
 // The last repeat at or before now: where a repeating reminder that has come round is due from.
 const lastTime = sql`((select max(t) from ${series(local(sql`now()`))}) at time zone ${reminders.timeZone})`;
 
-/** Ticks a reminder off. A repeating one isn't done: it moves on to its next time instead. */
+/**
+ * Ticks a reminder off. A repeating one isn't done: it moves on to its next time instead.
+ * Returns its times as they are now, or nothing if there's no such reminder.
+ */
 export async function complete(householdId: string, id: string) {
-  await db
+  const [row] = await db
     .update(reminders)
     .set({
       done: sql`not ${repeats}`,
@@ -45,7 +48,9 @@ export async function complete(householdId: string, id: string) {
       snoozedUntil: null,
       notified: sql`${reminders.notified} and not ${repeats}`,
     })
-    .where(and(eq(reminders.id, id), eq(reminders.householdId, householdId)));
+    .where(and(eq(reminders.id, id), eq(reminders.householdId, householdId)))
+    .returning({ remindAt: reminders.remindAt, snoozedUntil: reminders.snoozedUntil, done: reminders.done });
+  return row;
 }
 
 /** Sends every reminder that has come due, each once: marking it sent and picking it up is one statement. */

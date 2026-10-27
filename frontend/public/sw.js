@@ -36,7 +36,7 @@ function showReminder({ reminder, title, body }) {
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
   const { reminder, url } = e.notification.data ?? {};
-  e.waitUntil(reminder && e.action ? act(reminder, e.action) : open(url));
+  e.waitUntil(reminder && e.action ? act(reminder, e.action) : open(url, reminder));
 });
 
 /** Done or Snooze, straight from the notification, with the token the app left in the cache (api.ts). */
@@ -53,19 +53,22 @@ async function act(id, action) {
         });
   const res = await request.catch(() => null);
   // Offline, or the phone was unlinked: open the app so it can be done there.
-  if (!token || !res?.ok) return open("/reminders");
+  if (!token || !res?.ok) return open("/reminders", id);
 }
 
-/** Brings the app forward, on that screen if there is one (reminders); else opens it on Groceries. */
-function open(url) {
+/**
+ * Brings the app forward, on that screen if there is one (reminders); else opens it on Groceries.
+ * For a reminder the app asks what to do with it straight away, before any other that's due (DueReminders.tsx).
+ */
+function open(url, reminder) {
   return (
     self.clients
       // Uncontrolled too: the page that registered this worker isn't controlled until it reloads.
       .matchAll({ type: "window", includeUncontrolled: true })
       .then(([win]) => {
-        if (!win) return self.clients.openWindow(url ?? "/groceries");
+        if (!win) return self.clients.openWindow(reminder ? `${url}?reminder=${reminder}` : (url ?? "/groceries"));
         // An app that's already open stays where it is for something added, as it always has.
-        if (url) win.postMessage({ open: url }); // main.tsx takes it to that screen
+        if (url) win.postMessage({ open: url, reminder }); // main.tsx takes it to that screen
         return win.focus();
       })
   );

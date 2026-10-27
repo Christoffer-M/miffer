@@ -274,14 +274,28 @@ test("reminders reach who they're for once, snooze, and repeat on the wall clock
 
   // Done with a repeating one: it moves on to the next Monday after now, still 18:00 local
   // whether or not the clocks have changed since.
-  expect((await call(`/reminders/${trash}/done`, { method: "POST", token: ben.token })).status).toBe(204);
+  const [beforeDone] = await list();
+  const doneRes = await call(`/reminders/${trash}/done`, { method: "POST", token: ben.token });
+  expect(doneRes.status).toBe(200);
+  const afterDone = await doneRes.json();
   const [next] = await list();
+  expect(afterDone).toEqual({ remindAt: next.remindAt, snoozedUntil: null, done: false });
   const local = (iso: string) =>
     new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Copenhagen", weekday: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
   expect(next).toMatchObject({ done: false, notified: false, snoozedUntil: null });
   expect(local(next.remindAt)).toBe("Mon 18:00");
   expect(Date.parse(next.remindAt) - Date.now()).toBeGreaterThan(0);
   expect(Date.parse(next.remindAt) - Date.now()).toBeLessThanOrEqual(7 * 24 * HOUR);
+
+  // Undo: back to due as it was, and not sent a second time.
+  send.mockClear();
+  const { remindAt, snoozedUntil, notified, done } = beforeDone;
+  const restore = { method: "PUT", token: anna.token, body: { remindAt, snoozedUntil, notified, done, ifStill: afterDone } };
+  expect((await call(`/reminders/${trash}/state`, restore)).status).toBe(204);
+  await fireDue();
+  expect(send).not.toHaveBeenCalled();
+  expect(await list()).toEqual([expect.objectContaining({ remindAt, notified: true, done: false })]);
+  await call(`/reminders/${trash}/done`, { method: "POST", token: ben.token });
 
   // Ticked off before it's due: skips to the one after.
   const plants = crypto.randomUUID();
@@ -357,6 +371,50 @@ test("a repeating reminder nobody ticks off still comes round, and edits make it
   expect(await get()).toMatchObject({ done: true });
   await patch({ done: false });
   expect(await get()).toMatchObject({ done: false, remindAt: later });
+  send.mockRestore();
+});
+
+test("undo puts a reminder back as it was, unless another phone changed it since", async () => {
+  const send = vi.spyOn(webpush, "sendNotification").mockResolvedValue({ statusCode: 201, body: "", headers: {} });
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  const id = crypto.randomUUID();
+  const get = async () => (await (await call("/reminders", { token: anna.token })).json())[0];
+  const patch = (body: object) => call(`/reminders/${id}`, { method: "PATCH", token: anna.token, body });
+  const tickOff = async () => (await call(`/reminders/${id}/done`, { method: "POST", token: anna.token })).json();
+  const undo = (before: { remindAt: string; snoozedUntil: string | null; notified: boolean; done: boolean }, ifStill: object) => {
+    const { remindAt, snoozedUntil, notified, done } = before;
+    return call(`/reminders/${id}/state`, { method: "PUT", token: anna.token, body: { remindAt, snoozedUntil, notified, done, ifStill } });
+  };
+
+  // A one-off, due a second ago.
+  const fields = { title: "Mop the floor", notes: "", repeat: null, forDevice: null, timeZone: "Europe/Copenhagen" };
+  await call("/reminders", { method: "POST", token: anna.token, body: { id, ...fields, remindAt: new Date(Date.now() - 1000).toISOString() } });
+  await fireDue();
+  const due = await get();
+  expect(due).toMatchObject({ notified: true, done: false, snoozedUntil: null });
+
+  // Snoozed, then undone: due again as it was.
+  const later = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  await patch({ snoozedUntil: later });
+  expect((await undo(due, { remindAt: due.remindAt, snoozedUntil: later, done: false })).status).toBe(204);
+  expect(await get()).toEqual(due);
+
+  // Ticked off, then undone: not done any more.
+  const afterDone = await tickOff();
+  expect(afterDone).toEqual({ remindAt: due.remindAt, snoozedUntil: null, done: true });
+  expect((await undo(due, afterDone)).status).toBe(204);
+  expect(await get()).toEqual(due);
+
+  // Snoozed, then another phone gives it a new time before the Undo: the new time stays.
+  await patch({ snoozedUntil: later });
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  await patch({ remindAt: tomorrow });
+  expect((await undo(due, { remindAt: due.remindAt, snoozedUntil: later, done: false })).status).toBe(409);
+  expect(await get()).toMatchObject({ remindAt: tomorrow, snoozedUntil: null, notified: false });
+
+  // Gone: nothing to tick off.
+  await call(`/reminders/${id}`, { method: "DELETE", token: anna.token });
+  expect((await call(`/reminders/${id}/done`, { method: "POST", token: anna.token })).status).toBe(404);
   send.mockRestore();
 });
 
