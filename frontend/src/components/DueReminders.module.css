@@ -26,16 +26,8 @@
   align-self: center;
 }
 
-/* The reminder itself: swipes, and slides in as the next one comes up. It reaches a little
-   past its padding so the swipe panel and the Edit button's focus ring aren't clipped. */
+/* The reminder itself: slides in as the next one comes up. */
 .card {
-  margin: -6px;
-  border-radius: 16px;
-  overflow: hidden;
-}
-.cardContent {
-  padding: 6px;
-  background: var(--surface);
   display: flex;
   flex-direction: column;
   gap: var(--gap);

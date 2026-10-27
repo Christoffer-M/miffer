@@ -11,7 +11,6 @@ import { remindersQuery } from "../queries/reminders";
 import { dueAt, dueFor, formatBack, formatDue, nextTime, REPEATS, SNOOZES } from "../reminders";
 import { Button } from "./Button";
 import { ReminderSheet } from "./ReminderSheet";
-import { SwipeRow } from "./SwipeRow";
 import { UndoBar } from "./UndoBar";
 import confirm from "./Confirm.module.css";
 import ui from "../ui.module.css";
@@ -29,9 +28,7 @@ if (tappedAtStart) {
   history.replaceState(history.state, "", startUrl);
 }
 
-const [, inAnHour] = SNOOZES;
-
-const capitalize =(text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /**
  * What's due for this phone, one at a time, as soon as the app opens: Done, Snooze, or Not now.
@@ -139,59 +136,48 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
                 <div className={s.handle} aria-hidden />
                 <div role="status">{due && undoBar}</div>
               </div>
-              {/* Swipes like a due card on the Reminders screen: right for Done, left to snooze. */}
+              {/* The reminder itself: slides in as the next one comes up. */}
               <div key={shown.id} className={`${s.card} ${moved ? s[moved] : ""}`}>
-                <SwipeRow
-                  className={s.cardContent}
-                  right={{ label: "Done", icon: <Check size={20} aria-hidden />, onSwipe: () => done(shown) }}
-                  left={{
-                    label: `Snooze ${inAnHour.label}`,
-                    icon: <AlarmClock size={20} aria-hidden />,
-                    color: "var(--accent)",
-                    onSwipe: () => snooze(shown, inAnHour.at()),
-                  }}
-                >
-                  <div className={s.head}>
-                    <span className={s.bell}>
-                      <Bell size={20} aria-hidden className={ui.ring} />
-                    </span>
-                    <div className={s.when}>
-                      <span className={ui.eyebrow}>Due · {formatDue(new Date(dueAt(shown)!))}</span>
-                      {queue.length > 1 && (
-                        <span className={s.count}>
-                          {at + 1} of {queue.length}
-                        </span>
-                      )}
-                    </div>
-                    <Button variant="icon" aria-label="Edit reminder" onPress={() => setEditing(shown)}>
-                      <Pencil size={20} aria-hidden />
-                    </Button>
-                  </div>
-
-                  <div className={s.body}>
-                    <Heading slot="title" className={s.title}>
-                      {shown.title}
-                    </Heading>
-                    {(sender || shown.repeat) && (
-                      <p className={s.meta}>
-                        {sender && (
-                          <>
-                            {senderMember && <Avatar name={senderMember.name} index={members.indexOf(senderMember)} small />}
-                            <span>From {sender}</span>
-                          </>
-                        )}
-                        {sender && shown.repeat && <span aria-hidden>·</span>}
-                        {shown.repeat && (
-                          <>
-                            <Repeat size={14} aria-hidden />
-                            <span>{capitalize(REPEATS[shown.repeat])}</span>
-                          </>
-                        )}
-                      </p>
+                <div className={s.head}>
+                  <span className={s.bell}>
+                    <Bell size={20} aria-hidden className={ui.ring} />
+                  </span>
+                  <div className={s.when}>
+                    <span className={ui.eyebrow}>Due · {formatDue(new Date(dueAt(shown)!))}</span>
+                    {queue.length > 1 && (
+                      <span className={s.count}>
+                        {at + 1} of {queue.length}
+                      </span>
                     )}
-                    {shown.notes && <p className={s.notes}>{shown.notes}</p>}
                   </div>
-                </SwipeRow>
+                  <Button variant="icon" aria-label="Edit reminder" onPress={() => setEditing(shown)}>
+                    <Pencil size={20} aria-hidden />
+                  </Button>
+                </div>
+
+                <div className={s.body}>
+                  <Heading slot="title" className={s.title}>
+                    {shown.title}
+                  </Heading>
+                  {(sender || shown.repeat) && (
+                    <p className={s.meta}>
+                      {sender && (
+                        <>
+                          {senderMember && <Avatar name={senderMember.name} index={members.indexOf(senderMember)} small />}
+                          <span>From {sender}</span>
+                        </>
+                      )}
+                      {sender && shown.repeat && <span aria-hidden>·</span>}
+                      {shown.repeat && (
+                        <>
+                          <Repeat size={14} aria-hidden />
+                          <span>{capitalize(REPEATS[shown.repeat])}</span>
+                        </>
+                      )}
+                    </p>
+                  )}
+                  {shown.notes && <p className={s.notes}>{shown.notes}</p>}
+                </div>
               </div>
 
               <div className={s.actions}>
