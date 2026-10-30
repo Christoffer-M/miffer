@@ -1,10 +1,11 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { ApiError, api, ok, session } from "../api";
+import { remembered } from "../remember";
 
 /** This phone's device id and everyone in the household, oldest first. */
 export const meQuery = queryOptions({
   queryKey: ["me"],
-  queryFn: async () => (await ok(api.households.me.$get())).json(),
+  ...remembered("me", async () => (await ok(api.households.me.$get())).json()),
 });
 
 /** The household's members, plus a way to label who added something. */

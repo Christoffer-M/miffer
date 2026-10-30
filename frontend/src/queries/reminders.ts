@@ -1,12 +1,14 @@
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { api, ok, type Reminder } from "../api";
+import { remembered } from "../remember";
 import { animateListChange } from "../viewTransition";
 
-const fetchReminders = async () => (await ok(api.reminders.$get())).json();
+const reminders = remembered("reminders", async () => (await ok(api.reminders.$get())).json());
+const fetchReminders = reminders.queryFn;
 
 export const remindersQuery = queryOptions({
   queryKey: ["reminders"],
-  queryFn: fetchReminders,
+  ...reminders,
 });
 
 /** What the Reminders screen shows of each: where it sits and what it says. */

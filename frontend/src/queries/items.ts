@@ -1,12 +1,14 @@
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { api, ok, type Item } from "../api";
+import { remembered } from "../remember";
 import { animateListChange } from "../viewTransition";
 
-const fetchItems = async () => (await ok(api.items.$get())).json();
+const items = remembered("items", async () => (await ok(api.items.$get())).json());
+const fetchItems = items.queryFn;
 
 export const itemsQuery = queryOptions({
   queryKey: ["items"],
-  queryFn: fetchItems,
+  ...items,
 });
 
 /**
@@ -15,7 +17,7 @@ export const itemsQuery = queryOptions({
  */
 export const historyQuery = queryOptions({
   queryKey: ["items", "history"],
-  queryFn: async () => (await ok(api.items.history.$get())).json(),
+  ...remembered("history", async () => (await ok(api.items.history.$get())).json()),
 });
 
 /** What the list looks like on screen: order, names and ticks. */

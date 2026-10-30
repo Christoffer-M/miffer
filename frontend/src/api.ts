@@ -1,6 +1,7 @@
 import { hc, type InferResponseType } from "hono/client";
 import { useSyncExternalStore } from "react";
 import type { AppType } from "../../backend/src/app";
+import { forgetAll } from "./remember";
 
 // The PWA talks to its own domain; a Tauri build sets VITE_API_URL to the server's.
 const BASE = import.meta.env.VITE_API_URL ?? "";
@@ -24,6 +25,7 @@ export const session = {
   clear() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(DEVICE_KEY);
+    forgetAll(); // the next household mustn't open with this one's lists
     window.dispatchEvent(new Event(SESSION_EVENT));
     shareTokenWithWorker();
   },
