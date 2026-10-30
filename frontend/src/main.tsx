@@ -8,7 +8,7 @@ import { routeTree } from "./routeTree.gen";
 import "./tokens.css";
 
 fitAppToKeyboard();
-// Only for notifications (no caching). Registered up front so turning them on can subscribe right away.
+// For notifications and opening offline. Registered up front so turning notifications on can subscribe right away.
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
 shareTokenWithWorker();
 

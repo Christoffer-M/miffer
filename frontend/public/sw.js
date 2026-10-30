@@ -1,4 +1,51 @@
-// Only here for notifications: no caching, the app still loads from the network.
+// Notifications, and opening the app offline: the build's files are kept here (the build fills
+// in APP, see vite.config.ts), and the app opens from them when the network can't be reached.
+// The lists themselves are kept by the app (remember.ts). In dev APP stays empty and nothing is kept.
+const APP = { version: "", files: [] };
+const APP_CACHE = `miffer-app-${APP.version}`;
+// Not versioned: the same font files serve every build. ("miffer" itself holds the token, api.ts.)
+const FONTS_CACHE = "miffer-fonts";
+
+self.addEventListener("install", (e) => {
+  if (!APP.files.length) return;
+  // Straight from the server, not the browser's cache, so the files all come from this build.
+  e.waitUntil(caches.open(APP_CACHE).then((c) => c.addAll(APP.files.map((f) => new Request(f, { cache: "reload" })))));
+});
+
+// Takes over once the app has been closed, so an open app keeps the files it started with.
+self.addEventListener("activate", (e) => {
+  e.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith("miffer-app-") && k !== APP_CACHE).map((k) => caches.delete(k)))),
+  );
+});
+
+self.addEventListener("fetch", (e) => {
+  if (!APP.files.length || e.request.method !== "GET") return;
+  const url = new URL(e.request.url);
+  if (url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com") {
+    return e.respondWith(fromCacheFirst(FONTS_CACHE, e.request));
+  }
+  if (url.origin !== location.origin || url.pathname.startsWith("/api/")) return;
+  // Pages from the network, so phones get the latest version; the kept one only when that fails.
+  // Its files are all from the same build, so it works on its own.
+  if (e.request.mode === "navigate") {
+    return e.respondWith(fetch(e.request).catch(() => caches.match("/index.html", { cacheName: APP_CACHE })));
+  }
+  if (APP.files.includes(url.pathname)) e.respondWith(fromCacheFirst(APP_CACHE, e.request));
+});
+
+async function fromCacheFirst(name, request) {
+  const kept = await caches.match(request, { cacheName: name });
+  if (kept) return kept;
+  const res = await fetch(request);
+  if (res.ok || res.type === "opaque") {
+    const copy = res.clone();
+    caches.open(name).then((c) => c.put(request, copy));
+  }
+  return res;
+}
 
 self.addEventListener("push", (e) => {
   let data = {};
