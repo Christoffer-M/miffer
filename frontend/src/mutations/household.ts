@@ -9,6 +9,7 @@ import { meQuery } from "../queries/household";
 /** "Start fresh": a new household; this phone gets a token and a code to share. */
 export const useStartHousehold = (onStarted: (code: string) => void) =>
   useMutation({
+    meta: { offline: "the household couldn't be started" },
     mutationFn: async (name: string) => (await ok(api.households.$post({ json: { name } }))).json(),
     onSuccess: ({ token, deviceId, code }) => {
       session.save(token, deviceId);
@@ -19,6 +20,7 @@ export const useStartHousehold = (onStarted: (code: string) => void) =>
 /** "Link up": trade a code from someone in the household for a token. */
 export const useJoinHousehold = (onJoined: () => void) =>
   useMutation({
+    meta: { offline: "this phone couldn't link up" },
     mutationFn: async (json: { code: string; name: string }) =>
       (await ok(api.households.join.$post({ json }))).json(),
     onSuccess: ({ token, deviceId }) => {
@@ -30,6 +32,7 @@ export const useJoinHousehold = (onJoined: () => void) =>
 /** A fresh link code for adding another phone. */
 export const useNewLinkCode = () =>
   useMutation({
+    meta: { offline: "no invite could be made" },
     mutationFn: async () => (await ok(api.households.code.$post())).json(),
   });
 
@@ -37,6 +40,7 @@ export const useNewLinkCode = () =>
 export function useRename() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { offline: "the name couldn't be changed" },
     mutationFn: (name: string) => ok(api.households.me.$patch({ json: { name } })),
     onSuccess: () => qc.invalidateQueries(meQuery),
   });
@@ -46,6 +50,7 @@ export function useRename() {
 export function useRemoveMember() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { offline: "the household couldn't be changed" },
     mutationFn: (id: string) => ok(api.households.members[":id"].$delete({ param: { id } })),
     onSuccess: (_, id) => {
       if (id === session.deviceId) {
@@ -65,6 +70,7 @@ export const canPush = "PushManager" in window && "serviceWorker" in navigator;
 export function useSetPush(pushKey: string | null | undefined) {
   const qc = useQueryClient();
   return useMutation({
+    meta: { offline: "notifications couldn't be changed" },
     mutationFn: async (on: boolean) => {
       // Registered at startup (main.tsx), so this doesn't wait and the tap still counts as one:
       // iPhones only ask for permission straight from a tap.

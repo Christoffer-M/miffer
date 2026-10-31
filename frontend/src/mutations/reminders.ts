@@ -12,9 +12,11 @@ export type ReminderChanges = InferRequestType<(typeof api.reminders)[":id"]["$p
 /**
  * A change that shows on this phone at once (`apply`, animated on the Reminders screen), then gets
  * confirmed by the server. Without `apply` the list just refetches once the server has it.
+ * `offline` says what didn't happen when it's refused offline (offline.ts).
  * `change` picks the animation, as for groceries: "check" slides right, "remove" slides left.
  */
 function useReminderMutation<V, R>(
+  offline: string,
   send: (v: V) => Promise<R>,
   apply?: (list: Reminder[], v: V) => Reminder[],
   change?: (v: V) => ListChange | undefined,
@@ -23,6 +25,7 @@ function useReminderMutation<V, R>(
   return useMutation({
     mutationFn: send,
     mutationKey: ["reminders"],
+    meta: { offline },
     // Sent one at a time, in order, so a quick tick and untick reach the server as they happened.
     scope: { id: "reminders" },
     onMutate: async (v) => {
@@ -41,11 +44,12 @@ function useReminderMutation<V, R>(
 const update = (list: Reminder[], id: string, change: (r: Reminder) => Partial<Reminder>) =>
   list.map((r) => (r.id === id ? { ...r, ...change(r) } : r));
 
-export const useAddReminder = () => useReminderMutation((json: NewReminder) => ok(api.reminders.$post({ json })));
+export const useAddReminder = () => useReminderMutation("the reminder couldn't be added", (json: NewReminder) => ok(api.reminders.$post({ json })));
 
 /** Edit, snooze (snoozedUntil) or put back from Done (done: false). */
 export const useChangeReminder = () =>
   useReminderMutation(
+    "the reminder couldn't be changed",
     ({ id, ...json }: ReminderChanges & { id: string }) => ok(api.reminders[":id"].$patch({ param: { id }, json })),
     // Same rules as the server: a new time or a snooze makes it wait again.
     (list, { id, remindAt, snoozedUntil, ...rest }) =>
@@ -61,6 +65,7 @@ export const useChangeReminder = () =>
 /** Ticks it off; a repeating one moves on to its next time instead. Resolves to its times on the server after. */
 export const useCompleteReminder = () =>
   useReminderMutation(
+    "the reminder couldn't be marked done",
     async (id: string) => (await ok(api.reminders[":id"].done.$post({ param: { id } }))).json(),
     (list, id) =>
       update(list, id, (r) =>
@@ -80,6 +85,7 @@ export type ReminderTimes = ReminderState["ifStill"];
  */
 export const useRestoreReminder = () =>
   useReminderMutation(
+    "the reminder couldn't be put back",
     async ({ id, ifStill, ...json }: Omit<ReminderState, "ifStill"> & { id: string; ifStill: Promise<ReminderTimes> }) =>
       ok(api.reminders[":id"].state.$put({ param: { id }, json: { ...json, ifStill: await ifStill } })),
     (list, { id, remindAt, snoozedUntil, notified, done }) => update(list, id, () => ({ remindAt, snoozedUntil, notified, done })),
@@ -87,6 +93,7 @@ export const useRestoreReminder = () =>
 
 export const useDeleteReminder = () =>
   useReminderMutation(
+    "the reminder couldn't be deleted",
     (id: string) => ok(api.reminders[":id"].$delete({ param: { id } })),
     (list, id) => list.filter((r) => r.id !== id),
     () => "remove",
@@ -94,6 +101,7 @@ export const useDeleteReminder = () =>
 
 export const useClearDoneReminders = () =>
   useReminderMutation(
+    "done reminders couldn't be cleared",
     (_: void) => ok(api.reminders.done.$delete()),
     (list) => list.filter((r) => !r.done),
     () => "remove",

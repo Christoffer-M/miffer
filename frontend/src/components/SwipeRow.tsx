@@ -1,4 +1,5 @@
 import { type PointerEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { isOffline } from "../offline";
 import s from "./SwipeRow.module.css";
 
 type Action = {
@@ -81,15 +82,17 @@ export function SwipeRow({ children, right, left, className }: Props) {
       if (!d.active) return;
       delete content.dataset.dragging;
       const flick = Math.abs(d.v) >= FLICK && Math.abs(d.dx) >= FLICK_MIN && Math.sign(d.v) === Math.sign(d.dx);
-      if (e.type === "pointerup" && d.dx !== 0 && (d.armed || flick)) {
+      const swiped = e.type === "pointerup" && d.dx !== 0 && (d.armed || flick);
+      // Offline the change is refused and the row stays in the list, so it springs back (offline.ts).
+      if (swiped && !isOffline()) {
         // Stay where the finger left it: the list animation carries the row on from here.
         setArmed(true);
-        (d.dx > 0 ? actions.current.right : actions.current.left)?.onSwipe();
       } else {
         // Spring back (the CSS transition animates it); the panel goes once it's home.
         content.style.transform = "";
         setArmed(false);
       }
+      if (swiped) (d.dx > 0 ? actions.current.right : actions.current.left)?.onSwipe();
     }
     return { listen, stop };
   }, []);

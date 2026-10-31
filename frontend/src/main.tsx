@@ -1,9 +1,10 @@
-import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { shareTokenWithWorker } from "./api";
 import { fitAppToKeyboard } from "./keyboard";
+import { isOffline, OfflineError } from "./offline";
 import { routeTree } from "./routeTree.gen";
 import "./tokens.css";
 
@@ -12,10 +13,16 @@ fitAppToKeyboard();
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
 shareTokenWithWorker();
 
-// TanStack Query takes the phone to be online until it hears otherwise. Opened offline, changes
-// would then be sent and fail, instead of waiting until the phone is back online.
+// TanStack Query takes the phone to be online until it hears otherwise, so tell it what it is.
 onlineManager.setOnline(navigator.onLine);
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  mutationCache: new MutationCache({
+    // Offline a change is refused before it shows on screen, rather than kept to send later (offline.ts).
+    onMutate: (_, { meta }) => {
+      if (isOffline()) throw new OfflineError(`You're offline, so ${meta?.offline ?? "that couldn't be saved"}.`);
+    },
+  }),
+});
 
 // Tabs in bar order: moving right slides the new screen in from the right, and back again.
 const TABS = ["/", "/groceries", "/reminders", "/us"];

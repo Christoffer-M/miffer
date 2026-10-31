@@ -14,6 +14,7 @@ import { useAddItem, useClearDone, useRemoveItem, useRestoreItems, useSetDone } 
 import { useMembers } from "../queries/household";
 import { historyQuery, itemsQuery } from "../queries/items";
 import { starterItems } from "../groceries.da";
+import { isOffline } from "../offline";
 import { lower, suggest } from "../suggest";
 import { animatedBlock, animatedItem } from "../viewTransition";
 import ui from "../ui.module.css";
@@ -77,22 +78,22 @@ function Groceries() {
     const existing = items.find((i) => lower(i.name) === lower(name));
     if (!existing) addItem.mutate({ id: crypto.randomUUID(), name, addedBy: session.deviceId });
     else if (existing.done) setDone.mutate({ id: existing.id, done: false });
-    setDraft("");
+    if (!isOffline()) setDraft(""); // refused offline: what was typed stays, to add later
   }
 
   function remove(item: Item) {
     removeItem.mutate(item.id);
-    setRemoved([item]);
+    if (!isOffline()) setRemoved([item]);
   }
 
   function clear() {
     clearDone.mutate();
-    setRemoved(done);
+    if (!isOffline()) setRemoved(done);
   }
 
   function undo() {
     restoreItems.mutate(removed);
-    setRemoved([]);
+    if (!isOffline()) setRemoved([]);
   }
 
   function add(e: React.FormEvent) {
@@ -119,7 +120,7 @@ function Groceries() {
       {!online && (
         <div className={s.notice}>
           <strong>You're offline</strong>
-          <span>Changes will sync when you reconnect.</span>
+          <span>Changes can't be saved until you're back online.</span>
         </div>
       )}
 

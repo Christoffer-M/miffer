@@ -42,6 +42,7 @@ function LinkUp() {
   const [code, setCode] = useState("");
   // A wrong code shows here, before they've typed their name.
   const check = useMutation({
+    meta: { offline: "the code couldn't be checked" },
     mutationFn: (code: string) => queryClient.fetchQuery(codeQuery(code)),
     onSuccess: (_, code) => navigate({ to: "/name", hash: `code=${code}` }),
   });
