@@ -1,0 +1,45 @@
+/* Takes no room at the top of the screen: the notice floats over the header, and over a sheet. */
+.slot {
+  position: relative;
+  z-index: 11;
+}
+.slot > * {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  right: 12px;
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: #cbd5e1;
+  font-size: 15px;
+  box-shadow: 0 6px 20px rgb(20 33 61 / 0.25);
+  animation: notice-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.notice svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #fff;
+}
+.notice strong {
+  display: block;
+  color: #fff;
+}
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notice {
+    animation: none;
+  }
+}
