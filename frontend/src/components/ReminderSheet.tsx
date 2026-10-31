@@ -17,6 +17,7 @@ import { type Reminder, session } from "../api";
 import { Avatar } from "../brand";
 import { canPush, useSetPush } from "../mutations/household";
 import { useAddReminder, useChangeReminder, useDeleteReminder } from "../mutations/reminders";
+import { isOffline } from "../offline";
 import { meQuery, useMembers } from "../queries/household";
 import { quickTimes, toLocalInput } from "../reminders";
 import { Button } from "./Button";
@@ -69,7 +70,7 @@ export function ReminderSheet({ reminder, onClose }: { reminder?: Reminder; onCl
     if (!reminder) add.mutate({ id: crypto.randomUUID(), ...fields, remindAt: at });
     // The time only goes along when it changed: sending it would also end a snooze and send it again.
     else change.mutate({ id: reminder.id, ...fields, ...(at !== reminder.remindAt && { remindAt: at }) });
-    onClose();
+    if (!isOffline()) onClose(); // refused offline: the sheet stays, so nothing typed is lost
   }
 
   return (
@@ -200,7 +201,7 @@ export function ReminderSheet({ reminder, onClose }: { reminder?: Reminder; onCl
                   className={s.delete}
                   onPress={() => {
                     remove.mutate(reminder.id);
-                    onClose();
+                    if (!isOffline()) onClose();
                   }}
                 >
                   <Trash2 size={18} aria-hidden />

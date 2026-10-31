@@ -5,6 +5,7 @@ import { Bell, House, ShoppingBasket, Users } from "lucide-react";
 import { connectLive, session, useToken } from "../api";
 import { AskForNotifications } from "../components/AskForNotifications";
 import { DueReminders } from "../components/DueReminders";
+import { OfflineNotice } from "../components/OfflineNotice";
 import { UndoSpot } from "../components/UndoBar";
 import { changesPending } from "../mutations/settle";
 import { meQuery } from "../queries/household";
@@ -39,6 +40,7 @@ function Root() {
 
   return (
     <div className={s.screen}>
+      <OfflineNotice />
       <UndoSpot value={setUndoSpot}>
         <Outlet />
       </UndoSpot>

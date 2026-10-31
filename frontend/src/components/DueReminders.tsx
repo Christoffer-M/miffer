@@ -6,6 +6,7 @@ import { AlarmClock, Bell, Check, ChevronRight, Pencil, Repeat } from "lucide-re
 import { type Reminder, session } from "../api";
 import { Avatar } from "../brand";
 import { type ReminderTimes, useChangeReminder, useCompleteReminder, useRestoreReminder } from "../mutations/reminders";
+import { isOffline } from "../offline";
 import { useMembers } from "../queries/household";
 import { remindersQuery } from "../queries/reminders";
 import { dueAt, dueFor, formatBack, formatDue, nextTime, REPEATS, SNOOZES } from "../reminders";
@@ -83,17 +84,19 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
   if (!due && moved) setMoved(null);
 
   function done(r: Reminder) {
-    setMoved("next");
     const next = r.repeat && r.remindAt && nextTime(new Date(r.remindAt), r.repeat);
     const after = complete.mutateAsync(r.id);
     after.catch(() => {}); // the refetch shows it wasn't done; an Undo then finds nothing to undo
+    if (isOffline()) return; // refused: it stays up
+    setMoved("next");
     setUndo({ before: r, after, text: next ? `Done, back ${formatBack(next)}` : `Done: ${r.title}` });
   }
 
   function snooze(r: Reminder, until: Date) {
     const snoozedUntil = until.toISOString();
-    setMoved("next");
     change.mutate({ id: r.id, snoozedUntil });
+    if (isOffline()) return;
+    setMoved("next");
     const after = Promise.resolve({ remindAt: r.remindAt, snoozedUntil, done: false });
     setUndo({ before: r, after, text: `Snoozed, back ${formatBack(until)}` });
   }
@@ -102,6 +105,7 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
     if (!undo) return;
     const { id, remindAt, snoozedUntil, notified, done } = undo.before;
     restore.mutate({ id, remindAt, snoozedUntil, notified, done, ifStill: undo.after });
+    if (isOffline()) return;
     setShownId(id);
     if (due) setMoved("back");
     setUndo(null);
