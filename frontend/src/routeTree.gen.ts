@@ -16,6 +16,8 @@ import { Route as RemindersRouteImport } from './routes/reminders'
 import { Route as UsRouteImport } from './routes/us'
 import { Route as WatchIndexRouteImport } from './routes/watch/index'
 import { Route as WatchAddRouteImport } from './routes/watch/add'
+import { Route as WatchMoviesRouteImport } from './routes/watch/movies'
+import { Route as WatchSeriesRouteImport } from './routes/watch/series'
 import { Route as WatchWatchedRouteImport } from './routes/watch/watched'
 
 const IndexRoute = IndexRouteImport.update({
@@ -53,6 +55,16 @@ const WatchAddRoute = WatchAddRouteImport.update({
   path: '/watch/add',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WatchMoviesRoute = WatchMoviesRouteImport.update({
+  id: '/watch/movies',
+  path: '/watch/movies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WatchSeriesRoute = WatchSeriesRouteImport.update({
+  id: '/watch/series',
+  path: '/watch/series',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WatchWatchedRoute = WatchWatchedRouteImport.update({
   id: '/watch/watched',
   path: '/watch/watched',
@@ -66,6 +78,8 @@ export interface FileRoutesByFullPath {
   '/reminders': typeof RemindersRoute
   '/us': typeof UsRoute
   '/watch/add': typeof WatchAddRoute
+  '/watch/movies': typeof WatchMoviesRoute
+  '/watch/series': typeof WatchSeriesRoute
   '/watch/watched': typeof WatchWatchedRoute
   '/watch/': typeof WatchIndexRoute
 }
@@ -76,6 +90,8 @@ export interface FileRoutesByTo {
   '/reminders': typeof RemindersRoute
   '/us': typeof UsRoute
   '/watch/add': typeof WatchAddRoute
+  '/watch/movies': typeof WatchMoviesRoute
+  '/watch/series': typeof WatchSeriesRoute
   '/watch/watched': typeof WatchWatchedRoute
   '/watch': typeof WatchIndexRoute
 }
@@ -87,6 +103,8 @@ export interface FileRoutesById {
   '/reminders': typeof RemindersRoute
   '/us': typeof UsRoute
   '/watch/add': typeof WatchAddRoute
+  '/watch/movies': typeof WatchMoviesRoute
+  '/watch/series': typeof WatchSeriesRoute
   '/watch/watched': typeof WatchWatchedRoute
   '/watch/': typeof WatchIndexRoute
 }
@@ -99,6 +117,8 @@ export interface FileRouteTypes {
     | '/reminders'
     | '/us'
     | '/watch/add'
+    | '/watch/movies'
+    | '/watch/series'
     | '/watch/watched'
     | '/watch/'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +129,8 @@ export interface FileRouteTypes {
     | '/reminders'
     | '/us'
     | '/watch/add'
+    | '/watch/movies'
+    | '/watch/series'
     | '/watch/watched'
     | '/watch'
   id:
@@ -119,6 +141,8 @@ export interface FileRouteTypes {
     | '/reminders'
     | '/us'
     | '/watch/add'
+    | '/watch/movies'
+    | '/watch/series'
     | '/watch/watched'
     | '/watch/'
   fileRoutesById: FileRoutesById
@@ -130,6 +154,8 @@ export interface RootRouteChildren {
   RemindersRoute: typeof RemindersRoute
   UsRoute: typeof UsRoute
   WatchAddRoute: typeof WatchAddRoute
+  WatchMoviesRoute: typeof WatchMoviesRoute
+  WatchSeriesRoute: typeof WatchSeriesRoute
   WatchWatchedRoute: typeof WatchWatchedRoute
   WatchIndexRoute: typeof WatchIndexRoute
 }
@@ -185,6 +211,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WatchAddRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/watch/movies': {
+      id: '/watch/movies'
+      path: '/watch/movies'
+      fullPath: '/watch/movies'
+      preLoaderRoute: typeof WatchMoviesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/watch/series': {
+      id: '/watch/series'
+      path: '/watch/series'
+      fullPath: '/watch/series'
+      preLoaderRoute: typeof WatchSeriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/watch/watched': {
       id: '/watch/watched'
       path: '/watch/watched'
@@ -202,6 +242,8 @@ const rootRouteChildren: RootRouteChildren = {
   RemindersRoute: RemindersRoute,
   UsRoute: UsRoute,
   WatchAddRoute: WatchAddRoute,
+  WatchMoviesRoute: WatchMoviesRoute,
+  WatchSeriesRoute: WatchSeriesRoute,
   WatchWatchedRoute: WatchWatchedRoute,
   WatchIndexRoute: WatchIndexRoute,
 }

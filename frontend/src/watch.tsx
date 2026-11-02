@@ -8,10 +8,12 @@ import ui from "./ui.module.css";
 import sheet from "./components/Confirm.module.css";
 import s from "./routes/watch/watch.module.css";
 
+export type Kind = Watch["kind"];
+
 export const KINDS = {
-  movie: { label: "Movie", Icon: Film },
-  series: { label: "Series", Icon: Tv },
-};
+  movie: { label: "Movie", plural: "Movies", page: "/watch/movies", Icon: Film },
+  series: { label: "Series", plural: "Series", page: "/watch/series", Icon: Tv },
+} as const;
 
 /** The small line under a title: "Movie · 2024 · Anna". */
 export function WatchMeta({ kind, year, extra }: { kind: Watch["kind"]; year: number | null; extra?: string }) {
@@ -106,8 +108,8 @@ export function WatchSheet({ item, isOpen, onClose, eyebrow, note, actions }: Sh
   );
 }
 
-/** Whether Watch or Watched is on screen: changes there animate. Not on Add, which leaves the list alone. */
-export const showsList = () => ["/watch", "/watch/watched"].includes(location.pathname);
+/** Whether a list of posters is on screen: changes there animate. Not on Add, which leaves the list alone. */
+export const showsList = () => ["/watch", "/watch/movies", "/watch/series", "/watch/watched"].includes(location.pathname);
 
 /** "You added it", "Mia added it". */
 export const addedIt = (who: string) => `${who.charAt(0).toUpperCase()}${who.slice(1)} added it`;
