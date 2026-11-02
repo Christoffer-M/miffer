@@ -1,6 +1,6 @@
 import type { PushSubscription } from "web-push";
 import { sql } from "drizzle-orm";
-import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 export const households = pgTable("households", {
   id: uuid().primaryKey().defaultRandom(),
@@ -78,6 +78,32 @@ export const reminders = pgTable(
       .on(sql`coalesce(${t.snoozedUntil}, ${t.remindAt})`)
       .where(sql`not ${t.notified} and not ${t.done}`),
   ],
+);
+
+// Movies and series to watch, and what's been watched.
+export const watch = pgTable(
+  "watch",
+  {
+    // Made on the phone, like items.
+    id: uuid().primaryKey(),
+    householdId: uuid()
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    title: text().notNull(),
+    kind: text({ enum: ["movie", "series"] }).notNull(),
+    // From TMDB when picked from search; null when typed by hand.
+    tmdbId: integer(),
+    year: integer(),
+    // TMDB's poster, e.g. "/abc123.jpg"; the phone fetches it from TMDB's image server.
+    posterPath: text(),
+    addedBy: uuid().references(() => devices.id, { onDelete: "set null" }),
+    // When it was watched, or null while it's still to watch.
+    watchedAt: timestamp({ withTimezone: true }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  // Also the index for a household's list. The same movie can't be on twice; TMDB numbers
+  // movies and series separately, hence kind. Typed-in titles (no tmdbId) never clash.
+  (t) => [uniqueIndex().on(t.householdId, t.kind, t.tmdbId)],
 );
 
 // Everything a household has added and how often, for suggestions. Unlike items it

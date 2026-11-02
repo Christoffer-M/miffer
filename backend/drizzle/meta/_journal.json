@@ -50,6 +50,13 @@
       "when": 1793019178886,
       "tag": "0006_reminders_waiting_index",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793631037342,
+      "tag": "0007_watch",
+      "breakpoints": true
     }
   ]
 }

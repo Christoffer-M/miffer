@@ -52,6 +52,13 @@
   gap: 6px;
 }
 
+/* Watch: the first few posters in a row. */
+.posters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .chip {
   padding: 5px 12px;
   border-radius: 999px;

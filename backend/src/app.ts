@@ -10,8 +10,9 @@ import { db, schema } from "./db/index.js";
 import { notify } from "./live.js";
 import { isPushEndpoint, pushAdded, pushKey } from "./push.js";
 import { complete, isTimeZone } from "./reminders.js";
+import { search, searchOn } from "./tmdb.js";
 
-const { households, devices, items, itemHistory, linkCodes, reminders } = schema;
+const { households, devices, items, itemHistory, linkCodes, reminders, watch } = schema;
 
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O or 1/I mix-ups
 const CODE_TTL_MS = 24 * 60 * 60 * 1000; // long enough for an invite link to sit in a chat
@@ -423,11 +424,100 @@ const reminderRoutes = new Hono<Env>()
     return c.body(null, 204);
   });
 
+const watchFields = z.object({
+  title: z.string().trim().min(1).max(200),
+  kind: z.enum(["movie", "series"]),
+  // From a search result; null when typed by hand.
+  tmdbId: z.number().int().positive().nullable(),
+  year: z.number().int().min(1870).max(2200).nullable(),
+  // Only a TMDB image name: phones put it in an image address.
+  posterPath: z.string().regex(/^\/\w+\.(jpg|png)$/).nullable(),
+});
+const watchParam = zValidator("param", z.object({ id: z.uuid() }));
+
+const watchRoutes = new Hono<Env>()
+  .use(auth)
+  .get("/", async (c) => {
+    const rows = await db
+      .select()
+      .from(watch)
+      .where(eq(watch.householdId, c.var.householdId))
+      .orderBy(desc(watch.createdAt));
+    return c.json(rows);
+  })
+  // Through here rather than from the phone, so the TMDB key stays on the server.
+  .get("/search", zValidator("query", z.object({ q: z.string().trim().min(1).max(100) })), async (c) => {
+    if (!searchOn) return c.json({ error: "Search isn't set up on the server yet." }, 503);
+    try {
+      return c.json(await search(c.req.valid("query").q));
+    } catch (err) {
+      console.error("search failed", err);
+      return c.json({ error: "Search isn't answering right now." }, 502);
+    }
+  })
+  .post("/", zValidator("json", watchFields.extend({ id: z.uuid() })), async (c) => {
+    const { title, ...rest } = c.req.valid("json");
+    const added = await db
+      .insert(watch)
+      .values({ ...rest, title, householdId: c.var.householdId, addedBy: c.var.deviceId })
+      .onConflictDoNothing() // a retried request, or already on the list
+      .returning({ id: watch.id });
+    if (added.length) {
+      pushAdded(c.var.householdId, c.var.deviceId, `${title} to watch`).catch((err) => console.error("push failed", err));
+    }
+    notify(c.var.householdId, "watch");
+    return c.body(null, 204);
+  })
+  // Undo of a delete: puts it back as it was, watched or not, in its old place.
+  .post(
+    "/restore",
+    zValidator(
+      "json",
+      watchFields.extend({
+        id: z.uuid(),
+        addedBy: z.uuid().nullable(),
+        watchedAt: z.iso.datetime().nullable(),
+        createdAt: z.iso.datetime(),
+      }),
+    ),
+    async (c) => {
+      const { addedBy, watchedAt, createdAt, ...rest } = c.req.valid("json");
+      await db
+        .insert(watch)
+        .values({
+          ...rest,
+          householdId: c.var.householdId,
+          // Only someone in this household can have added it.
+          addedBy: addedBy && (await isMember(c.var.householdId, addedBy)) ? addedBy : null,
+          watchedAt: watchedAt ? new Date(watchedAt) : null,
+          createdAt: new Date(createdAt),
+        })
+        .onConflictDoNothing(); // already back (a retry), or someone else's id: left as it is
+      notify(c.var.householdId, "watch");
+      return c.body(null, 204);
+    },
+  )
+  // Watched (now), or back on the list.
+  .patch("/:id", watchParam, zValidator("json", z.object({ watched: z.boolean() })), async (c) => {
+    await db
+      .update(watch)
+      .set({ watchedAt: c.req.valid("json").watched ? new Date() : null })
+      .where(and(eq(watch.id, c.req.valid("param").id), eq(watch.householdId, c.var.householdId)));
+    notify(c.var.householdId, "watch");
+    return c.body(null, 204);
+  })
+  .delete("/:id", watchParam, async (c) => {
+    await db.delete(watch).where(and(eq(watch.id, c.req.valid("param").id), eq(watch.householdId, c.var.householdId)));
+    notify(c.var.householdId, "watch");
+    return c.body(null, 204);
+  });
+
 export const app = new Hono()
   .basePath("/api")
   .get("/health", (c) => c.text("ok"))
   .route("/households", householdRoutes)
   .route("/items", itemRoutes)
-  .route("/reminders", reminderRoutes);
+  .route("/reminders", reminderRoutes)
+  .route("/watch", watchRoutes);
 
 export type AppType = typeof app;

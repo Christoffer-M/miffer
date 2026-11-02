@@ -25,7 +25,7 @@ const queryClient = new QueryClient({
 });
 
 // Tabs in bar order: moving right slides the new screen in from the right, and back again.
-const TABS = ["/", "/groceries", "/reminders", "/us"];
+const TABS = ["/", "/groceries", "/reminders", "/watch", "/us"];
 
 const router = createRouter({
   routeTree,

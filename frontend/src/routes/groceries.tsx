@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useContext, useEffect, useState, useSyncExternalStore } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Button as AriaButton, Form } from "react-aria-components";
 import { Check, Plus, Trash2, Undo2, X } from "lucide-react";
 import { type Item, session } from "../api";
@@ -14,27 +14,13 @@ import { useAddItem, useClearDone, useRemoveItem, useRestoreItems, useSetDone } 
 import { useMembers } from "../queries/household";
 import { historyQuery, itemsQuery } from "../queries/items";
 import { starterItems } from "../groceries.da";
-import { isOffline } from "../offline";
+import { isOffline, useOnline } from "../offline";
 import { lower, suggest } from "../suggest";
 import { animatedBlock, animatedItem } from "../viewTransition";
 import ui from "../ui.module.css";
 import s from "./groceries.module.css";
 
 export const Route = createFileRoute("/groceries")({ component: Groceries });
-
-function useOnline() {
-  return useSyncExternalStore(
-    (cb) => {
-      window.addEventListener("online", cb);
-      window.addEventListener("offline", cb);
-      return () => {
-        window.removeEventListener("online", cb);
-        window.removeEventListener("offline", cb);
-      };
-    },
-    () => navigator.onLine,
-  );
-}
 
 /**
  * Lets an item animate in list changes (see viewTransition.ts). An item has a different

@@ -1,6 +1,6 @@
 # miffer
 
-A shared grocery list and reminders for two phones, kept in sync live.
+A shared grocery list, reminders and a watchlist for two phones, kept in sync live.
 
 - `frontend/`: React + Vite + TanStack Router + TanStack Query. Installable as a PWA; Tauri comes later.
 - `backend/`: Hono on Node, Drizzle + Postgres, plus a WebSocket that tells phones when their list changed.
@@ -17,6 +17,10 @@ pnpm dev     # backend on :3000, frontend on http://localhost:5173
 
 The Us screen only offers notifications when the backend has `VAPID_PUBLIC_KEY` and
 `VAPID_PRIVATE_KEY` set (`npx web-push generate-vapid-keys` makes a pair).
+
+Watch searches movies and series on [TMDB](https://www.themoviedb.org/settings/api) when the
+backend has `TMDB_API_KEY` (the API key or the read access token both work). Without it, titles
+are typed by hand. `pnpm dev` reads these from a `.env` in the repo root.
 
 ```bash
 pnpm typecheck
@@ -74,6 +78,7 @@ If `/srv` needs root: `sudo mkdir -p /srv/miffer && sudo chown $USER /srv/miffer
 | `DOMAIN` | `miffer.example.com` | Domain pointing at the server |
 | `PROXY_NETWORK` | `proxy` | Only if nginx-proxy's network isn't called `proxy` |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | from `npx web-push generate-vapid-keys` | Optional: turns on notifications when someone adds something. Keep them: new keys mean everyone has to turn notifications on again |
+| `TMDB_API_KEY` | from themoviedb.org → Settings → API | Optional: turns on movie and series search on Watch |
 
 On iPhones notifications need iOS 16.4+ and miffer added to the Home Screen; the Us screen says so.
 

@@ -64,6 +64,8 @@ export const { api } = hc<AppType>(BASE || "/", {
 
 export type Item = InferResponseType<typeof api.items.$get, 200>[number];
 export type Reminder = InferResponseType<typeof api.reminders.$get, 200>[number];
+export type Watch = InferResponseType<typeof api.watch.$get, 200>[number];
+export type SearchResult = InferResponseType<typeof api.watch.search.$get, 200>[number];
 
 /** A failed response: the server's message, and its status for telling failures apart. */
 export class ApiError extends Error {
@@ -88,8 +90,8 @@ export async function ok<T extends Response>(request: Promise<T>): Promise<Exclu
   return res as Exclude<T, { ok: false }>;
 }
 
-export type LiveTopic = "items" | "members" | "reminders";
-const TOPICS: LiveTopic[] = ["items", "members", "reminders"];
+export type LiveTopic = "items" | "members" | "reminders" | "watch";
+const TOPICS: LiveTopic[] = ["items", "members", "reminders", "watch"];
 
 /**
  * Opens the live connection and calls onChange with what changed in the

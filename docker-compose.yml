@@ -4,6 +4,7 @@
 #   DB_PASSWORD  Postgres password (keep it the same after the first start)
 #   DOMAIN       the domain nginx-proxy routes to miffer
 #   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY  for notifications (optional, see README)
+#   TMDB_API_KEY  for movie and series search on Watch (optional, see README)
 #   TAG          image tag to run; the deploy sets it to the commit it built (default: latest)
 name: miffer
 
@@ -43,6 +44,8 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: https://${DOMAIN}
+      # Movie and series search on Watch; without it titles are typed by hand.
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
       VIRTUAL_HOST: ${DOMAIN:?set DOMAIN in .env}
       VIRTUAL_PATH: /api/
       VIRTUAL_PORT: "3000"
