@@ -93,7 +93,7 @@
 }
 
 /* Edge to edge, so posters slide out under the screen's sides. As tall as the shelf's share
-   of the screen: a poster is as wide as fits that height (2:3) with its two-line title under it. */
+   of the screen: a poster is as wide as fits that height (2:3) with its one-line title under it. */
 .row {
   flex: 1 0 0;
   min-height: 140px; /* below this the screen scrolls instead */
@@ -112,8 +112,9 @@
   display: none;
 }
 .row > li {
-  /* The title's two lines and the gap above them: 40px. */
-  flex: 0 0 clamp(64px, (100cqh - 40px) * 2 / 3, 200px);
+  /* The title's line and the gap above it: 24px. */
+  flex: 0 0 clamp(64px, (100cqh - 24px) * 2 / 3, 200px);
+  min-width: 0; /* a long title is cut short, not let widen its poster */
   scroll-snap-align: start;
 }
 
@@ -358,15 +359,14 @@
   box-shadow: 0 0 0 2px var(--ground);
 }
 
-/* The title under the poster: two lines at most. */
+/* The title under the poster: one line, cut short with "…" when it's longer. */
 .caption {
   font-size: 13px;
   font-weight: 600;
   line-height: 1.25;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status {
