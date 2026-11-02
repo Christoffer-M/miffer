@@ -64,6 +64,13 @@
       "when": 1793651265159,
       "tag": "0008_watch_progress",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793660175690,
+      "tag": "0009_watched_all_seasons",
+      "breakpoints": true
     }
   ]
 }

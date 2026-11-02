@@ -80,8 +80,9 @@ function Watching() {
 
   /**
    * Seen it all: it remembers the end of its last season, so Watched says how many seasons that
-   * is and can tell when a new one comes. Seasons from search that haven't loaded yet are filled
-   * in on Watched (useFillWatchedEnds); typed by hand, the season it's in counts as done.
+   * is and can tell when a new one comes. From search with the seasons not loaded yet, it goes
+   * without a place and the server fills in the end (watched.ts); typed by hand, the season it's
+   * in counts as done.
    */
   function finished(w: Watch, seasons?: number[]) {
     close();

@@ -34,10 +34,12 @@ export function endOf(seasons?: number[]): Place | undefined {
 /**
  * Finished a series typed by hand, whose seasons aren't known: the season it's in counts as
  * seen to the end (S3 E5 next up is three seasons). At a season's first episode that season
- * hadn't started, so it's the ones before (S3 E1 is two).
+ * hadn't started, so it's the ones before (S3 E1 is two), and at S1 E1 nothing is known: null.
+ * The server's migration 0009 does the same for series finished before this.
  */
-export function finishedAt(at: Place): Place {
-  return at.episode === 1 && at.season > 1 ? at : { season: at.season + 1, episode: 1 };
+export function finishedAt(at: Place): Place | null {
+  if (at.episode > 1) return { season: at.season + 1, episode: 1 };
+  return at.season > 1 ? at : null;
 }
 
 /** The episode after `at`: the next season's first once this season's last is watched. */

@@ -62,50 +62,33 @@ export const seasonsQuery = (tmdbId: number | null) =>
   });
 
 /**
- * Watched series with episodes past where they ended: TMDB has added a season, or more episodes
- * to the last one. Only series from search that remember their end (watched since this
- * existed) can tell; the rest just stay watched.
+ * What Watched says about each watched series that remembers where it ended, from its seasons
+ * (fetched for search ones; typed by hand there are none):
+ * - `fresh`: episodes past that end, as TMDB has added a season or more episodes to the last
+ *   one, with where to go on from.
+ * - `seen`: how much was seen, "3 seasons". Series from search wait for their seasons.
+ * Series watched without an end yet (the server fills it in) say neither.
  */
-export function useNewEpisodes(list: Watch[]) {
-  const ended = list.filter(
-    (w) => w.kind === "series" && w.watchedAt && w.tmdbId !== null && w.season != null && w.episode != null,
-  );
+export function useWatchedSeries(list: Watch[]) {
+  const ended = list.filter((w) => w.kind === "series" && w.watchedAt && w.season != null && w.episode != null);
   return useQueries({
     queries: ended.map((w) => seasonsQuery(w.tmdbId)),
     combine: (results) => {
-      const found = new Map<string, { label: string; place: Place }>();
+      const fresh = new Map<string, { label: string; place: Place }>();
+      const seenBy = new Map<string, Seen>();
       ended.forEach((w, i) => {
-        const seasons = results[i]?.data;
-        if (!seasons || caughtUp(placeOf(w, seasons), seasons)) return;
-        const place = placeOf(w, seasons);
-        const part = share(place, seasons)!;
-        const left = part.total - part.watched;
-        const label = place.episode === 1 ? "New season" : left === 1 ? "1 new episode" : `${left} new episodes`;
-        found.set(w.id, { label, place });
-      });
-      return found;
-    },
-  });
-}
-
-/**
- * How much of each watched series was seen: "3 seasons". Series from search wait for their
- * seasons (the same ones as above, so nothing more is fetched); typed by hand, it's from the
- * place alone. Series watched without a place (before this existed) don't say.
- */
-export function useSeen(list: Watch[]) {
-  const watched = list.filter((w) => w.kind === "series" && w.watchedAt && w.season != null && w.episode != null);
-  return useQueries({
-    queries: watched.map((w) => seasonsQuery(w.tmdbId)),
-    combine: (results) => {
-      const found = new Map<string, Seen>();
-      watched.forEach((w, i) => {
         const seasons = results[i]?.data;
         if (w.tmdbId !== null && !seasons) return;
         const part = seen({ season: w.season!, episode: w.episode! }, seasons);
-        if (part) found.set(w.id, part);
+        if (part) seenBy.set(w.id, part);
+        if (!seasons || caughtUp(placeOf(w, seasons), seasons)) return;
+        const place = placeOf(w, seasons);
+        const shared = share(place, seasons)!;
+        const left = shared.total - shared.watched;
+        const label = place.episode === 1 ? "New season" : left === 1 ? "1 new episode" : `${left} new episodes`;
+        fresh.set(w.id, { label, place });
       });
-      return found;
+      return { fresh, seen: seenBy };
     },
   });
 }
