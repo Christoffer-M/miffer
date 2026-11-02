@@ -532,10 +532,19 @@ test("a series being watched keeps its place, and a movie has none", async () =>
   await call("/watch/restore", { method: "POST", token: anna.token, body: before });
   expect(await find(show)).toEqual(before);
 
-  // Back from Watched with restart, it starts over on its shelf.
-  await call(`/watch/${show}`, { method: "PATCH", token: anna.token, body: { watched: true } });
-  await call(`/watch/${show}`, { method: "PATCH", token: anna.token, body: { watched: false, restart: true } });
+  // Watched remembers where the series ended; Put back (place null) starts it over on its shelf.
+  const patch = (id: string, body: object) => call(`/watch/${id}`, { method: "PATCH", token: anna.token, body });
+  await patch(show, { watched: true, place: { season: 3, episode: 9 } });
+  expect(await find(show)).toMatchObject({ watchedAt: expect.any(String), season: 3, episode: 9 });
+  // Continue: back on Watching, at the new season.
+  await patch(show, { watched: false, place: { season: 4, episode: 1 } });
+  expect(await find(show)).toMatchObject({ watchedAt: null, season: 4, episode: 1, progressAt: expect.any(String) });
+  await patch(show, { watched: true });
+  await patch(show, { watched: false, place: null });
   expect(await find(show)).toMatchObject({ watchedAt: null, season: null, episode: null, progressAt: null });
+  // A movie is watched, but gets no place.
+  await patch(film, { watched: true, place: { season: 1, episode: 2 } });
+  expect(await find(film)).toMatchObject({ watchedAt: expect.any(String), season: null, episode: null });
   await setProgress(show, { season: 2, episode: 4 });
 
   // Stopping clears it.

@@ -513,21 +513,25 @@ const watchRoutes = new Hono<Env>()
       return c.body(null, 204);
     },
   )
-  // Watched (now), or back on the list. Back with `restart`, a series forgets where it was up to
-  // and goes on its shelf to start over; without, it's back on Watching where it was.
+  // Watched (now), or back on the list. A series can set where it's up to in the same go:
+  // `place` null starts it over on its shelf (Put back), the end of its last season remembers how
+  // far it went when watched (to spot a new season later), and a place to go on from takes it
+  // back to Watching (Continue). Left out, the place stays as it is (Undo of Finished).
   .patch(
     "/:id",
     watchParam,
-    zValidator("json", z.object({ watched: z.boolean(), restart: z.boolean().optional() })),
+    zValidator("json", z.object({ watched: z.boolean(), place: progress.nullable().optional() })),
     async (c) => {
-      const { watched, restart } = c.req.valid("json");
-      await db
-        .update(watch)
-        .set({
-          watchedAt: watched ? new Date() : null,
-          ...(restart && !watched && { season: null, episode: null, progressAt: null }),
-        })
-        .where(and(eq(watch.id, c.req.valid("param").id), eq(watch.householdId, c.var.householdId)));
+      const { watched, place } = c.req.valid("json");
+      const mine = and(eq(watch.id, c.req.valid("param").id), eq(watch.householdId, c.var.householdId));
+      await db.transaction(async (tx) => {
+        await tx.update(watch).set({ watchedAt: watched ? new Date() : null }).where(mine);
+        if (place === undefined) return;
+        await tx
+          .update(watch)
+          .set({ season: place?.season ?? null, episode: place?.episode ?? null, progressAt: place ? new Date() : null })
+          .where(and(mine, eq(watch.kind, "series"))); // a movie has no episodes
+      });
       notify(c.var.householdId, "watch");
       return c.body(null, 204);
     },

@@ -275,6 +275,36 @@
   display: flex;
 }
 
+/* New episodes since it was watched, under the title on Watched. */
+.tag {
+  align-self: flex-start;
+  margin-top: -2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* On Watch's Watched link when a watched series has new episodes (the count is in its label). */
+.iconWithDot {
+  position: relative;
+  display: flex;
+}
+.dot {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-bright);
+  box-shadow: 0 0 0 2px var(--ground);
+}
+
 /* The title under the poster: two lines at most. */
 .caption {
   font-size: 13px;

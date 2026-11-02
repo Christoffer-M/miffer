@@ -5,7 +5,7 @@ import type { Watch } from "../../api";
 import { Avatars } from "../../brand";
 import { useOnline } from "../../offline";
 import { useMembers } from "../../queries/household";
-import { watchQuery } from "../../queries/watch";
+import { useNewEpisodes, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
 import { isWatching, type Kind, KINDS, PosterTile, tileLabel, toStart } from "../../watch";
 import ui from "../../ui.module.css";
@@ -24,6 +24,8 @@ function WatchList() {
   const toWatch = toStart(list);
   const watchingCount = list.filter(isWatching).length;
   const watchedCount = list.filter((w) => w.watchedAt).length;
+  // Watched series with a new season since: a dot on Watched says so.
+  const freshCount = useNewEpisodes(list).size;
 
   return (
     <>
@@ -39,8 +41,15 @@ function WatchList() {
               <TvMinimalPlay size={20} aria-hidden />
               {watchingCount}
             </Link>
-            <Link to="/watch/watched" className={s.action} aria-label={`Watched, ${watchedCount}`}>
-              <History size={20} aria-hidden />
+            <Link
+              to="/watch/watched"
+              className={s.action}
+              aria-label={`Watched, ${watchedCount}${freshCount ? `, ${freshCount} with new episodes` : ""}`}
+            >
+              <span className={s.iconWithDot}>
+                <History size={20} aria-hidden />
+                {freshCount > 0 && <span className={s.dot} />}
+              </span>
               {watchedCount}
             </Link>
             <Avatars />

@@ -53,7 +53,7 @@ function Add() {
     const existing = findOn(list, w);
     const change = () => {
       if (!existing) addWatch.mutate({ id: crypto.randomUUID(), ...w, addedBy: session.deviceId });
-      else if (existing.watchedAt) setWatched.mutate({ id: existing.id, watched: false, restart: true });
+      else if (existing.watchedAt) setWatched.mutate({ id: existing.id, watched: false, place: null });
     };
     // Refused offline, and said so: this page stays, with what was typed, to try again.
     if (isOffline()) return change();

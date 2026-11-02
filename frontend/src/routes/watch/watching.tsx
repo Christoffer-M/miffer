@@ -7,7 +7,7 @@ import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
 import { UndoBar, useUndo } from "../../components/UndoBar";
 import { useSetProgress, useSetWatched } from "../../mutations/watch";
-import { caughtUp, MAX_EPISODE, MAX_SEASON, next, type Place, seasonParts, share, tapEpisode } from "../../progress";
+import { caughtUp, endOf, MAX_EPISODE, MAX_SEASON, next, type Place, seasonParts, share, tapEpisode } from "../../progress";
 import { useMembers } from "../../queries/household";
 import { seasonsQuery, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
@@ -65,11 +65,13 @@ function Watching() {
   }
   const tick = (w: Watch) => move(w, next(at(w), seasonsOf(w)), `Watched ${short(at(w))} of ${w.title}`);
 
-  function finished(w: Watch) {
+  /** Seen it all: it remembers the end of its last season, so Watched can tell when a new one comes. */
+  function finished(w: Watch, seasons?: number[]) {
     close();
-    setWatched.mutate({ id: w.id, watched: true });
-    // Back where it was, on Watching.
-    undo.offer(`${w.title} is in Watched`, () => setWatched.mutate({ id: w.id, watched: false }));
+    const was = { season: w.season ?? 1, episode: w.episode ?? 1 };
+    setWatched.mutate({ id: w.id, watched: true, place: endOf(seasons) });
+    // Back on Watching where it was.
+    undo.offer(`${w.title} is in Watched`, () => setWatched.mutate({ id: w.id, watched: false, place: was }));
   }
 
   return (
@@ -161,7 +163,7 @@ function Watching() {
                 <Undo2 size={18} aria-hidden />
                 Put back
               </Button>
-              <Button onPress={() => finished(open)}>
+              <Button onPress={() => finished(open, openSeasons)}>
                 <CircleCheckBig size={18} aria-hidden />
                 Finished
               </Button>

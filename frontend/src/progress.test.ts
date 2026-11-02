@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { caughtUp, next, seasonParts, settle, share, tapEpisode } from "./progress.ts";
+import { caughtUp, endOf, next, seasonParts, settle, share, tapEpisode } from "./progress.ts";
 
 const seasons = [10, 10, 8];
 
@@ -61,4 +61,17 @@ test("tapping an episode marks it as the last seen, and tapping it again unmarks
   assert.deepEqual(tapEpisode({ season: 1, episode: 2 }, { season: 1, episode: 1 }, seasons), { season: 1, episode: 1 });
   // The last of a season, with the next season's first up next.
   assert.deepEqual(tapEpisode({ season: 2, episode: 1 }, { season: 1, episode: 10 }, seasons), { season: 1, episode: 10 });
+});
+
+test("a watched series remembers its end, and a new season shows past it", () => {
+  const end = endOf(seasons)!;
+  assert.deepEqual(end, { season: 3, episode: 9 });
+  assert.equal(caughtUp(end, seasons), true);
+  assert.equal(caughtUp(end, [...seasons, 6]), false);
+  assert.deepEqual(settle(end, [...seasons, 6]), { season: 4, episode: 1 });
+  // More episodes in the same season: they're next instead.
+  assert.deepEqual(settle(end, [10, 10, 12]), { season: 3, episode: 9 });
+  assert.equal(caughtUp(end, [10, 10, 12]), false);
+  assert.equal(endOf([]), undefined);
+  assert.equal(endOf(undefined), undefined);
 });
