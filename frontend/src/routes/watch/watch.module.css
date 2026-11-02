@@ -416,8 +416,9 @@
 .tabbedHeader {
   padding-bottom: 8px;
 }
+/* On the same 20px edge as the title and the posters; each underline is as wide as its tab. */
 .kindTabs {
-  padding: 0 12px;
+  padding: 0 20px;
   border-bottom: 1px solid var(--line);
   display: flex;
 }
@@ -446,8 +447,8 @@
 .kindTab[data-selected]::after {
   content: "";
   position: absolute;
-  left: 24px;
-  right: 24px;
+  left: 0;
+  right: 0;
   bottom: -1px; /* over the line under the tabs */
   height: 3px;
   border-radius: 3px 3px 0 0;
@@ -552,8 +553,11 @@
 /* Series' Watching tab: the series watched last big on top, the rest in short rows under it. */
 .watching {
   gap: 18px;
-  padding-top: 12px; /* clear of the tabs */
-  padding-bottom: 96px; /* the last row clears Undo */
+}
+/* Clear of the tabs, cards on their 20px edge, and the last row clears Undo. Two classes, to
+   win over the list padding (groceries.module.css) whichever stylesheet loads last. */
+.tabs > .watching {
+  padding: 12px 20px 96px;
 }
 
 .hero {
@@ -619,7 +623,7 @@
 
 .watchingHeading {
   margin: 0;
-  padding: 4px 8px 6px;
+  padding: 4px 0 6px; /* on the cards' edge */
 }
 
 .compactList {
