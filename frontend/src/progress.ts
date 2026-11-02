@@ -31,6 +31,15 @@ export function endOf(seasons?: number[]): Place | undefined {
   return { season: seasons.length, episode: seasons[seasons.length - 1] + 1 };
 }
 
+/**
+ * Finished a series typed by hand, whose seasons aren't known: the season it's in counts as
+ * seen to the end (S3 E5 next up is three seasons). At a season's first episode that season
+ * hadn't started, so it's the ones before (S3 E1 is two).
+ */
+export function finishedAt(at: Place): Place {
+  return at.episode === 1 && at.season > 1 ? at : { season: at.season + 1, episode: 1 };
+}
+
 /** The episode after `at`: the next season's first once this season's last is watched. */
 export function next(at: Place, seasons?: number[]): Place {
   const here = settle(at, seasons);

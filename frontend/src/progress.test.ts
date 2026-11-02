@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { caughtUp, endOf, next, seasonParts, seen, seenShort, seenText, settle, share, tapEpisode } from "./progress.ts";
+import { caughtUp, endOf, finishedAt, next, seasonParts, seen, seenShort, seenText, settle, share, tapEpisode } from "./progress.ts";
 
 const seasons = [10, 10, 8];
 
@@ -92,5 +92,9 @@ test("a watched series says how many seasons were seen", () => {
   assert.equal(seenText({ seasons: 1, episodes: 1 }), "1 season and 1 episode");
   assert.equal(seenText({ seasons: 0, episodes: 4 }), "4 episodes");
   assert.equal(seenShort({ seasons: 1, episodes: 0 }), "1 season");
+  // Finished by hand: the season it's in counts as all seen.
+  assert.deepEqual(seen(finishedAt({ season: 3, episode: 5 })), { seasons: 3, episodes: 0 });
+  assert.deepEqual(seen(finishedAt({ season: 3, episode: 1 })), { seasons: 2, episodes: 0 });
+  assert.deepEqual(seen(finishedAt({ season: 1, episode: 1 })), { seasons: 1, episodes: 0 });
   assert.equal(seenShort({ seasons: 2, episodes: 4 }), "Up to S3 · E4");
 });

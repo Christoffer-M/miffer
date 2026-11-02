@@ -122,7 +122,7 @@ export const useSetProgress = () =>
 
 /**
  * Watched series that don't remember where they ended: marked Watched before progress existed,
- * or before their seasons had loaded. Watched means all of it, so once the seasons are here
+ * or marked Watched or Finished before their seasons had loaded. Watched means all of it, so once the seasons are here
  * each one remembers the end of its last season as it is now: that's how many seasons were
  * seen, and a season added after that shows up as new. Quietly, as nothing moves.
  */

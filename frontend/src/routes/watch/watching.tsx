@@ -10,6 +10,7 @@ import { useSetProgress, useSetWatched } from "../../mutations/watch";
 import {
   caughtUp,
   endOf,
+  finishedAt,
   MAX_EPISODE,
   MAX_SEASON,
   next,
@@ -77,13 +78,16 @@ function Watching() {
   }
   const tick = (w: Watch) => move(w, next(at(w), seasonsOf(w)), `Watched ${short(at(w))} of ${w.title}`);
 
-  /** Seen it all: it remembers the end of its last season, so Watched can tell when a new one comes. */
+  /**
+   * Seen it all: it remembers the end of its last season, so Watched says how many seasons that
+   * is and can tell when a new one comes. Seasons from search that haven't loaded yet are filled
+   * in on Watched (useFillWatchedEnds); typed by hand, the season it's in counts as done.
+   */
   function finished(w: Watch, seasons?: number[]) {
     close();
     const was = { season: w.season ?? 1, episode: w.episode ?? 1 };
-    const end = endOf(seasons);
-    // Without the seasons it keeps its place, so it was seen up to the episode before.
-    const part = seen(end ?? was, seasons);
+    const end = endOf(seasons) ?? (w.tmdbId === null ? finishedAt(was) : null);
+    const part = end && seen(end, seasons);
     setWatched.mutate({ id: w.id, watched: true, place: end });
     // Back on Watching where it was.
     undo.offer(`${w.title} is in Watched${part ? `, ${seenText(part)} seen` : ""}`, () => setWatched.mutate({ id: w.id, watched: false, place: was }));
