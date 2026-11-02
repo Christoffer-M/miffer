@@ -5,27 +5,22 @@ import { Button as AriaButton, Group, Input, Label, NumberField } from "react-ar
 import { Check, ChevronLeft, CircleCheckBig, Minus, Plus, Undo2 } from "lucide-react";
 import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
-import { UndoBar } from "../../components/UndoBar";
+import { UndoBar, useUndo } from "../../components/UndoBar";
 import { useSetProgress, useSetWatched } from "../../mutations/watch";
-import { isOffline } from "../../offline";
-import { caughtUp, next, type Place, seasonParts, share } from "../../progress";
+import { caughtUp, MAX_EPISODE, MAX_SEASON, next, type Place, seasonParts, share, tapEpisode } from "../../progress";
 import { useMembers } from "../../queries/household";
 import { seasonsQuery, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
-import { addedIt, byRecent, isWatching, Poster, WatchSheet } from "../../watch";
+import { addedIt, isWatching, placeOf, Poster, WatchSheet, watchingGroups } from "../../watch";
 import ui from "../../ui.module.css";
 import g from "../groceries.module.css";
 import s from "./watch.module.css";
 
 export const Route = createFileRoute("/watch/watching")({ component: Watching });
 
-const UNDO_MS = 6000;
-
-const placeOf = (w: Watch): Place => ({ season: w.season ?? 1, episode: w.episode ?? 1 });
 const short = ({ season, episode }: Place) => `S${season} · E${episode}`;
-const nextUpLabel = (w: Watch) => `${w.title}, next up season ${placeOf(w).season}, episode ${placeOf(w).episode}`;
-const tickLabel = (w: Watch) =>
-  `Watched season ${placeOf(w).season}, episode ${placeOf(w).episode} of ${w.title}`;
+const nextUpLabel = (w: Watch, at: Place) => `${w.title}, next up season ${at.season}, episode ${at.episode}`;
+const tickLabel = (w: Watch, at: Place) => `Watched season ${at.season}, episode ${at.episode} of ${w.title}`;
 
 /** How far through a series is, in words: "14 of 28 episodes watched", when the seasons are known. */
 function howFar(at: Place, seasons?: number[]) {
@@ -43,26 +38,20 @@ function Watching() {
   const setProgress = useSetProgress();
   const setWatched = useSetWatched();
   const { whoIs } = useMembers();
-  const [undo, setUndo] = useState<{ text: string; run: () => void } | null>(null);
+  const undo = useUndo();
   // The series tapped last; kept after closing so the sheet doesn't empty as it slides away.
   const [tapped, setTapped] = useState<{ item?: Watch; isOpen: boolean }>({ isOpen: false });
   const close = () => setTapped((t) => ({ ...t, isOpen: false }));
 
-  useEffect(() => {
-    if (!undo) return;
-    const timer = setTimeout(() => setUndo(null), UNDO_MS);
-    return () => clearTimeout(timer);
-  }, [undo]);
-
-  const shown = list.filter(isWatching).sort(byRecent);
-  // Each series' seasons, to tell the caught-up ones apart.
-  const seasonsOf = useQueries({
+  const shown = list.filter(isWatching);
+  // Each series' seasons, to tell the caught-up ones apart and to count episodes right.
+  const seasonsById = useQueries({
     queries: shown.map((w) => seasonsQuery(w.tmdbId)),
     combine: (results) => new Map(shown.map((w, i) => [w.id, results[i]?.data])),
   });
-  const going = shown.filter((w) => !caughtUp(placeOf(w), seasonsOf.get(w.id)));
-  const caught = shown.filter((w) => caughtUp(placeOf(w), seasonsOf.get(w.id)));
-  const [hero, ...others] = going;
+  const seasonsOf = (w: Watch) => seasonsById.get(w.id);
+  const at = (w: Watch) => placeOf(w, seasonsOf(w));
+  const { hero, others, caught } = watchingGroups(list, seasonsOf);
 
   // As it is now: someone may have changed it since it was tapped.
   const open = tapped.item && (list.find((w) => w.id === tapped.item!.id) ?? tapped.item);
@@ -70,17 +59,17 @@ function Watching() {
   const openTile = (w: Watch) => setTapped({ item: w, isOpen: true });
 
   function move(w: Watch, to: Place | null, text: string) {
-    const from = placeOf(w);
+    const from = { season: w.season ?? 1, episode: w.episode ?? 1 }; // as stored, to put back exactly
     setProgress.mutate({ id: w.id, progress: to });
-    if (!isOffline()) setUndo({ text, run: () => setProgress.mutate({ id: w.id, progress: from }) });
+    undo.offer(text, () => setProgress.mutate({ id: w.id, progress: from }));
   }
-  const tick = (w: Watch) =>
-    move(w, next(placeOf(w), seasonsOf.get(w.id)), `Watched ${short(placeOf(w))} of ${w.title}`);
+  const tick = (w: Watch) => move(w, next(at(w), seasonsOf(w)), `Watched ${short(at(w))} of ${w.title}`);
 
   function finished(w: Watch) {
     close();
     setWatched.mutate({ id: w.id, watched: true });
-    if (!isOffline()) setUndo({ text: `${w.title} is in Watched`, run: () => setWatched.mutate({ id: w.id, watched: false }) });
+    // Back where it was, on Watching.
+    undo.offer(`${w.title} is in Watched`, () => setWatched.mutate({ id: w.id, watched: false }));
   }
 
   return (
@@ -102,7 +91,7 @@ function Watching() {
         )}
 
         {hero && (
-          <Hero item={hero} seasons={seasonsOf.get(hero.id)} onOpen={() => openTile(hero)} onTick={() => tick(hero)} />
+          <Hero item={hero} seasons={seasonsOf(hero)} onOpen={() => openTile(hero)} onTick={() => tick(hero)} />
         )}
 
         {others.length > 0 && (
@@ -113,12 +102,12 @@ function Watching() {
             <ul className={s.compactList}>
               {others.map((w) => (
                 <li key={w.id} className={s.compactRow} {...animatedItem(`watching-${w.id}`)}>
-                  <AriaButton className={s.compactOpen} onPress={() => openTile(w)} aria-label={nextUpLabel(w)}>
+                  <AriaButton className={s.compactOpen} onPress={() => openTile(w)} aria-label={nextUpLabel(w, at(w))}>
                     <Poster path={w.posterPath} kind={w.kind} size="tiny" />
                     <span className={s.compactTitle}>{w.title}</span>
-                    <span className={s.compactPlace}>{short(placeOf(w))}</span>
+                    <span className={s.compactPlace}>{short(at(w))}</span>
                   </AriaButton>
-                  <AriaButton className={s.tick} onPress={() => tick(w)} aria-label={tickLabel(w)}>
+                  <AriaButton className={s.tick} onPress={() => tick(w)} aria-label={tickLabel(w, at(w))}>
                     <Check size={20} strokeWidth={2.5} aria-hidden />
                   </AriaButton>
                 </li>
@@ -134,7 +123,7 @@ function Watching() {
             </h2>
             <ul className={s.compactList}>
               {caught.map((w) => {
-                const part = share(placeOf(w), seasonsOf.get(w.id));
+                const part = share(at(w), seasonsOf(w));
                 return (
                   <li key={w.id} className={s.compactRow} {...animatedItem(`watching-${w.id}`)}>
                     <AriaButton className={s.compactOpen} onPress={() => openTile(w)} aria-label={`${w.title}, all caught up`}>
@@ -159,7 +148,7 @@ function Watching() {
           item={open}
           isOpen={tapped.isOpen}
           onClose={close}
-          note={howFar(placeOf(open), openSeasons) || addedIt(whoIs(open.addedBy))}
+          note={howFar(placeOf(open, openSeasons), openSeasons) || addedIt(whoIs(open.addedBy))}
           actions={
             <>
               <Button
@@ -179,11 +168,11 @@ function Watching() {
             </>
           }
         >
-          {/* No Undo in here: tapping another episode, or −, puts it back. */}
+          {/* No Undo in here: tapping an episode again, or −, puts it back. */}
           {openSeasons?.length ? (
             <EpisodePicker
               key={open.id}
-              at={placeOf(open)}
+              at={placeOf(open, openSeasons)}
               seasons={openSeasons}
               onChange={(to) => setProgress.mutate({ id: open.id, progress: to })}
             />
@@ -195,15 +184,7 @@ function Watching() {
 
       <div className={s.undoBottom}>
         <div className={g.undoSlot} role="status">
-          {undo && (
-            <UndoBar
-              text={undo.text}
-              onUndo={() => {
-                undo.run();
-                if (!isOffline()) setUndo(null);
-              }}
-            />
-          )}
+            {undo.text && <UndoBar text={undo.text} onUndo={undo.run} />}
         </div>
       </div>
     </>
@@ -214,11 +195,11 @@ type HeroProps = { item: Watch; seasons?: number[]; onOpen: () => void; onTick: 
 
 /** The series watched last: big, with how far through each season it is and one button for the next episode. */
 function Hero({ item, seasons, onOpen, onTick }: HeroProps) {
-  const at = placeOf(item);
+  const at = placeOf(item, seasons);
   const part = share(at, seasons);
   return (
     <section className={s.hero} aria-label="Pick up where you left off" {...animatedItem(`watching-${item.id}`)}>
-      <AriaButton className={s.heroOpen} onPress={onOpen} aria-label={`${nextUpLabel(item)}. Where you're up to`}>
+      <AriaButton className={s.heroOpen} onPress={onOpen} aria-label={`${nextUpLabel(item, at)}. Where you're up to`}>
         <Poster path={item.posterPath} kind={item.kind} size="medium" />
         <span className={s.heroText}>
           <span className={ui.eyebrow}>Pick up where you left off</span>
@@ -242,7 +223,7 @@ function Hero({ item, seasons, onOpen, onTick }: HeroProps) {
           ))}
         </span>
       )}
-      <Button onPress={onTick} aria-label={tickLabel(item)}>
+      <Button onPress={onTick} aria-label={tickLabel(item, at)}>
         <Check size={18} strokeWidth={2.5} aria-hidden />
         Watched episode {at.episode}
       </Button>
@@ -252,7 +233,7 @@ function Hero({ item, seasons, onOpen, onTick }: HeroProps) {
 
 /**
  * Where a series is up to, from TMDB's seasons: pick a season, then the last episode seen.
- * Watched ones are filled, the next one is outlined.
+ * Watched ones are filled, the next one is outlined. Tapping the last one seen again unmarks it.
  */
 function EpisodePicker({ at, seasons, onChange }: { at: Place; seasons: number[]; onChange: (to: Place) => void }) {
   // The season shown; it follows along when the place moves to another season.
@@ -285,21 +266,23 @@ function EpisodePicker({ at, seasons, onChange }: { at: Place; seasons: number[]
       </div>
       <div className={s.pickerHead}>
         <span className={`${ui.eyebrow} ${ui.muted}`}>Season {viewing}</span>
-        <span className={`${ui.muted} ${ui.small}`}>Tap the last one you saw</span>
+        <span className={`${ui.muted} ${ui.small}`}>Tap the last one you saw, again to unmark</span>
       </div>
       <div className={s.episodes} role="group" aria-label={`Season ${viewing} episodes`}>
         {Array.from({ length: seasons[viewing - 1] ?? 0 }, (_, i) => {
           const episode = i + 1;
           const seen = episode <= parts[viewing - 1];
           const isNext = !seen && viewing === at.season && episode === at.episode;
+          const tapTo = tapEpisode(at, { season: viewing, episode }, seasons);
+          const isLastSeen = seen && tapTo.season === viewing && tapTo.episode === episode;
           return (
             <AriaButton
               key={episode}
               className={s.episode}
               data-seen={seen || undefined}
               data-next={isNext || undefined}
-              aria-label={`Episode ${episode}${seen ? ", watched" : isNext ? ", next up" : ""}`}
-              onPress={() => onChange(next({ season: viewing, episode }, seasons))}
+              aria-label={`Episode ${episode}${isLastSeen ? ", the last one watched: tap to unmark" : seen ? ", watched" : isNext ? ", next up" : ""}`}
+              onPress={() => onChange(tapTo)}
             >
               {episode}
             </AriaButton>
@@ -330,20 +313,27 @@ function PlacePicker({ at, onChange }: { at: Place; onChange: (to: Place) => voi
     <div className={s.places}>
       <span className={`${ui.eyebrow} ${ui.muted}`}>Next up</span>
       <div className={s.steppers}>
-        <Stepper label="Season" value={at.season} onChange={(season) => onChange({ season, episode: 1 })} />
-        <Stepper label="Episode" value={at.episode} onChange={(episode) => onChange({ season: at.season, episode })} />
+        <Stepper label="Season" value={at.season} max={MAX_SEASON} onChange={(season) => onChange({ season, episode: 1 })} />
+        <Stepper
+          label="Episode"
+          value={at.episode}
+          max={MAX_EPISODE}
+          onChange={(episode) => onChange({ season: at.season, episode })}
+        />
       </div>
     </div>
   );
 }
 
-function Stepper({ label, value, onChange }: { label: string; value: number; onChange: (n: number) => void }) {
+type StepperProps = { label: string; value: number; max: number; onChange: (n: number) => void };
+
+function Stepper({ label, value, max, onChange }: StepperProps) {
   return (
     <NumberField
       className={s.stepper}
       value={value}
       minValue={1}
-      maxValue={label === "Season" ? 500 : 5000}
+      maxValue={max}
       step={1}
       onChange={(n) => {
         if (Number.isInteger(n) && n !== value) onChange(n);

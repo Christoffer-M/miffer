@@ -2,6 +2,7 @@ import { type ReactNode, useState } from "react";
 import { Button as AriaButton, Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
 import { Film, Tv } from "lucide-react";
 import type { Watch } from "./api";
+import { caughtUp, type Place, settle } from "./progress";
 import { Avatar } from "./brand";
 import { useMembers } from "./queries/household";
 import ui from "./ui.module.css";
@@ -131,6 +132,29 @@ export const isWatching = (w?: Watch) => !!w && !w.watchedAt && w.season != null
 /** Watched last first: Watching's order. A series started before progressAt existed goes by when it was added. */
 export const byRecent = (a: Watch, b: Watch) =>
   (b.progressAt ?? b.createdAt).localeCompare(a.progressAt ?? a.createdAt);
+
+/** Where a series is up to, as a real episode once its seasons are known (progress.ts). */
+export const placeOf = (w: Watch, seasons?: number[]): Place => settle({ season: w.season ?? 1, episode: w.episode ?? 1 }, seasons);
+
+/** A series' seasons from TMDB, when this phone has them. */
+export type SeasonsOf = (w: Watch) => number[] | undefined;
+
+/**
+ * Watching's layout: the series watched last that isn't caught up goes on top, the rest of those
+ * under it, and the caught-up ones at the bottom.
+ */
+export function watchingGroups(list: Watch[], seasonsOf: SeasonsOf) {
+  const shown = list.filter(isWatching).sort(byRecent);
+  const isCaught = (w: Watch) => caughtUp(placeOf(w, seasonsOf(w)), seasonsOf(w));
+  const [hero, ...others] = shown.filter((w) => !isCaught(w));
+  return { hero, others, caught: shown.filter(isCaught) };
+}
+
+/** The same as one string, to tell whether a change moves anything on Watching. */
+export function watchingLayout(list: Watch[], seasonsOf: SeasonsOf) {
+  const { hero, others, caught } = watchingGroups(list, seasonsOf);
+  return JSON.stringify([hero?.id, others.map((w) => w.id), caught.map((w) => w.id)]);
+}
 
 /** Still to start: what the shelves and See all show of a kind. */
 export const toStart = (list: Watch[], kind?: Kind) =>

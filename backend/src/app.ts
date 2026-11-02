@@ -513,24 +513,34 @@ const watchRoutes = new Hono<Env>()
       return c.body(null, 204);
     },
   )
-  // Watched (now), or back on the list.
-  .patch("/:id", watchParam, zValidator("json", z.object({ watched: z.boolean() })), async (c) => {
-    await db
-      .update(watch)
-      .set({ watchedAt: c.req.valid("json").watched ? new Date() : null })
-      .where(and(eq(watch.id, c.req.valid("param").id), eq(watch.householdId, c.var.householdId)));
-    notify(c.var.householdId, "watch");
-    return c.body(null, 204);
-  })
+  // Watched (now), or back on the list. Back with `restart`, a series forgets where it was up to
+  // and goes on its shelf to start over; without, it's back on Watching where it was.
+  .patch(
+    "/:id",
+    watchParam,
+    zValidator("json", z.object({ watched: z.boolean(), restart: z.boolean().optional() })),
+    async (c) => {
+      const { watched, restart } = c.req.valid("json");
+      await db
+        .update(watch)
+        .set({
+          watchedAt: watched ? new Date() : null,
+          ...(restart && !watched && { season: null, episode: null, progressAt: null }),
+        })
+        .where(and(eq(watch.id, c.req.valid("param").id), eq(watch.householdId, c.var.householdId)));
+      notify(c.var.householdId, "watch");
+      return c.body(null, 204);
+    },
+  )
   // Where a series is up to (started, or the next episode), or null to stop watching it for now.
   .put("/:id/progress", watchParam, zValidator("json", z.object({ progress: progress.nullable() })), async (c) => {
-    const { progress } = c.req.valid("json");
+    const place = c.req.valid("json").progress;
     await db
       .update(watch)
       .set({
-        season: progress?.season ?? null,
-        episode: progress?.episode ?? null,
-        progressAt: progress ? new Date() : null,
+        season: place?.season ?? null,
+        episode: place?.episode ?? null,
+        progressAt: place ? new Date() : null,
       })
       .where(
         and(

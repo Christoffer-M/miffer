@@ -532,6 +532,12 @@ test("a series being watched keeps its place, and a movie has none", async () =>
   await call("/watch/restore", { method: "POST", token: anna.token, body: before });
   expect(await find(show)).toEqual(before);
 
+  // Back from Watched with restart, it starts over on its shelf.
+  await call(`/watch/${show}`, { method: "PATCH", token: anna.token, body: { watched: true } });
+  await call(`/watch/${show}`, { method: "PATCH", token: anna.token, body: { watched: false, restart: true } });
+  expect(await find(show)).toMatchObject({ watchedAt: null, season: null, episode: null, progressAt: null });
+  await setProgress(show, { season: 2, episode: 4 });
+
   // Stopping clears it.
   await setProgress(show, null);
   expect(await find(show)).toMatchObject({ season: null, episode: null, progressAt: null });
@@ -550,8 +556,11 @@ test("a series' seasons come from TMDB, without the specials", async () => {
   );
   expect(await (await call("/watch/seasons/1408", { token: anna.token })).json()).toEqual([10, 8]);
   expect(new URL(String(tmdb.mock.calls[0][0])).pathname).toBe("/3/tv/1408");
+  // Asked again soon, it's answered without TMDB.
+  expect(await (await call("/watch/seasons/1408", { token: anna.token })).json()).toEqual([10, 8]);
+  expect(tmdb).toHaveBeenCalledTimes(1);
   tmdb.mockResolvedValue(new Response("", { status: 404 }));
-  expect((await call("/watch/seasons/1408", { token: anna.token })).status).toBe(502);
+  expect((await call("/watch/seasons/1409", { token: anna.token })).status).toBe(502);
   tmdb.mockRestore();
 });
 

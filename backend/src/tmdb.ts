@@ -54,14 +54,25 @@ export async function search(query: string) {
     });
 }
 
+// Seasons asked for lately, so every phone opening Watching doesn't ask TMDB again.
+const SEASONS_FOR_MS = 6 * 60 * 60 * 1000;
+const SEASONS_KEPT = 1000; // series; the oldest goes first
+const seasonsKept = new Map<number, { at: number; seasons: number[] }>();
+
 /**
  * How many episodes each season of a series has, in order: [10, 10, 8] for three seasons.
  * Specials (TMDB's season 0) are left out. Counts include episodes announced but not out yet.
  */
 export async function seasons(tmdbId: number) {
+  const kept = seasonsKept.get(tmdbId);
+  if (kept && Date.now() - kept.at < SEASONS_FOR_MS) return kept.seasons;
   const show = await get<{ seasons?: { season_number: number; episode_count: number }[] }>(`/tv/${tmdbId}`);
-  return (show.seasons ?? [])
+  const fresh = (show.seasons ?? [])
     .filter((s) => s.season_number > 0)
     .sort((a, b) => a.season_number - b.season_number)
     .map((s) => s.episode_count);
+  seasonsKept.delete(tmdbId); // re-added last: a Map keeps insertion order
+  seasonsKept.set(tmdbId, { at: Date.now(), seasons: fresh });
+  if (seasonsKept.size > SEASONS_KEPT) seasonsKept.delete(seasonsKept.keys().next().value!);
+  return fresh;
 }

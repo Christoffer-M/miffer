@@ -48,12 +48,12 @@ function Add() {
   const results = q === typed ? (search.data ?? []) : [];
   const searching = typed.length >= 2 && (q !== typed || search.isFetching);
 
-  /** Adds it, unless it's there already: then a watched one comes back on the list, or it's left be. */
+  /** Adds it, unless it's there already: then a watched one comes back on the list (from the start), or it's left be. */
   async function add(w: NewWatch) {
     const existing = findOn(list, w);
     const change = () => {
       if (!existing) addWatch.mutate({ id: crypto.randomUUID(), ...w, addedBy: session.deviceId });
-      else if (existing.watchedAt) setWatched.mutate({ id: existing.id, watched: false });
+      else if (existing.watchedAt) setWatched.mutate({ id: existing.id, watched: false, restart: true });
     };
     // Refused offline, and said so: this page stays, with what was typed, to try again.
     if (isOffline()) return change();

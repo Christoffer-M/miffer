@@ -3,14 +3,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 import { Check, ChevronLeft, Dices, Play, Plus, Trash2 } from "lucide-react";
 import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
-import { UndoBar, UndoSpot } from "../../components/UndoBar";
+import { UndoBar, UndoSpot, useUndo } from "../../components/UndoBar";
 import { useRemoveWatch, useRestoreWatch, useSetProgress, useSetWatched } from "../../mutations/watch";
-import { isOffline } from "../../offline";
 import { useMembers } from "../../queries/household";
 import { watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
@@ -18,9 +17,6 @@ import { addedIt, type Kind, KINDS, PosterTile, tileLabel, toStart, WatchSheet }
 import ui from "../../ui.module.css";
 import g from "../groceries.module.css";
 import s from "./watch.module.css";
-
-/** How long Undo stays up, as for groceries. */
-const UNDO_MS = 6000;
 
 /**
  * Tapping a poster to watch: its sheet, with Remove and Watched (and Start watching, for a
@@ -34,37 +30,31 @@ export function useToWatch() {
   const removeWatch = useRemoveWatch();
   const restoreWatch = useRestoreWatch();
   const setProgress = useSetProgress();
-  // The last thing done that can be undone. A new one takes its place.
-  const [undo, setUndo] = useState<{ text: string; run: () => void } | null>(null);
+  const undo = useUndo();
   // The poster tapped last; kept after closing so the sheet doesn't empty as it slides away.
   const [tapped, setTapped] = useState<{ item?: Watch; isOpen: boolean }>({ isOpen: false });
   const close = () => setTapped((t) => ({ ...t, isOpen: false }));
 
-  useEffect(() => {
-    if (!undo) return;
-    const timer = setTimeout(() => setUndo(null), UNDO_MS);
-    return () => clearTimeout(timer);
-  }, [undo]);
-
   function watched(w: Watch) {
     close();
     setWatched.mutate({ id: w.id, watched: true });
-    if (!isOffline()) setUndo({ text: `${w.title} is in Watched`, run: () => setWatched.mutate({ id: w.id, watched: false }) });
+    undo.offer(`${w.title} is in Watched`, () => setWatched.mutate({ id: w.id, watched: false }));
   }
 
   function remove(w: Watch) {
     close();
     removeWatch.mutate(w.id);
-    if (!isOffline()) setUndo({ text: `Removed ${w.title}`, run: () => restoreWatch.mutate(w) });
+    undo.offer(`Removed ${w.title}`, () => restoreWatch.mutate(w));
   }
 
   /** A series from the first episode: it leaves the shelf for Watching. */
   function start(w: Watch) {
     close();
     setProgress.mutate({ id: w.id, progress: { season: 1, episode: 1 } });
-    if (!isOffline()) setUndo({ text: `${w.title} is in Watching`, run: () => setProgress.mutate({ id: w.id, progress: null }) });
+    undo.offer(`${w.title} is in Watching`, () => setProgress.mutate({ id: w.id, progress: null }));
   }
 
+  const isSeries = tapped.item?.kind === "series";
   const sheet = tapped.item && (
     <WatchSheet
       // As it is now: someone may have changed it since it was tapped.
@@ -72,34 +62,24 @@ export function useToWatch() {
       isOpen={tapped.isOpen}
       onClose={close}
       note={addedIt(whoIs(tapped.item.addedBy))}
+      // A series' main button is Start watching, across the top; a movie's is Watched.
       actions={
-        tapped.item.kind === "series" ? (
-          <>
+        <>
+          {isSeries && (
             <Button onPress={() => start(tapped.item!)} autoFocus>
               <Play size={18} aria-hidden />
               Start watching
             </Button>
-            <Button variant="outline" onPress={() => remove(tapped.item!)}>
-              <Trash2 size={18} aria-hidden />
-              Remove
-            </Button>
-            <Button variant="outline" onPress={() => watched(tapped.item!)}>
-              <Check size={18} aria-hidden />
-              Watched
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button variant="outline" onPress={() => remove(tapped.item!)}>
-              <Trash2 size={18} aria-hidden />
-              Remove
-            </Button>
-            <Button onPress={() => watched(tapped.item!)} autoFocus>
-              <Check size={18} aria-hidden />
-              Watched
-            </Button>
-          </>
-        )
+          )}
+          <Button variant="outline" onPress={() => remove(tapped.item!)}>
+            <Trash2 size={18} aria-hidden />
+            Remove
+          </Button>
+          <Button variant={isSeries ? "outline" : "primary"} onPress={() => watched(tapped.item!)} autoFocus={!isSeries}>
+            <Check size={18} aria-hidden />
+            Watched
+          </Button>
+        </>
       }
     />
   );
@@ -108,15 +88,7 @@ export function useToWatch() {
   const bottom = (
     <div className={`${s.undoBottom} ${s.withFab}`}>
       <div className={g.undoSlot} role="status">
-        {undo && (
-          <UndoBar
-            text={undo.text}
-            onUndo={() => {
-              undo.run();
-              if (!isOffline()) setUndo(null);
-            }}
-          />
-        )}
+        {undo.text && <UndoBar text={undo.text} onUndo={undo.run} />}
         {/* A due reminder's Undo goes here too. */}
         <div ref={offerUndoSpot} className={g.undoSpot} />
       </div>

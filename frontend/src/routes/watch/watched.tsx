@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronLeft, Trash2, Undo2 } from "lucide-react";
 import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
-import { UndoBar } from "../../components/UndoBar";
+import { UndoBar, useUndo } from "../../components/UndoBar";
 import { useRemoveWatch, useRestoreWatch, useSetWatched } from "../../mutations/watch";
-import { isOffline } from "../../offline";
 import { watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
 import { PosterTile, tileLabel, WatchSheet } from "../../watch";
@@ -15,8 +14,6 @@ import g from "../groceries.module.css";
 import s from "./watch.module.css";
 
 export const Route = createFileRoute("/watch/watched")({ component: Watched });
-
-const UNDO_MS = 6000;
 
 const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
 const month = new Intl.DateTimeFormat("en-GB", { month: "long" });
@@ -43,29 +40,24 @@ function Watched() {
   const setWatched = useSetWatched();
   const removeWatch = useRemoveWatch();
   const restoreWatch = useRestoreWatch();
-  const [removed, setRemoved] = useState<Watch | null>(null);
+  const undo = useUndo();
   // The poster tapped last; kept after closing so the sheet doesn't empty as it slides away.
   const [tapped, setTapped] = useState<{ item?: Watch; isOpen: boolean }>({ isOpen: false });
   const close = () => setTapped((t) => ({ ...t, isOpen: false }));
   const watchedOn = (w: Watch) => `watched ${day.format(new Date(w.watchedAt!))}`;
-
-  useEffect(() => {
-    if (!removed) return;
-    const timer = setTimeout(() => setRemoved(null), UNDO_MS);
-    return () => clearTimeout(timer);
-  }, [removed]);
 
   const groups = byMonth(list);
   const count = groups.reduce((n, [, ws]) => n + ws.length, 0);
 
   function putBack(w: Watch) {
     close();
-    setWatched.mutate({ id: w.id, watched: false });
+    // Back on its shelf: a series starts over rather than going back to Watching.
+    setWatched.mutate({ id: w.id, watched: false, restart: true });
   }
   function remove(w: Watch) {
     close();
     removeWatch.mutate(w.id);
-    if (!isOffline()) setRemoved(w);
+    undo.offer(`Removed ${w.title}`, () => restoreWatch.mutate(w));
   }
 
   return (
@@ -123,15 +115,7 @@ function Watched() {
 
       <div className={s.undoBottom}>
         <div className={g.undoSlot} role="status">
-          {removed && (
-            <UndoBar
-              text={`Removed ${removed.title}`}
-              onUndo={() => {
-                restoreWatch.mutate(removed);
-                if (!isOffline()) setRemoved(null);
-              }}
-            />
-          )}
+          {undo.text && <UndoBar text={undo.text} onUndo={undo.run} />}
         </div>
       </div>
     </>

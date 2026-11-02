@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ok, type SearchResult, type Watch } from "../api";
-import { watchQuery } from "../queries/watch";
+import { seasonsFrom, watchQuery } from "../queries/watch";
 import type { Place } from "../progress";
-import { byRecent, isWatching, showsList } from "../watch";
+import { isWatching, type SeasonsOf, showsList, watchingLayout } from "../watch";
 import { animateListChange, type ListChange } from "../viewTransition";
 import { refetchWhenLast } from "./settle";
 
@@ -17,7 +17,7 @@ function useWatchMutation<V>(
   offline: string,
   send: (v: V) => Promise<unknown>,
   apply: (list: Watch[], v: V) => Watch[],
-  change?: ListChange | ((list: Watch[], v: V) => ListChange | false | undefined),
+  change?: ListChange | ((list: Watch[], v: V, seasonsOf: SeasonsOf) => ListChange | false | undefined),
 ) {
   const qc = useQueryClient();
   return useMutation({
@@ -28,7 +28,8 @@ function useWatchMutation<V>(
     onMutate: async (v) => {
       await qc.cancelQueries(watchQuery);
       const write = () => qc.setQueryData(watchQuery.queryKey, (old = []) => apply(old, v));
-      const how = typeof change === "function" ? change(qc.getQueryData(watchQuery.queryKey) ?? [], v) : change;
+      const old = qc.getQueryData(watchQuery.queryKey) ?? [];
+      const how = typeof change === "function" ? change(old, v, seasonsFrom(qc)) : change;
       if (how !== false && showsList()) animateListChange(write, how);
       else write();
     },
@@ -59,41 +60,57 @@ export const useAddWatch = () =>
           ],
   );
 
-/** Watched now, or back on the list. */
+/**
+ * Watched now, or back on the list. `restart` also forgets where a series was up to, so it goes
+ * back on its shelf to start over (Put back on Watched); without it, a series comes back to
+ * Watching where it was (Undo of Finished).
+ */
 export const useSetWatched = () =>
   useWatchMutation(
     "it couldn't be changed",
-    ({ id, watched }: { id: string; watched: boolean }) =>
-      ok(api.watch[":id"].$patch({ param: { id }, json: { watched } })),
-    (list, { id, watched }) =>
-      list.map((w) => (w.id === id ? { ...w, watchedAt: watched ? new Date().toISOString() : null } : w)),
+    ({ id, watched, restart }: { id: string; watched: boolean; restart?: boolean }) =>
+      ok(api.watch[":id"].$patch({ param: { id }, json: { watched, restart } })),
+    (list, { id, watched, restart }) =>
+      list.map((w) =>
+        w.id !== id
+          ? w
+          : {
+              ...w,
+              watchedAt: watched ? new Date().toISOString() : null,
+              ...(restart && !watched && { season: null, episode: null, progressAt: null }),
+            },
+      ),
     "check",
   );
 
+/** Where a series is up to now: started, on to another episode, or stopped (null). */
+function placeIn(list: Watch[], { id, progress }: { id: string; progress: Place | null }) {
+  return list.map((w) =>
+    w.id === id
+      ? {
+          ...w,
+          season: progress?.season ?? null,
+          episode: progress?.episode ?? null,
+          progressAt: progress ? new Date().toISOString() : null,
+        }
+      : w,
+  );
+}
+
 /**
  * A series started, on to another episode, or stopped (null): back on its shelf.
- * Starting and stopping move it between screens; on Watching, the series watched last goes
- * to the top, so that animates too. Another episode of the one already on top doesn't.
+ * Starting and stopping move it between screens. On Watching it animates when it moves there:
+ * to the top, or into Caught up and out again. Another episode of the series on top doesn't.
  */
 export const useSetProgress = () =>
   useWatchMutation(
     "it couldn't be changed",
-    ({ id, progress }: { id: string; progress: Place | null }) =>
-      ok(api.watch[":id"].progress.$put({ param: { id }, json: { progress } })),
-    (list, { id, progress }) =>
-      list.map((w) =>
-        w.id === id
-          ? {
-              ...w,
-              season: progress?.season ?? null,
-              episode: progress?.episode ?? null,
-              progressAt: progress ? new Date().toISOString() : null,
-            }
-          : w,
-      ),
-    (list, { id, progress }) => {
-      if (isWatching(list.find((w) => w.id === id)) !== !!progress) return "check";
-      return list.filter(isWatching).sort(byRecent)[0]?.id === id ? false : undefined;
+    ({ id, progress: place }: { id: string; progress: Place | null }) =>
+      ok(api.watch[":id"].progress.$put({ param: { id }, json: { progress: place } })),
+    placeIn,
+    (list, v, seasonsOf) => {
+      if (isWatching(list.find((w) => w.id === v.id)) !== !!v.progress) return "check";
+      return watchingLayout(list, seasonsOf) === watchingLayout(placeIn(list, v), seasonsOf) ? false : undefined;
     },
   );
 
