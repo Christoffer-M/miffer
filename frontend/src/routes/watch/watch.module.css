@@ -553,6 +553,13 @@
   font-family: var(--display);
   font-size: 30px;
   line-height: 1.15;
+  /* Two lines at most, cut short with "…"; a long word breaks rather than overflow. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 .pickMeta {
   margin: 0;
@@ -609,6 +616,13 @@
   font-size: 26px;
   font-weight: 700;
   line-height: 1.15;
+  /* Two lines at most, cut short with "…"; a long word breaks rather than overflow. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 .heroPlace {
   font-size: 16px;
