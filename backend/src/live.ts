@@ -17,7 +17,7 @@ export function unsubscribe(householdId: string, ws: WSContext) {
 }
 
 /** Tell every phone in the household what changed; they refetch it. */
-export function notify(householdId: string, what: "items" | "members" | "reminders" = "items") {
+export function notify(householdId: string, what: "items" | "members" | "reminders" | "watch" = "items") {
   sockets.get(householdId)?.forEach((ws) => ws.send(what));
 }
 

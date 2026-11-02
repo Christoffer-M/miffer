@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Link, Outlet, redirect, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, House, ShoppingBasket, Users } from "lucide-react";
+import { Bell, House, Popcorn, ShoppingBasket, Users } from "lucide-react";
 import { connectLive, session, useToken } from "../api";
 import { AskForNotifications } from "../components/AskForNotifications";
 import { DueReminders } from "../components/DueReminders";
@@ -11,6 +11,7 @@ import { changesPending } from "../mutations/settle";
 import { meQuery } from "../queries/household";
 import { refreshItems } from "../queries/items";
 import { refreshReminders } from "../queries/reminders";
+import { refreshWatch } from "../queries/watch";
 import s from "./__root.module.css";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -34,6 +35,7 @@ function Root() {
       // Not while this phone's own changes are on their way: the last one refetches (settle.ts).
       else if (changesPending(queryClient, what)) return;
       else if (what === "items") refreshItems(queryClient).catch(() => {});
+      else if (what === "watch") refreshWatch(queryClient).catch(() => {});
       else refreshReminders(queryClient).catch(() => {});
     });
   }, [token, queryClient]);
@@ -61,6 +63,10 @@ function Root() {
           <Link to="/reminders" className={s.tab}>
             <Bell size={22} aria-hidden />
             Reminders
+          </Link>
+          <Link to="/watch" className={s.tab}>
+            <Popcorn size={22} aria-hidden />
+            Watch
           </Link>
           <Link to="/us" className={s.tab}>
             <Users size={22} aria-hidden />

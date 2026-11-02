@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, ChevronRight, ShoppingBasket } from "lucide-react";
+import { Bell, ChevronRight, Popcorn, ShoppingBasket } from "lucide-react";
 import { session } from "../api";
 import { Avatars, Wordmark } from "../brand";
 import { useMembers } from "../queries/household";
 import { itemsQuery } from "../queries/items";
 import { remindersQuery } from "../queries/reminders";
+import { watchQuery } from "../queries/watch";
+import { Poster } from "../watch";
 import { clock, dueAt, formatWhen, sortReminders } from "../reminders";
 import ui from "../ui.module.css";
 import s from "./index.module.css";
@@ -25,6 +27,10 @@ function Home() {
   const { data: reminders = [] } = useQuery(remindersQuery);
   const { due, upcoming } = sortReminders(reminders);
   const next = upcoming[0];
+  const { data: watchList = [] } = useQuery(watchQuery);
+  const toWatch = watchList.filter((w) => !w.watchedAt);
+  const movies = toWatch.filter((w) => w.kind === "movie").length;
+  const watchFromOthers = toWatch.find((w) => w.addedBy && w.addedBy !== session.deviceId); // newest first
 
   return (
     <>
@@ -91,6 +97,33 @@ function Home() {
                 </div>
               )}
             </div>
+          )}
+        </Link>
+        <Link to="/watch" className={s.card}>
+          <div className={s.cardHead}>
+            <span className={s.cardIcon}>
+              <Popcorn size={22} aria-hidden />
+            </span>
+            <div className={s.cardTitle}>
+              <strong>Watch</strong>
+              <span>
+                {movies} {movies === 1 ? "movie" : "movies"} · {toWatch.length - movies} series
+              </span>
+            </div>
+            <ChevronRight size={20} aria-hidden />
+          </div>
+          {toWatch.length > 0 && (
+            <div className={s.posters} aria-label={toWatch.slice(0, 5).map((w) => w.title).join(", ")}>
+              {toWatch.slice(0, 5).map((w) => (
+                <Poster key={w.id} path={w.posterPath} kind={w.kind} />
+              ))}
+              {toWatch.length > 5 && <span className={`${ui.muted} ${ui.small}`}>+{toWatch.length - 5}</span>}
+            </div>
+          )}
+          {watchFromOthers && (
+            <span className={`${ui.muted} ${ui.small}`}>
+              {whoIs(watchFromOthers.addedBy)} added {watchFromOthers.title}
+            </span>
           )}
         </Link>
       </main>

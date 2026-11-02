@@ -14,6 +14,9 @@ import { Route as GroceriesRouteImport } from './routes/groceries'
 import { Route as NameRouteImport } from './routes/name'
 import { Route as RemindersRouteImport } from './routes/reminders'
 import { Route as UsRouteImport } from './routes/us'
+import { Route as WatchIndexRouteImport } from './routes/watch/index'
+import { Route as WatchAddRouteImport } from './routes/watch/add'
+import { Route as WatchWatchedRouteImport } from './routes/watch/watched'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +43,21 @@ const UsRoute = UsRouteImport.update({
   path: '/us',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WatchIndexRoute = WatchIndexRouteImport.update({
+  id: '/watch/',
+  path: '/watch/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WatchAddRoute = WatchAddRouteImport.update({
+  id: '/watch/add',
+  path: '/watch/add',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WatchWatchedRoute = WatchWatchedRouteImport.update({
+  id: '/watch/watched',
+  path: '/watch/watched',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +65,9 @@ export interface FileRoutesByFullPath {
   '/name': typeof NameRoute
   '/reminders': typeof RemindersRoute
   '/us': typeof UsRoute
+  '/watch/add': typeof WatchAddRoute
+  '/watch/watched': typeof WatchWatchedRoute
+  '/watch/': typeof WatchIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +75,9 @@ export interface FileRoutesByTo {
   '/name': typeof NameRoute
   '/reminders': typeof RemindersRoute
   '/us': typeof UsRoute
+  '/watch/add': typeof WatchAddRoute
+  '/watch/watched': typeof WatchWatchedRoute
+  '/watch': typeof WatchIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +86,41 @@ export interface FileRoutesById {
   '/name': typeof NameRoute
   '/reminders': typeof RemindersRoute
   '/us': typeof UsRoute
+  '/watch/add': typeof WatchAddRoute
+  '/watch/watched': typeof WatchWatchedRoute
+  '/watch/': typeof WatchIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/groceries' | '/name' | '/reminders' | '/us'
+  fullPaths:
+    | '/'
+    | '/groceries'
+    | '/name'
+    | '/reminders'
+    | '/us'
+    | '/watch/add'
+    | '/watch/watched'
+    | '/watch/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/groceries' | '/name' | '/reminders' | '/us'
-  id: '__root__' | '/' | '/groceries' | '/name' | '/reminders' | '/us'
+  to:
+    | '/'
+    | '/groceries'
+    | '/name'
+    | '/reminders'
+    | '/us'
+    | '/watch/add'
+    | '/watch/watched'
+    | '/watch'
+  id:
+    | '__root__'
+    | '/'
+    | '/groceries'
+    | '/name'
+    | '/reminders'
+    | '/us'
+    | '/watch/add'
+    | '/watch/watched'
+    | '/watch/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +129,9 @@ export interface RootRouteChildren {
   NameRoute: typeof NameRoute
   RemindersRoute: typeof RemindersRoute
   UsRoute: typeof UsRoute
+  WatchAddRoute: typeof WatchAddRoute
+  WatchWatchedRoute: typeof WatchWatchedRoute
+  WatchIndexRoute: typeof WatchIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +171,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/watch/': {
+      id: '/watch/'
+      path: '/watch'
+      fullPath: '/watch/'
+      preLoaderRoute: typeof WatchIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/watch/add': {
+      id: '/watch/add'
+      path: '/watch/add'
+      fullPath: '/watch/add'
+      preLoaderRoute: typeof WatchAddRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/watch/watched': {
+      id: '/watch/watched'
+      path: '/watch/watched'
+      fullPath: '/watch/watched'
+      preLoaderRoute: typeof WatchWatchedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,6 +201,9 @@ const rootRouteChildren: RootRouteChildren = {
   NameRoute: NameRoute,
   RemindersRoute: RemindersRoute,
   UsRoute: UsRoute,
+  WatchAddRoute: WatchAddRoute,
+  WatchWatchedRoute: WatchWatchedRoute,
+  WatchIndexRoute: WatchIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

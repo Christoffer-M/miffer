@@ -12,6 +12,7 @@ vi.hoisted(() => {
   process.env.VAPID_PUBLIC_KEY =
     "BFboTDHfxJXoeI1Mo01jA5MgTUCTTaw3TMVQjedY42rtMqYpvBlbBKasuxQxuGBZKjPpgqXdxGo8OU1MS-_-6rA";
   process.env.VAPID_PRIVATE_KEY = "r5JiyoGcuNrkZVAvQYcPfsC-rfXROnsF1Nl61-hGyXA";
+  process.env.TMDB_API_KEY = "test-key"; // fetch is faked in the search test
 });
 
 process.env.TRUST_PROXY = "true"; // the tests stand in for nginx-proxy and set X-Real-IP themselves
@@ -419,6 +420,84 @@ test("undo puts a reminder back as it was, unless another phone changed it since
 });
 
 // Last: it uses up everyone's tries for this window.
+test("the watchlist is shared, a movie is on it once, and watched ones can come back", async () => {
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  // Its own address: the tests before this use up the join tries of the default one.
+  const join = { code: anna.code, name: "Ben" };
+  const ben = await (await call("/households/join", { method: "POST", body: join, ip: "10.0.0.7" })).json();
+  const list = async (token = anna.token) => (await call("/watch", { token })).json();
+  const add = (token: string, body: object) =>
+    call("/watch", { method: "POST", token, body: { id: crypto.randomUUID(), tmdbId: null, year: null, posterPath: null, ...body } });
+
+  // Ben has notifications on, but a new title doesn't send one.
+  const endpoint = `https://fcm.googleapis.com/fcm/send/${ben.deviceId}`;
+  await call("/households/me/push", { method: "PUT", token: ben.token, body: { endpoint, keys: { p256dh: "k", auth: "a" } } });
+  const send = vi.spyOn(webpush, "sendNotification").mockResolvedValue({ statusCode: 201, body: "", headers: {} });
+
+  const dune = { title: "Dune: Part Two", kind: "movie", tmdbId: 693134, year: 2024, posterPath: "/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg" };
+  expect((await add(anna.token, dune)).status).toBe(204);
+  await new Promise((r) => setTimeout(r, 100));
+  expect(send).not.toHaveBeenCalled();
+  send.mockRestore();
+  await add(ben.token, dune); // the same movie from the other phone
+  await add(ben.token, { title: "Dune", kind: "series", tmdbId: 693134 }); // same number, but a series
+  await add(ben.token, { title: "Home video", kind: "movie" });
+  await add(ben.token, { title: "Home video", kind: "movie" }); // typed by hand: not checked
+  // A poster is only ever a TMDB image name, never an address of someone's choosing.
+  expect((await add(ben.token, { title: "Bad", kind: "movie", posterPath: "//evil.example/x.jpg" })).status).toBe(400);
+  const [, , , first] = await list(ben.token);
+  expect(first).toMatchObject({ ...dune, addedBy: anna.deviceId, watchedAt: null });
+  expect(await list()).toHaveLength(4);
+
+  await call(`/watch/${first.id}`, { method: "PATCH", token: ben.token, body: { watched: true } });
+  expect((await list()).find((w: { id: string }) => w.id === first.id).watchedAt).toEqual(expect.any(String));
+  await call(`/watch/${first.id}`, { method: "PATCH", token: ben.token, body: { watched: false } });
+  expect((await list()).find((w: { id: string }) => w.id === first.id).watchedAt).toBeNull();
+
+  // Undo of a delete puts it back as it was.
+  const before = await list();
+  await call(`/watch/${first.id}`, { method: "DELETE", token: anna.token });
+  expect(await list()).toHaveLength(3);
+  await call("/watch/restore", { method: "POST", token: anna.token, body: first });
+  expect(await list()).toEqual(before);
+
+  // Another household sees none of it and can't change it.
+  const eve = await (await call("/households", { method: "POST", body: { name: "Eve" } })).json();
+  expect(await list(eve.token)).toEqual([]);
+  await call(`/watch/${first.id}`, { method: "DELETE", token: eve.token });
+  await call("/watch/restore", { method: "POST", token: eve.token, body: { ...first, title: "Stolen" } });
+  expect(await list()).toEqual(before);
+});
+
+test("search finds movies and series on TMDB, by the title people know them by", async () => {
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  const tmdb = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    Response.json({
+      results: [
+        { id: 1, media_type: "movie", title: "Another Round", original_title: "Druk", original_language: "da", release_date: "2020-09-24", poster_path: "/aDcIt4NHURLKnAEu7gow51Yd00Q.jpg" },
+        { id: 2, media_type: "person", name: "Mads Mikkelsen" },
+        { id: 3, media_type: "tv", name: "Squid Game", original_name: "오징어 게임", original_language: "ko", first_air_date: "2021-09-17" },
+        { id: 4, media_type: "movie", title: "Untitled", original_title: "Untitled", original_language: "en", release_date: "" },
+      ],
+    }),
+  );
+
+  const res = await call("/watch/search?q=druk", { token: anna.token });
+  expect(await res.json()).toEqual([
+    { tmdbId: 1, kind: "movie", title: "Druk", year: 2020, posterPath: "/aDcIt4NHURLKnAEu7gow51Yd00Q.jpg" },
+    { tmdbId: 3, kind: "series", title: "Squid Game", year: 2021, posterPath: null },
+    { tmdbId: 4, kind: "movie", title: "Untitled", year: null, posterPath: null },
+  ]);
+  const asked = new URL(String(tmdb.mock.calls[0][0]));
+  expect([asked.pathname, asked.searchParams.get("query"), asked.searchParams.get("api_key")]).toEqual(["/3/search/multi", "druk", "test-key"]);
+
+  // TMDB down: a clear error, not a crash.
+  tmdb.mockResolvedValue(new Response("", { status: 503 }));
+  expect((await call("/watch/search?q=druk", { token: anna.token })).status).toBe(502);
+  tmdb.mockRestore();
+  expect((await call("/watch/search?q=druk")).status).toBe(401);
+});
+
 test("faking a new address for each guess still runs into a cap", async () => {
   let fresh = 0;
   let status = 404;
