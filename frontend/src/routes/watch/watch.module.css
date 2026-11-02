@@ -104,6 +104,46 @@
   scroll-snap-align: start;
 }
 
+/* Watch: the series being watched, at the top of the Series shelf. Opens Series on Watching. */
+.watchingCard {
+  margin: 0 16px 4px;
+  min-height: 64px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 80ms ease-out;
+}
+.watchingCard:active {
+  transform: scale(0.98);
+}
+.watchingCard:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.watchingCard > svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.watchingCard .text {
+  flex: 1;
+}
+/* Up to three posters, overlapping. */
+.stack {
+  display: flex;
+  flex-shrink: 0;
+}
+.stack > * {
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.stack > * + * {
+  margin-left: -14px;
+}
+
 /* The dice and the Watched link: bare accent icons, the same size. */
 .action {
   min-width: 44px;
@@ -424,6 +464,14 @@
   font-weight: 500;
 }
 
+/* Series' To start tab: the count and the dice, over the posters. */
+.panelRow {
+  padding: 0 0 0 8px;
+}
+.panelRow p {
+  margin: 0;
+}
+
 /* Watched: a month heading per group. Only the last grid needs room below for Undo. */
 .monthSection:not(:last-child) .grid {
   padding-bottom: 8px;
@@ -501,9 +549,10 @@
   grid-column: 1 / -1;
 }
 
-/* Watching: the series watched last big on top, the rest in short rows under it. */
+/* Series' Watching tab: the series watched last big on top, the rest in short rows under it. */
 .watching {
   gap: 18px;
+  padding-top: 12px; /* clear of the tabs */
   padding-bottom: 96px; /* the last row clears Undo */
 }
 
