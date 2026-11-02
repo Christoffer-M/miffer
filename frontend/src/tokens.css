@@ -2,12 +2,15 @@
  * The only global CSS: design tokens and element defaults. Component styles live in *.module.css.
  * Use these instead of literal colours, sizes, radii, shadows and easings, so every screen
  * draws from the same few values. Spacing (padding, margin, gap) is still written in px.
+ * Tokens built from others (--focus-ring, the shadows, --scrim) are worked out here on :root,
+ * so a component that sets its own --accent or --ink has to set those again too.
  */
 :root {
   /* Surfaces and text */
   --ground: #f2f4f7;
   --surface: #ffffff;
-  --ink: #14213d;
+  --ink-rgb: 20 33 61; /* #14213d, as channels so shadows and the scrim can derive from it */
+  --ink: rgb(var(--ink-rgb));
   --muted: #4a5568;
   --placeholder: #6b7280;
   --line: #dce1e8;
@@ -15,7 +18,8 @@
   --field-border: #7b8798;
 
   /* Accent */
-  --accent: #c2410c; /* buttons, labels: white text passes contrast */
+  --accent-rgb: 194 65 12; /* #c2410c, as channels for --shadow-accent */
+  --accent: rgb(var(--accent-rgb)); /* buttons, labels: white text passes contrast */
   --accent-bright: #ea580c; /* checkmarks, the wordmark dot */
   --accent-tint: #ffedd5;
   --accent-ink: #9a3412; /* text on the tint: passes 4.5:1 */
@@ -83,16 +87,16 @@
   --radius-round: 50%;
 
   /* Elevation */
-  --shadow-float: 0 6px 20px color-mix(in srgb, var(--ink) 25%, transparent); /* bars floating over the screen */
-  --shadow-accent: 0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent); /* the + button */
-  --scrim: color-mix(in srgb, var(--ink) 45%, transparent); /* behind a sheet */
+  --shadow-float: 0 6px 20px rgb(var(--ink-rgb) / 0.25); /* bars floating over the screen */
+  --shadow-accent: 0 6px 20px rgb(var(--accent-rgb) / 0.35); /* the + button */
+  --scrim: rgb(var(--ink-rgb) / 0.45); /* behind a sheet */
 
-  /* Focus: outline: var(--focus-width) solid var(--accent), or --accent-tint on ink. The colour
-     is written where it's used, so it follows a locally set --accent. */
+  /* Focus: outline: var(--focus-ring). On ink, var(--focus-width) solid var(--accent-tint). */
   --focus-width: 2px;
+  --focus-ring: var(--focus-width) solid var(--accent);
 
   /* Motion */
-  /* Not named ease-in/ease-out: those CSS keywords are other curves, still used for presses. */
+  /* Not named ease-in/ease-out: those CSS keywords are other curves, still used for presses and fades. */
   --ease-decelerate: cubic-bezier(0.2, 0.8, 0.2, 1); /* most things arriving or moving */
   --ease-spring: cubic-bezier(0.2, 0.8, 0.2, 1.4); /* a small overshoot: picked, armed */
   --ease-accelerate: cubic-bezier(0.4, 0, 1, 1); /* leaving */

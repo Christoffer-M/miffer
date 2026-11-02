@@ -163,7 +163,7 @@
   border-color: var(--accent);
 }
 .chip[data-focus-visible] {
-  outline: var(--focus-width) solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 

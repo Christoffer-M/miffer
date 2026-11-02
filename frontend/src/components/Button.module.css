@@ -11,7 +11,7 @@
   transform: scale(0.97);
 }
 .base[data-focus-visible] {
-  outline: var(--focus-width) solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 .base[data-disabled] {

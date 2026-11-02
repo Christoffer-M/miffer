@@ -40,6 +40,6 @@
   transform: scale(0.92);
 }
 .checkbox[data-focus-visible] .box {
-  outline: var(--focus-width) solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
