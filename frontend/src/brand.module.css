@@ -1,6 +1,6 @@
 .wordmark {
   font-family: var(--display);
-  font-size: 30px;
+  font-size: var(--text-5xl);
   font-weight: 700;
   letter-spacing: -0.03em;
 }
@@ -17,11 +17,11 @@
   width: 36px;
   height: 36px;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 700;
   border: 2px solid var(--ground);
 }
@@ -29,37 +29,37 @@
 .small {
   width: 26px;
   height: 26px;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .avatars .avatar + .avatar {
   margin-left: -8px;
 }
 
-/* Member colours: light tint with dark text, all above 4.5:1. */
+/* Member colours (tokens.css). */
 .c0 {
-  background: #ffedd5;
-  color: #9a3412;
+  background: var(--member-0-tint);
+  color: var(--member-0-ink);
 }
 .c1 {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--member-1-tint);
+  color: var(--member-1-ink);
 }
 .c2 {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--member-2-tint);
+  color: var(--member-2-ink);
 }
 .c3 {
-  background: #f3e8ff;
-  color: #6b21a8;
+  background: var(--member-3-tint);
+  color: var(--member-3-ink);
 }
 .c4 {
-  background: #fce7f3;
-  color: #9d174d;
+  background: var(--member-4-tint);
+  color: var(--member-4-ink);
 }
 
 .more {
   background: var(--line);
   color: var(--ink);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }

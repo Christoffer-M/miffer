@@ -1,7 +1,7 @@
 /* What Watch and Watched add to the grocery list's look (groceries.module.css, used as is). */
 
 .countRow {
-  min-height: 44px;
+  min-height: var(--tap-min);
 }
 
 .actions {
@@ -45,7 +45,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 0 12px 0 20px;
-  min-height: 44px;
+  min-height: var(--tap-min);
 }
 
 .shelfTitle {
@@ -54,7 +54,7 @@
   align-items: center;
   gap: 8px;
   font-family: var(--display);
-  font-size: 22px;
+  font-size: var(--text-2xl);
   letter-spacing: -0.01em;
 }
 .shelfTitle svg {
@@ -62,32 +62,32 @@
 }
 .shelfCount {
   font-family: var(--body);
-  font-size: 15px;
+  font-size: var(--text-base);
   font-weight: 500;
   color: var(--muted);
 }
 
 .seeAll {
-  min-height: 44px;
+  min-height: var(--tap-min);
   padding: 0 8px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   gap: 2px;
   color: var(--accent);
-  font-size: 15px;
+  font-size: var(--text-base);
   font-weight: 700;
   -webkit-tap-highlight-color: transparent;
 }
 .seeAll:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
 .shelfNote {
   margin: 0;
   padding: 4px 20px 8px;
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 /* Edge to edge, so posters slide out under the screen's sides. As tall as the shelf's share
@@ -120,20 +120,20 @@
   margin: 0 16px 4px;
   min-height: 64px;
   padding: 8px 8px 8px 12px;
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   background: var(--surface);
   color: var(--ink);
   display: flex;
   align-items: center;
   gap: 12px;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 80ms ease-out;
+  transition: transform var(--duration-press) ease-out;
 }
 .watchingCard:active {
   transform: scale(0.98);
 }
 .watchingCard:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 .watchingCard > svg {
@@ -157,10 +157,10 @@
 
 /* The dice and the Watched link: bare accent icons, the same size. */
 .action {
-  min-width: 44px;
-  height: 44px;
+  min-width: var(--tap-min);
+  height: var(--tap-min);
   padding: 0 8px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -168,14 +168,14 @@
   border: 0;
   background: none;
   color: var(--accent);
-  font-size: 15px;
+  font-size: var(--text-base);
   font-weight: 700;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 .action:focus-visible,
 .action[data-focus-visible] {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -192,7 +192,7 @@
   align-items: center;
   gap: 5px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 400;
 }
 
@@ -208,7 +208,7 @@
 .resultList {
   margin-top: 8px; /* clear of the search field */
   padding: 8px 12px;
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   background: var(--surface);
   display: flex;
   flex-direction: column;
@@ -232,7 +232,7 @@
   background: var(--ground);
 }
 .result[data-focus-visible] {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: -2px;
 }
 .result strong {
@@ -253,7 +253,7 @@
   width: 40px;
   height: 60px;
   flex-shrink: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   object-fit: cover;
   background: var(--accent-tint);
   color: var(--accent);
@@ -264,17 +264,17 @@
 .posterTiny {
   width: 32px;
   height: 48px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
 }
 .posterMedium {
   width: 80px;
   height: 120px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 .posterLarge {
   width: 96px;
   height: 144px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 /* The poster wall: three across, as wide as the screen allows. */
@@ -282,8 +282,8 @@
   width: 100%;
   height: auto;
   aspect-ratio: 2 / 3;
-  border-radius: 10px;
-  transition: transform 80ms ease-out;
+  border-radius: var(--radius-md);
+  transition: transform var(--duration-press) ease-out;
 }
 
 .grid {
@@ -313,9 +313,9 @@
   transform: scale(0.96);
 }
 .tile[data-focus-visible] {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 3px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 
 /* Who added it, in their avatar colour, on the poster's corner. */
@@ -331,10 +331,10 @@
   align-self: flex-start;
   margin-top: -2px;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent);
-  color: #fff;
-  font-size: 11px;
+  color: var(--on-solid);
+  font-size: var(--text-2xs);
   font-weight: 700;
   line-height: 1.4;
   white-space: nowrap;
@@ -351,14 +351,14 @@
   right: -4px;
   width: 10px;
   height: 10px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--accent-bright);
   box-shadow: 0 0 0 2px var(--ground);
 }
 
 /* The title under the poster: two lines at most. */
 .caption {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   line-height: 1.25;
   display: -webkit-box;
@@ -370,7 +370,7 @@
 .sub {
   margin-top: -4px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
   line-height: 1.25;
 }
 
@@ -378,14 +378,14 @@
   margin-left: auto;
   flex-shrink: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .searchNote {
-  min-height: 44px;
+  min-height: var(--tap-min);
   display: flex;
   align-items: center;
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 /* "Not there? Add it as a movie / series". */
@@ -394,7 +394,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 .byHandButtons {
   display: grid;
@@ -403,12 +403,12 @@
 }
 /* Tinted, so they read as buttons on the white card. */
 .kindButton {
-  height: 44px;
+  height: var(--tap-min);
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent-tint);
   color: var(--accent);
-  font-size: 15px;
+  font-size: var(--text-base);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -416,13 +416,13 @@
   gap: 8px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 80ms ease-out;
+  transition: transform var(--duration-press) ease-out;
 }
 .kindButton[data-pressed] {
   transform: scale(0.97);
 }
 .kindButton[data-focus-visible] {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -443,9 +443,9 @@
 .kindTab {
   position: relative; /* holds the underline */
   flex: 1;
-  height: 48px;
+  height: var(--control-height);
   color: var(--muted);
-  font-size: 16px;
+  font-size: var(--text-lg);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -469,17 +469,17 @@
   right: 0;
   bottom: -1px; /* over the line under the tabs */
   height: 3px;
-  border-radius: 3px 3px 0 0;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
   background: var(--accent);
 }
 .kindTab[data-focus-visible] {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: -4px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 .kindCount {
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 500;
 }
 
@@ -520,23 +520,23 @@
   position: absolute;
   right: 16px;
   bottom: 12px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+  width: var(--control-height-lg);
+  height: var(--control-height-lg);
+  border-radius: var(--radius-round);
   background: var(--accent);
-  color: #fff;
+  color: var(--on-solid);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 20px rgb(194 65 12 / 0.35);
+  box-shadow: var(--shadow-accent);
   -webkit-tap-highlight-color: transparent;
-  transition: transform 80ms ease-out;
+  transition: transform var(--duration-press) ease-out;
 }
 .fab:active {
   transform: scale(0.95);
 }
 .fab:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -556,7 +556,7 @@
 .pickTitle {
   margin: 4px 0 0;
   font-family: var(--display);
-  font-size: 30px;
+  font-size: var(--text-5xl);
   line-height: 1.15;
 }
 .pickMeta {
@@ -580,7 +580,7 @@
 
 .hero {
   padding: 16px;
-  border-radius: 20px;
+  border-radius: var(--radius-2xl);
   background: var(--surface);
   display: flex;
   flex-direction: column;
@@ -589,7 +589,7 @@
 .heroOpen {
   padding: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: none;
   color: var(--ink);
   text-align: left;
@@ -600,7 +600,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 .heroOpen[data-focus-visible] {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 .heroText {
@@ -611,12 +611,12 @@
 }
 .heroTitle {
   font-family: var(--display);
-  font-size: 26px;
+  font-size: var(--text-4xl);
   font-weight: 700;
   line-height: 1.15;
 }
 .heroPlace {
-  font-size: 16px;
+  font-size: var(--text-lg);
   font-weight: 700;
 }
 
@@ -628,7 +628,7 @@
 .segment {
   flex-basis: 0;
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
   background: var(--accent-tint);
   overflow: hidden;
 }
@@ -648,7 +648,7 @@
   list-style: none;
   margin: 0;
   padding: 4px 12px;
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   background: var(--surface);
   display: flex;
   flex-direction: column;
@@ -669,7 +669,7 @@
   min-height: 56px;
   padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: none;
   color: var(--ink);
   text-align: left;
@@ -680,13 +680,13 @@
   -webkit-tap-highlight-color: transparent;
 }
 .compactOpen[data-focus-visible] {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 .compactTitle {
   flex: 1;
   min-width: 0;
-  font-size: 15px;
+  font-size: var(--text-base);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -695,18 +695,18 @@
 .compactPlace {
   flex-shrink: 0;
   color: var(--accent);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 /* The next episode watched, on a row. */
 .tick {
-  width: 44px;
-  height: 44px;
+  width: var(--tap-min);
+  height: var(--tap-min);
   flex-shrink: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--accent-tint);
   color: var(--accent);
   display: flex;
@@ -714,20 +714,20 @@
   justify-content: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 80ms ease-out;
+  transition: transform var(--duration-press) ease-out;
 }
 .tick[data-pressed] {
   transform: scale(0.92);
 }
 .tick[data-focus-visible] {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
 /* Watching's sheet: a season, then the last episode seen. */
 .upNextBig {
   color: var(--accent);
-  font-size: 15px;
+  font-size: var(--text-base);
   font-weight: 700;
 }
 .pickerHead {
@@ -751,12 +751,12 @@
 }
 .chip {
   flex: 1 0 56px;
-  height: 44px;
+  height: var(--tap-min);
   border: 2px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--ink);
-  font-size: 15px;
+  font-size: var(--text-base);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -771,10 +771,10 @@
 .chip[data-selected] {
   border-color: var(--ink);
   background: var(--ink);
-  color: #fff;
+  color: var(--on-solid);
 }
 .chip[data-focus-visible] {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -795,14 +795,14 @@
   color: var(--muted);
 }
 .episode {
-  height: 48px;
-  border-radius: 12px;
-  font-size: 16px;
+  height: var(--control-height);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-lg);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 80ms ease-out;
+  transition: transform var(--duration-press) ease-out;
 }
 .episode[data-pressed] {
   transform: scale(0.94);
@@ -815,7 +815,7 @@
 .swatch[data-seen] {
   border: 2px solid var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--on-solid);
 }
 .episode[data-next],
 .swatch[data-next] {
@@ -828,7 +828,7 @@
   display: flex;
   gap: 16px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .legend > span {
   display: flex;
@@ -838,7 +838,7 @@
 .swatch {
   width: 12px;
   height: 12px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 /* Watching's sheet without TMDB's seasons: season and episode, each with - and +. */
@@ -859,27 +859,27 @@
   gap: 4px;
 }
 .stepperLabel {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--muted);
 }
 .stepperGroup {
-  height: 48px;
-  border-radius: 999px;
+  height: var(--control-height);
+  border-radius: var(--radius-pill);
   background: var(--ground);
   display: flex;
   align-items: center;
 }
 .stepperGroup[data-focus-within] {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 .stepButton {
-  width: 48px;
-  height: 48px;
+  width: var(--control-height);
+  height: var(--control-height);
   flex-shrink: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: none;
   color: var(--accent);
   display: flex;
@@ -904,7 +904,7 @@
   background: none;
   color: var(--ink);
   font: inherit;
-  font-size: 18px;
+  font-size: var(--text-xl);
   font-weight: 700;
   text-align: center;
   outline: none;

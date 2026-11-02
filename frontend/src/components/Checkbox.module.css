@@ -12,19 +12,19 @@
   height: 24px;
   flex-shrink: 0;
   border: 2px solid var(--field-border);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   display: flex;
   align-items: center;
   justify-content: center;
   transition:
-    background 120ms,
-    border-color 120ms,
-    transform 80ms;
+    background var(--duration-fast),
+    border-color var(--duration-fast),
+    transform var(--duration-press);
 }
 
 .box svg {
-  color: #fff;
+  color: var(--on-solid);
   opacity: 0;
 }
 
@@ -40,6 +40,6 @@
   transform: scale(0.92);
 }
 .checkbox[data-focus-visible] .box {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
