@@ -6,7 +6,7 @@ import { ChevronLeft, Play, Trash2, Undo2 } from "lucide-react";
 import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
 import { UndoBar, useUndo } from "../../components/UndoBar";
-import { useRemoveWatch, useRestoreWatch, useSetWatched } from "../../mutations/watch";
+import { useFillWatchedEnds, useRemoveWatch, useRestoreWatch, useSetWatched } from "../../mutations/watch";
 import { type Place, seenShort, seenText } from "../../progress";
 import { useNewEpisodes, useSeen, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
@@ -54,6 +54,8 @@ function Watched() {
   const fresh = useNewEpisodes(list);
   // How much of each watched series was seen, to know where you were when a new season comes.
   const seen = useSeen(list);
+  // Watched without remembering where it ended: all the seasons there are now.
+  useFillWatchedEnds(list);
   const setWatched = useSetWatched();
   const removeWatch = useRemoveWatch();
   const restoreWatch = useRestoreWatch();

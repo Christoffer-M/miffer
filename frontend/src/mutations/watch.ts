@@ -1,7 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { api, ok, type SearchResult, type Watch } from "../api";
-import { seasonsFrom, watchQuery } from "../queries/watch";
-import type { Place } from "../progress";
+import { seasonsFrom, seasonsQuery, watchQuery } from "../queries/watch";
+import { endOf, type Place } from "../progress";
 import { isWatching, type SeasonsOf, showsList, watchingLayout } from "../watch";
 import { animateListChange, type ListChange } from "../viewTransition";
 import { refetchWhenLast } from "./settle";
@@ -118,6 +119,43 @@ export const useSetProgress = () =>
       return watchingLayout(list, seasonsOf) === watchingLayout(placeIn(list, v), seasonsOf) ? false : undefined;
     },
   );
+
+/**
+ * Watched series that don't remember where they ended: marked Watched before progress existed,
+ * or before their seasons had loaded. Watched means all of it, so once the seasons are here
+ * each one remembers the end of its last season as it is now: that's how many seasons were
+ * seen, and a season added after that shows up as new. Quietly, as nothing moves.
+ */
+export function useFillWatchedEnds(list: Watch[]) {
+  const qc = useQueryClient();
+  const missing = list.filter(
+    (w) => w.kind === "series" && w.watchedAt && w.tmdbId !== null && (w.season == null || w.episode == null),
+  );
+  const seasons = useQueries({ queries: missing.map((w) => seasonsQuery(w.tmdbId)) });
+  const ends = missing.flatMap((w, i) => {
+    const end = endOf(seasons[i]?.data);
+    return end ? [{ id: w.id, end }] : [];
+  });
+  const fill = useMutation({
+    mutationFn: ({ id, end }: { id: string; end: Place }) =>
+      ok(api.watch[":id"].progress.$put({ param: { id }, json: { progress: end } })),
+    mutationKey: ["watch"],
+    meta: { offline: "it couldn't be changed" },
+    scope: { id: "watch" },
+    onMutate: ({ id, end }) => qc.setQueryData(watchQuery.queryKey, (old = []) => placeIn(old, { id, progress: end })),
+    onSettled: () => refetchWhenLast(qc, "watch", () => qc.invalidateQueries(watchQuery)),
+  });
+  // Each one once: the list can come back without it filled in before the server has it.
+  const sent = useRef(new Set<string>());
+  const key = JSON.stringify(ends);
+  useEffect(() => {
+    for (const e of JSON.parse(key) as typeof ends) {
+      if (sent.current.has(e.id)) continue;
+      sent.current.add(e.id);
+      fill.mutate(e);
+    }
+  }, [key]);
+}
 
 export const useRemoveWatch = () =>
   useWatchMutation(

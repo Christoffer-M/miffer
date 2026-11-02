@@ -5,6 +5,7 @@ import type { Watch } from "../../api";
 import { Avatars } from "../../brand";
 import { useOnline } from "../../offline";
 import { useMembers } from "../../queries/household";
+import { useFillWatchedEnds } from "../../mutations/watch";
 import { useNewEpisodes, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
 import { isWatching, type Kind, KINDS, PosterTile, tileLabel, toStart } from "../../watch";
@@ -26,6 +27,7 @@ function WatchList() {
   const watchedCount = list.filter((w) => w.watchedAt).length;
   // Watched series with a new season since: a dot on Watched says so.
   const freshCount = useNewEpisodes(list).size;
+  useFillWatchedEnds(list);
 
   return (
     <>
