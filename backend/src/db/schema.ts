@@ -97,6 +97,11 @@ export const watch = pgTable(
     // TMDB's poster, e.g. "/abc123.jpg"; the phone fetches it from TMDB's image server.
     posterPath: text(),
     addedBy: uuid().references(() => devices.id, { onDelete: "set null" }),
+    // A series being watched: the next episode up. Null until someone starts it (and for movies).
+    season: integer(),
+    episode: integer(),
+    // When the place last changed, so Watching can put the series watched last first.
+    progressAt: timestamp({ withTimezone: true }),
     // When it was watched, or null while it's still to watch.
     watchedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

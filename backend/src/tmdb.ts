@@ -15,10 +15,10 @@ type Result = {
   poster_path?: string | null;
 };
 
-/** The best few movies and series for what was typed, most popular first (TMDB's order). */
-export async function search(query: string) {
-  const url = new URL("https://api.themoviedb.org/3/search/multi");
-  url.search = new URLSearchParams({ query, include_adult: "false", language: "en-US" }).toString();
+/** Asks TMDB's API for `path`. */
+async function get<T>(path: string, params: Record<string, string> = {}) {
+  const url = new URL(`https://api.themoviedb.org/3${path}`);
+  url.search = new URLSearchParams(params).toString();
   // TMDB hands out a short API key (sent as a parameter) and a long read access token (a header).
   const token = KEY!.length > 40;
   if (!token) url.searchParams.set("api_key", KEY!);
@@ -27,7 +27,16 @@ export async function search(query: string) {
     signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) throw new Error(`TMDB answered ${res.status}`);
-  const { results } = (await res.json()) as { results: Result[] };
+  return (await res.json()) as T;
+}
+
+/** The best few movies and series for what was typed, most popular first (TMDB's order). */
+export async function search(query: string) {
+  const { results } = await get<{ results: Result[] }>("/search/multi", {
+    query,
+    include_adult: "false",
+    language: "en-US",
+  });
   return results
     .filter((r) => r.media_type === "movie" || r.media_type === "tv") // not people
     .slice(0, 6)
@@ -43,4 +52,27 @@ export async function search(query: string) {
         posterPath: r.poster_path ?? null,
       };
     });
+}
+
+// Seasons asked for lately, so every phone opening Watching doesn't ask TMDB again.
+const SEASONS_FOR_MS = 6 * 60 * 60 * 1000;
+const SEASONS_KEPT = 1000; // series; the oldest goes first
+const seasonsKept = new Map<number, { at: number; seasons: number[] }>();
+
+/**
+ * How many episodes each season of a series has, in order: [10, 10, 8] for three seasons.
+ * Specials (TMDB's season 0) are left out. Counts include episodes announced but not out yet.
+ */
+export async function seasons(tmdbId: number) {
+  const kept = seasonsKept.get(tmdbId);
+  if (kept && Date.now() - kept.at < SEASONS_FOR_MS) return kept.seasons;
+  const show = await get<{ seasons?: { season_number: number; episode_count: number }[] }>(`/tv/${tmdbId}`);
+  const fresh = (show.seasons ?? [])
+    .filter((s) => s.season_number > 0)
+    .sort((a, b) => a.season_number - b.season_number)
+    .map((s) => s.episode_count);
+  seasonsKept.delete(tmdbId); // re-added last: a Map keeps insertion order
+  seasonsKept.set(tmdbId, { at: Date.now(), seasons: fresh });
+  if (seasonsKept.size > SEASONS_KEPT) seasonsKept.delete(seasonsKept.keys().next().value!);
+  return fresh;
 }

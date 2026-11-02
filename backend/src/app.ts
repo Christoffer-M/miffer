@@ -10,7 +10,7 @@ import { db, schema } from "./db/index.js";
 import { notify } from "./live.js";
 import { isPushEndpoint, pushAdded, pushKey } from "./push.js";
 import { complete, isTimeZone } from "./reminders.js";
-import { search, searchOn } from "./tmdb.js";
+import { search, searchOn, seasons } from "./tmdb.js";
 
 const { households, devices, items, itemHistory, linkCodes, reminders, watch } = schema;
 
@@ -434,6 +434,8 @@ const watchFields = z.object({
   posterPath: z.string().regex(/^\/\w+\.(jpg|png)$/).nullable(),
 });
 const watchParam = zValidator("param", z.object({ id: z.uuid() }));
+// The next episode up in a series being watched.
+const progress = z.object({ season: z.number().int().min(1).max(500), episode: z.number().int().min(1).max(5000) });
 
 const watchRoutes = new Hono<Env>()
   .use(auth)
@@ -455,6 +457,16 @@ const watchRoutes = new Hono<Env>()
       return c.json({ error: "Search isn't answering right now." }, 502);
     }
   })
+  // Episodes per season of a series from search, so the phone knows when a season ends.
+  .get("/seasons/:tmdbId", zValidator("param", z.object({ tmdbId: z.coerce.number().int().positive() })), async (c) => {
+    if (!searchOn) return c.json({ error: "Search isn't set up on the server yet." }, 503);
+    try {
+      return c.json(await seasons(c.req.valid("param").tmdbId));
+    } catch (err) {
+      console.error("seasons failed", err);
+      return c.json({ error: "TMDB isn't answering right now." }, 502);
+    }
+  })
   .post("/", zValidator("json", watchFields.extend({ id: z.uuid() })), async (c) => {
     // No notification, unlike groceries: a new title can wait until someone opens Watch.
     await db
@@ -474,10 +486,15 @@ const watchRoutes = new Hono<Env>()
         addedBy: z.uuid().nullable(),
         watchedAt: z.iso.datetime().nullable(),
         createdAt: z.iso.datetime(),
+        // Missing from a phone that queued this before progress existed.
+        season: progress.shape.season.nullable().default(null),
+        episode: progress.shape.episode.nullable().default(null),
+        progressAt: z.iso.datetime().nullable().default(null),
       }),
     ),
     async (c) => {
-      const { addedBy, watchedAt, createdAt, ...rest } = c.req.valid("json");
+      const { addedBy, watchedAt, createdAt, season, episode, progressAt, ...rest } = c.req.valid("json");
+      const started = rest.kind === "series" && season !== null && episode !== null;
       await db
         .insert(watch)
         .values({
@@ -487,18 +504,51 @@ const watchRoutes = new Hono<Env>()
           addedBy: addedBy && (await isMember(c.var.householdId, addedBy)) ? addedBy : null,
           watchedAt: watchedAt ? new Date(watchedAt) : null,
           createdAt: new Date(createdAt),
+          season: started ? season : null,
+          episode: started ? episode : null,
+          progressAt: started && progressAt ? new Date(progressAt) : null,
         })
         .onConflictDoNothing(); // already back (a retry), or someone else's id: left as it is
       notify(c.var.householdId, "watch");
       return c.body(null, 204);
     },
   )
-  // Watched (now), or back on the list.
-  .patch("/:id", watchParam, zValidator("json", z.object({ watched: z.boolean() })), async (c) => {
+  // Watched (now), or back on the list. Back with `restart`, a series forgets where it was up to
+  // and goes on its shelf to start over; without, it's back on Watching where it was.
+  .patch(
+    "/:id",
+    watchParam,
+    zValidator("json", z.object({ watched: z.boolean(), restart: z.boolean().optional() })),
+    async (c) => {
+      const { watched, restart } = c.req.valid("json");
+      await db
+        .update(watch)
+        .set({
+          watchedAt: watched ? new Date() : null,
+          ...(restart && !watched && { season: null, episode: null, progressAt: null }),
+        })
+        .where(and(eq(watch.id, c.req.valid("param").id), eq(watch.householdId, c.var.householdId)));
+      notify(c.var.householdId, "watch");
+      return c.body(null, 204);
+    },
+  )
+  // Where a series is up to (started, or the next episode), or null to stop watching it for now.
+  .put("/:id/progress", watchParam, zValidator("json", z.object({ progress: progress.nullable() })), async (c) => {
+    const place = c.req.valid("json").progress;
     await db
       .update(watch)
-      .set({ watchedAt: c.req.valid("json").watched ? new Date() : null })
-      .where(and(eq(watch.id, c.req.valid("param").id), eq(watch.householdId, c.var.householdId)));
+      .set({
+        season: place?.season ?? null,
+        episode: place?.episode ?? null,
+        progressAt: place ? new Date() : null,
+      })
+      .where(
+        and(
+          eq(watch.id, c.req.valid("param").id),
+          eq(watch.householdId, c.var.householdId),
+          eq(watch.kind, "series"), // a movie has no episodes
+        ),
+      );
     notify(c.var.householdId, "watch");
     return c.body(null, 204);
   })

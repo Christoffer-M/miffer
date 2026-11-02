@@ -9,7 +9,7 @@ import { Button } from "../components/Button";
 import { Checkbox } from "../components/Checkbox";
 import { SwipeRow } from "../components/SwipeRow";
 import { TextField } from "../components/TextField";
-import { UndoBar, UndoSpot } from "../components/UndoBar";
+import { UNDO_MS, UndoBar, UndoSpot } from "../components/UndoBar";
 import { useAddItem, useClearDone, useRemoveItem, useRestoreItems, useSetDone } from "../mutations/items";
 import { useMembers } from "../queries/household";
 import { historyQuery, itemsQuery } from "../queries/items";
@@ -28,9 +28,6 @@ export const Route = createFileRoute("/groceries")({ component: Groceries });
  * it into the other, instead of gliding between them.
  */
 const animated = (id: string, list: "todo" | "cart") => animatedItem(`${list}-${id}`);
-
-/** How long Undo stays up after removing something. */
-const UNDO_MS = 6000;
 
 function Groceries() {
   const { data: items = [], isPending, error } = useQuery(itemsQuery);

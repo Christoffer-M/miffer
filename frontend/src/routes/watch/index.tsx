@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight, History } from "lucide-react";
+import { ChevronRight, History, TvMinimalPlay } from "lucide-react";
 import type { Watch } from "../../api";
 import { Avatars } from "../../brand";
 import { useOnline } from "../../offline";
 import { useMembers } from "../../queries/household";
 import { watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
-import { type Kind, KINDS, PosterTile, tileLabel } from "../../watch";
+import { isWatching, type Kind, KINDS, PosterTile, tileLabel, toStart } from "../../watch";
 import ui from "../../ui.module.css";
 import g from "../groceries.module.css";
 import { Pick, useToWatch } from "./-toWatch";
@@ -15,14 +15,15 @@ import s from "./watch.module.css";
 
 export const Route = createFileRoute("/watch/")({ component: WatchList });
 
-/** Movies on one shelf and series on another, each scrolling sideways. */
+/** Movies on one shelf and series on another, each scrolling sideways. Started series are on Watching. */
 function WatchList() {
   const { data: list = [], isPending, error } = useQuery(watchQuery);
   const online = useOnline();
-  const { open, sheet, bottom } = useToWatch();
+  const { open, start, sheet, bottom } = useToWatch();
 
-  const toWatch = list.filter((w) => !w.watchedAt);
-  const watchedCount = list.length - toWatch.length;
+  const toWatch = toStart(list);
+  const watchingCount = list.filter(isWatching).length;
+  const watchedCount = list.filter((w) => w.watchedAt).length;
 
   return (
     <>
@@ -34,6 +35,10 @@ function WatchList() {
         <div className={`${ui.row} ${g.titleRow}`}>
           <h1 className={ui.display}>Watch</h1>
           <div className={s.actions}>
+            <Link to="/watch/watching" className={s.action} aria-label={`Watching, ${watchingCount} series`}>
+              <TvMinimalPlay size={20} aria-hidden />
+              {watchingCount}
+            </Link>
             <Link to="/watch/watched" className={s.action} aria-label={`Watched, ${watchedCount}`}>
               <History size={20} aria-hidden />
               {watchedCount}
@@ -46,10 +51,12 @@ function WatchList() {
       <main className={s.shelves}>
         {error && <p className={`${ui.error} ${s.shelfNote}`}>{error.message}</p>}
         {!isPending && toWatch.length === 0 ? (
-          <p className={`${ui.muted} ${s.shelfNote}`}>Nothing to watch yet. Tap + to add a movie or series.</p>
+          <p className={`${ui.muted} ${s.shelfNote}`}>
+            {watchingCount ? "Nothing new to start. Tap + to add a movie or series." : "Nothing to watch yet. Tap + to add a movie or series."}
+          </p>
         ) : (
           (["movie", "series"] as const).map((kind) => (
-            <Shelf key={kind} kind={kind} list={toWatch.filter((w) => w.kind === kind)} onOpen={open} />
+            <Shelf key={kind} kind={kind} list={toWatch.filter((w) => w.kind === kind)} onOpen={open} onStart={start} />
           ))
         )}
       </main>
@@ -60,7 +67,9 @@ function WatchList() {
   );
 }
 
-function Shelf({ kind, list, onOpen }: { kind: Kind; list: Watch[]; onOpen: (w: Watch) => void }) {
+type ShelfProps = { kind: Kind; list: Watch[]; onOpen: (w: Watch) => void; onStart: (w: Watch) => void };
+
+function Shelf({ kind, list, onOpen, onStart }: ShelfProps) {
   const { whoIs } = useMembers();
   const { plural, page, Icon } = KINDS[kind];
   const name = plural.toLowerCase();
@@ -75,7 +84,7 @@ function Shelf({ kind, list, onOpen }: { kind: Kind; list: Watch[]; onOpen: (w: 
         </h2>
         {list.length > 0 && (
           <div className={s.actions}>
-            <Pick list={list} kind={kind} />
+            <Pick list={list} kind={kind} onStart={onStart} />
             <Link to={page} className={s.seeAll} aria-label={`See all ${name}`}>
               See all
               <ChevronRight size={18} aria-hidden />
