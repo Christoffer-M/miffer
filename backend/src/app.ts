@@ -11,6 +11,7 @@ import { notify } from "./live.js";
 import { isPushEndpoint, pushAdded, pushKey } from "./push.js";
 import { complete, isTimeZone } from "./reminders.js";
 import { search, searchOn, seasons } from "./tmdb.js";
+import { fillEnds } from "./watched.js";
 
 const { households, devices, items, itemHistory, linkCodes, reminders, watch } = schema;
 
@@ -517,6 +518,7 @@ const watchRoutes = new Hono<Env>()
   // `place` null starts it over on its shelf (Put back), the end of its last season remembers how
   // far it went when watched (to spot a new season later), and a place to go on from takes it
   // back to Watching (Continue). Left out, the place stays as it is (Undo of Finished).
+  // Watched with no place, the server finds the end itself (watched.ts), after answering.
   .patch(
     "/:id",
     watchParam,
@@ -533,6 +535,7 @@ const watchRoutes = new Hono<Env>()
           .where(and(mine, eq(watch.kind, "series"))); // a movie has no episodes
       });
       notify(c.var.householdId, "watch");
+      if (watched) fillEnds({ id: c.req.valid("param").id }).catch((err) => console.error("filling ends failed", err));
       return c.body(null, 204);
     },
   )

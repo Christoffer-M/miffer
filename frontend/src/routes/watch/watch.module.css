@@ -369,6 +369,13 @@
   text-overflow: ellipsis;
 }
 
+.sub {
+  margin-top: -4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
 .status {
   margin-left: auto;
   flex-shrink: 0;
