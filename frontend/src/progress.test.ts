@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { caughtUp, next, share } from "./progress.ts";
+import { caughtUp, next, seasonParts, share } from "./progress.ts";
 
 const seasons = [10, 10, 8];
 
@@ -25,4 +25,9 @@ test("how much of a series is watched", () => {
   assert.deepEqual(share({ season: 2, episode: 5 }, seasons), { watched: 14, total: 28 });
   assert.deepEqual(share({ season: 3, episode: 9 }, seasons), { watched: 28, total: 28 });
   assert.equal(share({ season: 2, episode: 5 }), undefined);
+});
+
+test("how much of each season is watched", () => {
+  assert.deepEqual(seasonParts({ season: 2, episode: 4 }, seasons), [10, 3, 0]);
+  assert.deepEqual(seasonParts({ season: 3, episode: 9 }, seasons), [10, 10, 8]);
 });

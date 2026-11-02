@@ -489,10 +489,11 @@ const watchRoutes = new Hono<Env>()
         // Missing from a phone that queued this before progress existed.
         season: progress.shape.season.nullable().default(null),
         episode: progress.shape.episode.nullable().default(null),
+        progressAt: z.iso.datetime().nullable().default(null),
       }),
     ),
     async (c) => {
-      const { addedBy, watchedAt, createdAt, season, episode, ...rest } = c.req.valid("json");
+      const { addedBy, watchedAt, createdAt, season, episode, progressAt, ...rest } = c.req.valid("json");
       const started = rest.kind === "series" && season !== null && episode !== null;
       await db
         .insert(watch)
@@ -505,6 +506,7 @@ const watchRoutes = new Hono<Env>()
           createdAt: new Date(createdAt),
           season: started ? season : null,
           episode: started ? episode : null,
+          progressAt: started && progressAt ? new Date(progressAt) : null,
         })
         .onConflictDoNothing(); // already back (a retry), or someone else's id: left as it is
       notify(c.var.householdId, "watch");
@@ -525,7 +527,11 @@ const watchRoutes = new Hono<Env>()
     const { progress } = c.req.valid("json");
     await db
       .update(watch)
-      .set({ season: progress?.season ?? null, episode: progress?.episode ?? null })
+      .set({
+        season: progress?.season ?? null,
+        episode: progress?.episode ?? null,
+        progressAt: progress ? new Date() : null,
+      })
       .where(
         and(
           eq(watch.id, c.req.valid("param").id),

@@ -517,7 +517,7 @@ test("a series being watched keeps its place, and a movie has none", async () =>
 
   expect((await setProgress(show, { season: 1, episode: 1 })).status).toBe(204);
   await setProgress(show, { season: 2, episode: 4 });
-  expect(await find(show)).toMatchObject({ season: 2, episode: 4 });
+  expect(await find(show)).toMatchObject({ season: 2, episode: 4, progressAt: expect.any(String) });
   expect((await setProgress(show, { season: 0, episode: 1 })).status).toBe(400);
   await setProgress(show, { season: 9, episode: 9 }, eve.token); // not Eve's
   await setProgress(film, { season: 1, episode: 1 });
@@ -534,7 +534,7 @@ test("a series being watched keeps its place, and a movie has none", async () =>
 
   // Stopping clears it.
   await setProgress(show, null);
-  expect(await find(show)).toMatchObject({ season: null, episode: null });
+  expect(await find(show)).toMatchObject({ season: null, episode: null, progressAt: null });
 });
 
 test("a series' seasons come from TMDB, without the specials", async () => {

@@ -100,6 +100,8 @@ export const watch = pgTable(
     // A series being watched: the next episode up. Null until someone starts it (and for movies).
     season: integer(),
     episode: integer(),
+    // When the place last changed, so Watching can put the series watched last first.
+    progressAt: timestamp({ withTimezone: true }),
     // When it was watched, or null while it's still to watch.
     watchedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

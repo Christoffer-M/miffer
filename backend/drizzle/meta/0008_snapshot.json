@@ -1,5 +1,5 @@
 {
-  "id": "b35c9488-6880-4b25-bc3a-4d7bd208119e",
+  "id": "00d9d4ad-d085-4116-9332-9a759ff36d90",
   "prevId": "4ace23a4-1945-4da7-b28a-1f691e4a7881",
   "version": "7",
   "dialect": "postgresql",
@@ -547,6 +547,12 @@
         "episode": {
           "name": "episode",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "progress_at": {
+          "name": "progress_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },

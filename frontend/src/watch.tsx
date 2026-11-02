@@ -26,8 +26,15 @@ export function WatchMeta({ kind, year, extra }: { kind: Watch["kind"]; year: nu
   );
 }
 
-type Size = "small" | "large" | "fill";
-const SIZES = { small: s.poster, large: `${s.poster} ${s.posterLarge}`, fill: `${s.poster} ${s.posterFill}` };
+type Size = "tiny" | "small" | "medium" | "large" | "fill";
+const SIZES = {
+  tiny: `${s.poster} ${s.posterTiny}`,
+  small: s.poster,
+  medium: `${s.poster} ${s.posterMedium}`,
+  large: `${s.poster} ${s.posterLarge}`,
+  fill: `${s.poster} ${s.posterFill}`,
+};
+const ICON_SIZES = { tiny: 16, small: 20, medium: 28, large: 36, fill: 36 };
 
 /**
  * The poster from TMDB's image server, or the movie or series icon when there's none: typed by
@@ -39,12 +46,12 @@ export function Poster({ path, kind, size = "small" }: { path: string | null; ki
     const { Icon } = KINDS[kind];
     return (
       <span className={SIZES[size]}>
-        <Icon size={size === "small" ? 20 : 36} aria-hidden />
+        <Icon size={ICON_SIZES[size]} aria-hidden />
       </span>
     );
   }
   // About three times the shown width, for sharp phone screens.
-  const src = `https://image.tmdb.org/t/p/${size === "small" ? "w154" : "w342"}${path}`;
+  const src = `https://image.tmdb.org/t/p/${size === "large" || size === "fill" ? "w342" : "w154"}${path}`;
   return <img className={SIZES[size]} src={src} alt="" loading="lazy" onError={() => setFailed(true)} />;
 }
 
@@ -120,6 +127,10 @@ export const showsList = () =>
  * Loose (!=) because a list kept on the phone from before progress existed has no season at all.
  */
 export const isWatching = (w?: Watch) => !!w && !w.watchedAt && w.season != null && w.episode != null;
+
+/** Watched last first: Watching's order. A series started before progressAt existed goes by when it was added. */
+export const byRecent = (a: Watch, b: Watch) =>
+  (b.progressAt ?? b.createdAt).localeCompare(a.progressAt ?? a.createdAt);
 
 /** Still to start: what the shelves and See all show of a kind. */
 export const toStart = (list: Watch[], kind?: Kind) =>

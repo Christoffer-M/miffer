@@ -27,3 +27,8 @@ export function share(at: Place, seasons?: number[]) {
   const before = seasons.slice(0, at.season - 1).reduce((n, e) => n + e, 0);
   return { watched: Math.min(total, before + at.episode - 1), total };
 }
+
+/** How many episodes of each season are watched: [10, 3, 0, 0] at S2 E4 of [10, 10, 10, 8]. */
+export function seasonParts(at: Place, seasons: number[]) {
+  return seasons.map((n, i) => (i + 1 < at.season ? n : i + 1 === at.season ? Math.min(n, at.episode - 1) : 0));
+}

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ok, type SearchResult, type Watch } from "../api";
 import { watchQuery } from "../queries/watch";
 import type { Place } from "../progress";
-import { isWatching, showsList } from "../watch";
+import { byRecent, isWatching, showsList } from "../watch";
 import { animateListChange, type ListChange } from "../viewTransition";
 import { refetchWhenLast } from "./settle";
 
@@ -17,7 +17,7 @@ function useWatchMutation<V>(
   offline: string,
   send: (v: V) => Promise<unknown>,
   apply: (list: Watch[], v: V) => Watch[],
-  change?: ListChange | ((list: Watch[], v: V) => ListChange | false),
+  change?: ListChange | ((list: Watch[], v: V) => ListChange | false | undefined),
 ) {
   const qc = useQueryClient();
   return useMutation({
@@ -46,7 +46,15 @@ export const useAddWatch = () =>
       list.some((x) => x.id === w.id)
         ? list
         : [
-            { ...w, householdId: "", season: null, episode: null, watchedAt: null, createdAt: new Date().toISOString() },
+            {
+              ...w,
+              householdId: "",
+              season: null,
+              episode: null,
+              progressAt: null,
+              watchedAt: null,
+              createdAt: new Date().toISOString(),
+            },
             ...list,
           ],
   );
@@ -64,7 +72,8 @@ export const useSetWatched = () =>
 
 /**
  * A series started, on to another episode, or stopped (null): back on its shelf.
- * Only starting and stopping move it, so only they animate.
+ * Starting and stopping move it between screens; on Watching, the series watched last goes
+ * to the top, so that animates too. Another episode of the one already on top doesn't.
  */
 export const useSetProgress = () =>
   useWatchMutation(
@@ -72,8 +81,20 @@ export const useSetProgress = () =>
     ({ id, progress }: { id: string; progress: Place | null }) =>
       ok(api.watch[":id"].progress.$put({ param: { id }, json: { progress } })),
     (list, { id, progress }) =>
-      list.map((w) => (w.id === id ? { ...w, season: progress?.season ?? null, episode: progress?.episode ?? null } : w)),
-    (list, { id, progress }) => (isWatching(list.find((w) => w.id === id)) === !!progress ? false : "check"),
+      list.map((w) =>
+        w.id === id
+          ? {
+              ...w,
+              season: progress?.season ?? null,
+              episode: progress?.episode ?? null,
+              progressAt: progress ? new Date().toISOString() : null,
+            }
+          : w,
+      ),
+    (list, { id, progress }) => {
+      if (isWatching(list.find((w) => w.id === id)) !== !!progress) return "check";
+      return list.filter(isWatching).sort(byRecent)[0]?.id === id ? false : undefined;
+    },
   );
 
 export const useRemoveWatch = () =>
