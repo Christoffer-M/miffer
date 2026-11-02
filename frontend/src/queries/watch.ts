@@ -1,6 +1,6 @@
 import { type QueryClient, queryOptions, useQueries } from "@tanstack/react-query";
 import { api, ok, type Watch } from "../api";
-import { remembered } from "../remember";
+import { remembered, whenForgotten } from "../remember";
 import { caughtUp, type Place, type Seen, seen, share } from "../progress";
 import { isWatching, placeOf, type SeasonsOf, showsList, watchingLayout } from "../watch";
 import { animateListChange } from "../viewTransition";
@@ -27,11 +27,67 @@ const SEASONS_KEY = "miffer.last.seasons"; // under remember.ts' prefix, so forg
 
 type KeptSeasons = Record<string, { at: number; seasons: number[] }>;
 
+// Read from the phone once and then kept in memory, as every series on screen looks itself up.
+let kept: KeptSeasons | undefined;
+let saving = false;
+whenForgotten(() => (kept = undefined));
+
 function keptSeasons(): KeptSeasons {
+  if (kept) return kept;
   try {
-    return JSON.parse(localStorage.getItem(SEASONS_KEY) ?? "{}");
+    kept = JSON.parse(localStorage.getItem(SEASONS_KEY) ?? "{}") as KeptSeasons;
   } catch {
-    return {};
+    kept = {};
+  }
+  return kept;
+}
+
+/** Keeps a series' seasons; written to the phone once for all that arrive together. */
+function keep(tmdbId: number, seasons: number[]) {
+  keptSeasons()[String(tmdbId)] = { at: Date.now(), seasons };
+  if (saving) return;
+  saving = true;
+  setTimeout(() => {
+    saving = false;
+    if (!kept) return; // forgotten meanwhile
+    const now = Date.now();
+    kept = Object.fromEntries(Object.entries(kept).filter(([, k]) => now - k.at < 30 * DAY));
+    try {
+      localStorage.setItem(SEASONS_KEY, JSON.stringify(kept));
+    } catch {} // full or blocked: it's fetched again next time
+  });
+}
+
+// Series asked for together (all those on a screen) go to the server in one request.
+const AT_ONCE = 100; // as many as app.ts takes
+type Asked = { resolve: (seasons: number[]) => void; reject: (err: Error) => void };
+let asked = new Map<number, Asked[]>();
+
+function askSeasons(tmdbId: number) {
+  return new Promise<number[]>((resolve, reject) => {
+    if (!asked.size) setTimeout(sendAsked);
+    asked.set(tmdbId, [...(asked.get(tmdbId) ?? []), { resolve, reject }]);
+  });
+}
+
+async function sendAsked() {
+  const batch = [...asked];
+  asked = new Map();
+  for (let i = 0; i < batch.length; i += AT_ONCE) {
+    const part = batch.slice(i, i + AT_ONCE);
+    try {
+      const ids = part.map(([id]) => id).join(",");
+      const found = await (await ok(api.watch.seasons.$get({ query: { ids } }))).json();
+      for (const [id, waiting] of part) {
+        const seasons = found[id];
+        for (const w of waiting) {
+          if (seasons) w.resolve(seasons);
+          else w.reject(new Error("TMDB isn't answering right now."));
+        }
+      }
+    } catch (err) {
+      for (const [, waiting] of part) for (const w of waiting) w.reject(err as Error);
+    }
   }
 }
 
@@ -45,13 +101,8 @@ export const seasonsQuery = (tmdbId: number | null) =>
   queryOptions({
     queryKey: ["seasons", tmdbId],
     queryFn: async () => {
-      const seasons = await (await ok(api.watch.seasons[":tmdbId"].$get({ param: { tmdbId: String(tmdbId) } }))).json();
-      const now = Date.now();
-      const kept = Object.fromEntries(Object.entries(keptSeasons()).filter(([, k]) => now - k.at < 30 * DAY));
-      kept[String(tmdbId)] = { at: now, seasons };
-      try {
-        localStorage.setItem(SEASONS_KEY, JSON.stringify(kept));
-      } catch {} // full or blocked: it's fetched again next time
+      const seasons = await askSeasons(tmdbId!);
+      keep(tmdbId!, seasons);
       return seasons;
     },
     initialData: () => keptSeasons()[String(tmdbId)]?.seasons,
@@ -81,9 +132,11 @@ export function useWatchedSeries(list: Watch[]) {
         if (w.tmdbId !== null && !seasons) return;
         const part = seen({ season: w.season!, episode: w.episode! }, seasons);
         if (part) seenBy.set(w.id, part);
-        if (!seasons || caughtUp(placeOf(w, seasons), seasons)) return;
+        // No seasons on TMDB yet (or only specials) is as good as not knowing them.
+        if (!seasons?.length || caughtUp(placeOf(w, seasons), seasons)) return;
         const place = placeOf(w, seasons);
-        const shared = share(place, seasons)!;
+        const shared = share(place, seasons);
+        if (!shared) return;
         const left = shared.total - shared.watched;
         const label = place.episode === 1 ? "New season" : left === 1 ? "1 new episode" : `${left} new episodes`;
         fresh.set(w.id, { label, place });

@@ -30,7 +30,15 @@ export function remembered<T>(name: string, fetch: () => Promise<T>) {
   };
 }
 
+const forgetters: (() => void)[] = [];
+
+/** For what keeps a copy in memory as well (queries/watch.ts): drop it when the phone forgets. */
+export function whenForgotten(forget: () => void) {
+  forgetters.push(forget);
+}
+
 /** Forgets it all, for when this phone leaves its household. */
 export function forgetAll() {
   for (const key of Object.keys(localStorage)) if (key.startsWith(PREFIX)) localStorage.removeItem(key);
+  for (const forget of forgetters) forget();
 }

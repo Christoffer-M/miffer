@@ -20,6 +20,7 @@ import {
   seen,
   seenText,
   share,
+  short,
   tapEpisode,
 } from "../../progress";
 import { useMembers } from "../../queries/household";
@@ -30,7 +31,6 @@ import ui from "../../ui.module.css";
 import g from "../groceries.module.css";
 import s from "./watch.module.css";
 
-export const short = ({ season, episode }: Place) => `S${season} · E${episode}`;
 const nextUpLabel = (w: Watch, at: Place) => `${w.title}, next up season ${at.season}, episode ${at.episode}`;
 const tickLabel = (w: Watch, at: Place) => `Watched season ${at.season}, episode ${at.episode} of ${w.title}`;
 
@@ -79,9 +79,10 @@ export function WatchingPanel({ offer }: { offer: Offer }) {
   const openTile = (w: Watch) => setTapped({ item: w, isOpen: true });
 
   function move(w: Watch, to: Place | null, text: string) {
-    const from = { season: w.season ?? 1, episode: w.episode ?? 1 }; // as stored, to put back exactly
+    // As stored, to put back exactly: in the same spot on Watching too.
+    const from = { season: w.season ?? 1, episode: w.episode ?? 1 };
     setProgress.mutate({ id: w.id, progress: to });
-    offer(text, () => setProgress.mutate({ id: w.id, progress: from }));
+    offer(text, () => setProgress.mutate({ id: w.id, progress: from, at: w.progressAt }));
   }
   const tick = (w: Watch) => move(w, next(at(w), seasonsOf(w)), `Watched ${short(at(w))} of ${w.title}`);
 
@@ -94,11 +95,13 @@ export function WatchingPanel({ offer }: { offer: Offer }) {
   function finished(w: Watch, seasons?: number[]) {
     close();
     const was = { season: w.season ?? 1, episode: w.episode ?? 1 };
-    const end = endOf(seasons) ?? (w.tmdbId === null ? finishedAt(was) : null);
+    const end = endOf(seasons) ?? (w.tmdbId === null ? finishedAt(was) : undefined);
     const part = end && seen(end, seasons);
     setWatched.mutate({ id: w.id, watched: true, place: end });
-    // Back on Watching where it was.
-    offer(`${w.title} is in Watched${part ? `, ${seenText(part)} seen` : ""}`, () => setWatched.mutate({ id: w.id, watched: false, place: was }));
+    // Back on Watching where it was, in the same spot.
+    offer(`${w.title} is in Watched${part ? `, ${seenText(part)} seen` : ""}`, () =>
+      setWatched.mutate({ id: w.id, watched: false, place: was, at: w.progressAt }),
+    );
   }
 
   return (

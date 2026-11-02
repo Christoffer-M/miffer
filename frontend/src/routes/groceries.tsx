@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { Button as AriaButton, Form } from "react-aria-components";
 import { Check, Plus, Trash2, Undo2, X } from "lucide-react";
 import { type Item, session } from "../api";
@@ -9,7 +9,7 @@ import { Button } from "../components/Button";
 import { Checkbox } from "../components/Checkbox";
 import { SwipeRow } from "../components/SwipeRow";
 import { TextField } from "../components/TextField";
-import { UNDO_MS, UndoBar, UndoSpot } from "../components/UndoBar";
+import { UndoBar, UndoSpot, useUndoable } from "../components/UndoBar";
 import { useAddItem, useClearDone, useRemoveItem, useRestoreItems, useSetDone } from "../mutations/items";
 import { useMembers } from "../queries/household";
 import { historyQuery, itemsQuery } from "../queries/items";
@@ -43,13 +43,8 @@ function Groceries() {
   const [draft, setDraft] = useState("");
   const [typing, setTyping] = useState(false);
   // What was removed last, for Undo. A new removal takes its place.
-  const [removed, setRemoved] = useState<Item[]>([]);
-
-  useEffect(() => {
-    if (!removed.length) return;
-    const timer = setTimeout(() => setRemoved([]), UNDO_MS);
-    return () => clearTimeout(timer);
-  }, [removed]);
+  const [lastRemoved, setRemoved] = useUndoable<Item[]>();
+  const removed = lastRemoved ?? [];
 
   const todo = items.filter((i) => !i.done);
   const done = items.filter((i) => i.done);
@@ -76,7 +71,7 @@ function Groceries() {
 
   function undo() {
     restoreItems.mutate(removed);
-    if (!isOffline()) setRemoved([]);
+    if (!isOffline()) setRemoved(null);
   }
 
   function add(e: React.FormEvent) {
