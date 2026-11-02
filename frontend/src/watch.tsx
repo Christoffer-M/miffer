@@ -128,7 +128,7 @@ export function WatchSheet({ item, isOpen, onClose, eyebrow, note, actions, chil
 
 /** Whether a list of posters is on screen: changes there animate. Not on Add, which leaves the list alone. */
 export const showsList = () =>
-  ["/watch", "/watch/movies", "/watch/series", "/watch/watching", "/watch/watched"].includes(location.pathname);
+  ["/watch", "/watch/movies", "/watch/series", "/watch/watched"].includes(location.pathname);
 
 /**
  * A series someone has started and not finished: it's on Watching, not on the shelves.

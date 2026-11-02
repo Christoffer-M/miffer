@@ -115,6 +115,46 @@
   scroll-snap-align: start;
 }
 
+/* Watch: the series being watched, at the top of the Series shelf. Opens Series on Watching. */
+.watchingCard {
+  margin: 0 16px 4px;
+  min-height: 64px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 80ms ease-out;
+}
+.watchingCard:active {
+  transform: scale(0.98);
+}
+.watchingCard:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.watchingCard > svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.watchingCard .text {
+  flex: 1;
+}
+/* Up to three posters, overlapping. */
+.stack {
+  display: flex;
+  flex-shrink: 0;
+}
+.stack > * {
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.stack > * + * {
+  margin-left: -14px;
+}
+
 /* The dice and the Watched link: bare accent icons, the same size. */
 .action {
   min-width: 44px;
@@ -387,8 +427,9 @@
 .tabbedHeader {
   padding-bottom: 8px;
 }
+/* On the same 20px edge as the title and the posters; each underline is as wide as its tab. */
 .kindTabs {
-  padding: 0 12px;
+  padding: 0 20px;
   border-bottom: 1px solid var(--line);
   display: flex;
 }
@@ -417,8 +458,8 @@
 .kindTab[data-selected]::after {
   content: "";
   position: absolute;
-  left: 24px;
-  right: 24px;
+  left: 0;
+  right: 0;
   bottom: -1px; /* over the line under the tabs */
   height: 3px;
   border-radius: 3px 3px 0 0;
@@ -433,6 +474,14 @@
   color: var(--muted);
   font-size: 14px;
   font-weight: 500;
+}
+
+/* Series' To start tab: the count and the dice, over the posters. */
+.panelRow {
+  padding: 0 0 0 8px;
+}
+.panelRow p {
+  margin: 0;
 }
 
 /* Watched: a month heading per group. Only the last grid needs room below for Undo. */
@@ -512,10 +561,14 @@
   grid-column: 1 / -1;
 }
 
-/* Watching: the series watched last big on top, the rest in short rows under it. */
+/* Series' Watching tab: the series watched last big on top, the rest in short rows under it. */
 .watching {
   gap: 18px;
-  padding-bottom: 96px; /* the last row clears Undo */
+}
+/* Clear of the tabs, cards on their 20px edge, and the last row clears Undo. Two classes, to
+   win over the list padding (groceries.module.css) whichever stylesheet loads last. */
+.tabs > .watching {
+  padding: 12px 20px 96px;
 }
 
 .hero {
@@ -581,7 +634,7 @@
 
 .watchingHeading {
   margin: 0;
-  padding: 4px 8px 6px;
+  padding: 4px 0 6px; /* on the cards' edge */
 }
 
 .compactList {
