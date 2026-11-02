@@ -20,7 +20,7 @@
   flex-grow: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 0 76px; /* the last shelf clears the + button (56px, 12px off the bottom) */
+  padding: 0 0 12px; /* down to the bottom: the + button floats over the posters' corner */
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -28,9 +28,11 @@
 .shelves > * {
   flex-shrink: 0;
 }
-/* A shelf with posters takes an even share of the room; an empty one just its note. */
+/* A shelf with posters grows by an even share of the room left over, so both rows of posters
+   end up the same height whatever is above them (Series' Watching card); an empty shelf just
+   takes its note. */
 .shelves > .shelf:has(.row) {
-  flex: 1 0 0;
+  flex: 1 0 auto;
 }
 
 .shelf {
