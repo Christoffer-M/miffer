@@ -5,16 +5,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useContext, useEffect, useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
-import { Check, ChevronLeft, Dices, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronLeft, Dices, Play, Plus, Trash2 } from "lucide-react";
 import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
 import { UndoBar, UndoSpot } from "../../components/UndoBar";
-import { useRemoveWatch, useRestoreWatch, useSetWatched } from "../../mutations/watch";
+import { useRemoveWatch, useRestoreWatch, useSetProgress, useSetWatched } from "../../mutations/watch";
 import { isOffline } from "../../offline";
 import { useMembers } from "../../queries/household";
 import { watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
-import { addedIt, type Kind, KINDS, PosterTile, tileLabel, WatchSheet } from "../../watch";
+import { addedIt, type Kind, KINDS, PosterTile, tileLabel, toStart, WatchSheet } from "../../watch";
 import ui from "../../ui.module.css";
 import g from "../groceries.module.css";
 import s from "./watch.module.css";
@@ -23,8 +23,8 @@ import s from "./watch.module.css";
 const UNDO_MS = 6000;
 
 /**
- * Tapping a poster to watch: its sheet, with Remove and Watched, both with Undo.
- * The screen shows `sheet` and `bottom` (Undo and the + button) after its list.
+ * Tapping a poster to watch: its sheet, with Remove and Watched (and Start watching, for a
+ * series), all with Undo. The screen shows `sheet` and `bottom` (Undo and the + button) after its list.
  */
 export function useToWatch() {
   const { data: list = [] } = useQuery(watchQuery);
@@ -33,6 +33,7 @@ export function useToWatch() {
   const setWatched = useSetWatched();
   const removeWatch = useRemoveWatch();
   const restoreWatch = useRestoreWatch();
+  const setProgress = useSetProgress();
   // The last thing done that can be undone. A new one takes its place.
   const [undo, setUndo] = useState<{ text: string; run: () => void } | null>(null);
   // The poster tapped last; kept after closing so the sheet doesn't empty as it slides away.
@@ -57,6 +58,13 @@ export function useToWatch() {
     if (!isOffline()) setUndo({ text: `Removed ${w.title}`, run: () => restoreWatch.mutate(w) });
   }
 
+  /** A series from the first episode: it leaves the shelf for Watching. */
+  function start(w: Watch) {
+    close();
+    setProgress.mutate({ id: w.id, progress: { season: 1, episode: 1 } });
+    if (!isOffline()) setUndo({ text: `${w.title} is in Watching`, run: () => setProgress.mutate({ id: w.id, progress: null }) });
+  }
+
   const sheet = tapped.item && (
     <WatchSheet
       // As it is now: someone may have changed it since it was tapped.
@@ -65,16 +73,33 @@ export function useToWatch() {
       onClose={close}
       note={addedIt(whoIs(tapped.item.addedBy))}
       actions={
-        <>
-          <Button variant="outline" onPress={() => remove(tapped.item!)}>
-            <Trash2 size={18} aria-hidden />
-            Remove
-          </Button>
-          <Button onPress={() => watched(tapped.item!)} autoFocus>
-            <Check size={18} aria-hidden />
-            Watched
-          </Button>
-        </>
+        tapped.item.kind === "series" ? (
+          <>
+            <Button onPress={() => start(tapped.item!)} autoFocus>
+              <Play size={18} aria-hidden />
+              Start watching
+            </Button>
+            <Button variant="outline" onPress={() => remove(tapped.item!)}>
+              <Trash2 size={18} aria-hidden />
+              Remove
+            </Button>
+            <Button variant="outline" onPress={() => watched(tapped.item!)}>
+              <Check size={18} aria-hidden />
+              Watched
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="outline" onPress={() => remove(tapped.item!)}>
+              <Trash2 size={18} aria-hidden />
+              Remove
+            </Button>
+            <Button onPress={() => watched(tapped.item!)} autoFocus>
+              <Check size={18} aria-hidden />
+              Watched
+            </Button>
+          </>
+        )
       }
     />
   );
@@ -101,11 +126,14 @@ export function useToWatch() {
     </div>
   );
 
-  return { open: (item: Watch) => setTapped({ item, isOpen: true }), sheet, bottom };
+  return { open: (item: Watch) => setTapped({ item, isOpen: true }), start, sheet, bottom };
 }
 
-/** The dice: a movie or a series at random for tonight, and another if that's not it. */
-export function Pick({ list, kind }: { list: Watch[]; kind: Kind }) {
+/**
+ * The dice: a movie or a series at random for tonight, and another if that's not it.
+ * Let's watch on a series starts it, so it moves to Watching.
+ */
+export function Pick({ list, kind, onStart }: { list: Watch[]; kind: Kind; onStart: (w: Watch) => void }) {
   const { whoIs } = useMembers();
   const [pick, setPick] = useState<Watch>();
   const [isOpen, setOpen] = useState(false);
@@ -138,7 +166,13 @@ export function Pick({ list, kind }: { list: Watch[]; kind: Kind }) {
             <Button variant="outline" onPress={roll}>
               Another
             </Button>
-            <Button onPress={() => setOpen(false)} autoFocus>
+            <Button
+              onPress={() => {
+                setOpen(false);
+                if (pick?.kind === "series") onStart(pick);
+              }}
+              autoFocus
+            >
               Let's watch
             </Button>
           </>
@@ -152,9 +186,9 @@ export function Pick({ list, kind }: { list: Watch[]; kind: Kind }) {
 export function KindPage({ kind }: { kind: Kind }) {
   const { data: list = [], isPending, error } = useQuery(watchQuery);
   const { whoIs } = useMembers();
-  const { open, sheet, bottom } = useToWatch();
+  const { open, start, sheet, bottom } = useToWatch();
   const { plural } = KINDS[kind];
-  const shown = list.filter((w) => !w.watchedAt && w.kind === kind);
+  const shown = toStart(list, kind);
 
   return (
     <>
@@ -166,7 +200,7 @@ export function KindPage({ kind }: { kind: Kind }) {
         <h1 className={ui.display}>{plural}</h1>
         <div className={`${ui.row} ${s.countRow}`}>
           <p className={ui.muted}>{shown.length} to watch</p>
-          {shown.length > 0 && <Pick list={shown} kind={kind} />}
+          {shown.length > 0 && <Pick list={shown} kind={kind} onStart={start} />}
         </div>
       </header>
 

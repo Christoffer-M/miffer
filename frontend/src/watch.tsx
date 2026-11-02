@@ -76,12 +76,14 @@ type SheetProps = {
   eyebrow?: string;
   /** The line under the meta, e.g. "Mia added it". */
   note: string;
-  /** Two buttons. */
+  /** Two buttons, or three with the first (the main one) across the whole width. */
   actions: ReactNode;
+  /** Between the title and the buttons, e.g. where a series is up to. */
+  children?: ReactNode;
 };
 
 /** A poster big, with what's known about it and two things to do. Slides up from the bottom. */
-export function WatchSheet({ item, isOpen, onClose, eyebrow, note, actions }: SheetProps) {
+export function WatchSheet({ item, isOpen, onClose, eyebrow, note, actions, children }: SheetProps) {
   return (
     <ModalOverlay isOpen={isOpen} onOpenChange={(open) => !open && onClose()} isDismissable className={sheet.overlay}>
       <Modal className={sheet.sheet}>
@@ -99,7 +101,8 @@ export function WatchSheet({ item, isOpen, onClose, eyebrow, note, actions }: Sh
                   <span className={`${ui.muted} ${ui.small}`}>{note}</span>
                 </div>
               </div>
-              <div className={sheet.actions}>{actions}</div>
+              {children}
+              <div className={`${sheet.actions} ${s.sheetActions}`}>{actions}</div>
             </>
           )}
         </Dialog>
@@ -109,7 +112,18 @@ export function WatchSheet({ item, isOpen, onClose, eyebrow, note, actions }: Sh
 }
 
 /** Whether a list of posters is on screen: changes there animate. Not on Add, which leaves the list alone. */
-export const showsList = () => ["/watch", "/watch/movies", "/watch/series", "/watch/watched"].includes(location.pathname);
+export const showsList = () =>
+  ["/watch", "/watch/movies", "/watch/series", "/watch/watching", "/watch/watched"].includes(location.pathname);
+
+/**
+ * A series someone has started and not finished: it's on Watching, not on the shelves.
+ * Loose (!=) because a list kept on the phone from before progress existed has no season at all.
+ */
+export const isWatching = (w?: Watch) => !!w && !w.watchedAt && w.season != null && w.episode != null;
+
+/** Still to start: what the shelves and See all show of a kind. */
+export const toStart = (list: Watch[], kind?: Kind) =>
+  list.filter((w) => !w.watchedAt && !isWatching(w) && (!kind || w.kind === kind));
 
 /** "You added it", "Mia added it". */
 export const addedIt = (who: string) => `${who.charAt(0).toUpperCase()}${who.slice(1)} added it`;

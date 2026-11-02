@@ -498,6 +498,63 @@ test("search finds movies and series on TMDB, by the title people know them by",
   expect((await call("/watch/search?q=druk")).status).toBe(401);
 });
 
+test("a series being watched keeps its place, and a movie has none", async () => {
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  const eve = await (await call("/households", { method: "POST", body: { name: "Eve" } })).json();
+  const list = async () => (await call("/watch", { token: anna.token })).json();
+  const add = async (body: object) => {
+    const id = crypto.randomUUID();
+    await call("/watch", { method: "POST", token: anna.token, body: { id, tmdbId: null, year: null, posterPath: null, ...body } });
+    return id;
+  };
+  const setProgress = (id: string, progress: object | null, token = anna.token) =>
+    call(`/watch/${id}/progress`, { method: "PUT", token, body: { progress } });
+  const find = async (id: string) => (await list()).find((w: { id: string }) => w.id === id);
+
+  const show = await add({ title: "Borgen", kind: "series" });
+  const film = await add({ title: "Druk", kind: "movie" });
+  expect(await find(show)).toMatchObject({ season: null, episode: null });
+
+  expect((await setProgress(show, { season: 1, episode: 1 })).status).toBe(204);
+  await setProgress(show, { season: 2, episode: 4 });
+  expect(await find(show)).toMatchObject({ season: 2, episode: 4 });
+  expect((await setProgress(show, { season: 0, episode: 1 })).status).toBe(400);
+  await setProgress(show, { season: 9, episode: 9 }, eve.token); // not Eve's
+  await setProgress(film, { season: 1, episode: 1 });
+  expect(await find(film)).toMatchObject({ season: null, episode: null });
+
+  // Watched and back keeps the place; Undo of a delete brings it back too.
+  await call(`/watch/${show}`, { method: "PATCH", token: anna.token, body: { watched: true } });
+  await call(`/watch/${show}`, { method: "PATCH", token: anna.token, body: { watched: false } });
+  const before = await find(show);
+  expect(before).toMatchObject({ season: 2, episode: 4 });
+  await call(`/watch/${show}`, { method: "DELETE", token: anna.token });
+  await call("/watch/restore", { method: "POST", token: anna.token, body: before });
+  expect(await find(show)).toEqual(before);
+
+  // Stopping clears it.
+  await setProgress(show, null);
+  expect(await find(show)).toMatchObject({ season: null, episode: null });
+});
+
+test("a series' seasons come from TMDB, without the specials", async () => {
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  const tmdb = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    Response.json({
+      seasons: [
+        { season_number: 2, episode_count: 8 },
+        { season_number: 0, episode_count: 3 },
+        { season_number: 1, episode_count: 10 },
+      ],
+    }),
+  );
+  expect(await (await call("/watch/seasons/1408", { token: anna.token })).json()).toEqual([10, 8]);
+  expect(new URL(String(tmdb.mock.calls[0][0])).pathname).toBe("/3/tv/1408");
+  tmdb.mockResolvedValue(new Response("", { status: 404 }));
+  expect((await call("/watch/seasons/1408", { token: anna.token })).status).toBe(502);
+  tmdb.mockRestore();
+});
+
 test("faking a new address for each guess still runs into a cap", async () => {
   let fresh = 0;
   let status = 404;

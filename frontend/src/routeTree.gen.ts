@@ -19,6 +19,7 @@ import { Route as WatchAddRouteImport } from './routes/watch/add'
 import { Route as WatchMoviesRouteImport } from './routes/watch/movies'
 import { Route as WatchSeriesRouteImport } from './routes/watch/series'
 import { Route as WatchWatchedRouteImport } from './routes/watch/watched'
+import { Route as WatchWatchingRouteImport } from './routes/watch/watching'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -70,6 +71,11 @@ const WatchWatchedRoute = WatchWatchedRouteImport.update({
   path: '/watch/watched',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WatchWatchingRoute = WatchWatchingRouteImport.update({
+  id: '/watch/watching',
+  path: '/watch/watching',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/watch/movies': typeof WatchMoviesRoute
   '/watch/series': typeof WatchSeriesRoute
   '/watch/watched': typeof WatchWatchedRoute
+  '/watch/watching': typeof WatchWatchingRoute
   '/watch/': typeof WatchIndexRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/watch/movies': typeof WatchMoviesRoute
   '/watch/series': typeof WatchSeriesRoute
   '/watch/watched': typeof WatchWatchedRoute
+  '/watch/watching': typeof WatchWatchingRoute
   '/watch': typeof WatchIndexRoute
 }
 export interface FileRoutesById {
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/watch/movies': typeof WatchMoviesRoute
   '/watch/series': typeof WatchSeriesRoute
   '/watch/watched': typeof WatchWatchedRoute
+  '/watch/watching': typeof WatchWatchingRoute
   '/watch/': typeof WatchIndexRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/watch/movies'
     | '/watch/series'
     | '/watch/watched'
+    | '/watch/watching'
     | '/watch/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/watch/movies'
     | '/watch/series'
     | '/watch/watched'
+    | '/watch/watching'
     | '/watch'
   id:
     | '__root__'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/watch/movies'
     | '/watch/series'
     | '/watch/watched'
+    | '/watch/watching'
     | '/watch/'
   fileRoutesById: FileRoutesById
 }
@@ -157,6 +169,7 @@ export interface RootRouteChildren {
   WatchMoviesRoute: typeof WatchMoviesRoute
   WatchSeriesRoute: typeof WatchSeriesRoute
   WatchWatchedRoute: typeof WatchWatchedRoute
+  WatchWatchingRoute: typeof WatchWatchingRoute
   WatchIndexRoute: typeof WatchIndexRoute
 }
 
@@ -232,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WatchWatchedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/watch/watching': {
+      id: '/watch/watching'
+      path: '/watch/watching'
+      fullPath: '/watch/watching'
+      preLoaderRoute: typeof WatchWatchingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -245,6 +265,7 @@ const rootRouteChildren: RootRouteChildren = {
   WatchMoviesRoute: WatchMoviesRoute,
   WatchSeriesRoute: WatchSeriesRoute,
   WatchWatchedRoute: WatchWatchedRoute,
+  WatchWatchingRoute: WatchWatchingRoute,
   WatchIndexRoute: WatchIndexRoute,
 }
 export const routeTree = rootRouteImport

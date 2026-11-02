@@ -10,7 +10,7 @@ import { type NewWatch, useAddWatch, useSetWatched } from "../../mutations/watch
 import { isOffline } from "../../offline";
 import { searchQuery, watchQuery } from "../../queries/watch";
 import { lower } from "../../suggest";
-import { KINDS, Poster, WatchMeta } from "../../watch";
+import { isWatching, KINDS, Poster, WatchMeta } from "../../watch";
 import ui from "../../ui.module.css";
 import g from "../groceries.module.css";
 import s from "./watch.module.css";
@@ -147,7 +147,7 @@ function Result({ result: r, on, onAdd }: { result: SearchResult; on?: Watch; on
     return (
       <span className={`${s.result} ${s.onList}`}>
         {label}
-        <span className={s.status}>On the list</span>
+        <span className={s.status}>{isWatching(on) ? "Watching" : "On the list"}</span>
       </span>
     );
   }
