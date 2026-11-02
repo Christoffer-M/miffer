@@ -1,4 +1,4 @@
-// What the to-watch screens share: Watch's shelves and each kind's See all page.
+// What the to-watch screens share: Watch's shelves, Movies' See all and Series' To start tab.
 // The leading "-" keeps the router from taking this file for a route.
 
 import { useQuery } from "@tanstack/react-query";
@@ -21,7 +21,8 @@ import s from "./watch.module.css";
 
 /**
  * Tapping a poster to watch: its sheet, with Remove and Watched (and Start watching, for a
- * series), all with Undo. The screen shows `sheet` and `bottom` (Undo and the + button) after its list.
+ * series), all with Undo. The screen shows `sheet` and `bottom` (Undo and the + button) after its list;
+ * `undo` is there for the screen's other changes, so one Undo bar serves them all.
  */
 export function useToWatch() {
   const { data: list = [] } = useQuery(watchQuery);
@@ -110,7 +111,7 @@ export function useToWatch() {
     </div>
   );
 
-  return { open: (item: Watch) => setTapped({ item, isOpen: true }), start, sheet, bottom };
+  return { open: (item: Watch) => setTapped({ item, isOpen: true }), start, sheet, bottom, undo };
 }
 
 /**
@@ -166,10 +167,24 @@ export function Pick({ list, kind, onStart }: { list: Watch[]; kind: Kind; onSta
   );
 }
 
-/** See all: every movie (or series) to watch, three across, from a shelf on Watch. */
+/** Every movie (or series) still to start, three across. */
+export function PosterGrid({ list, kind, onOpen }: { list: Watch[]; kind: Kind; onOpen: (w: Watch) => void }) {
+  const { whoIs } = useMembers();
+  const { plural } = KINDS[kind];
+  return (
+    <ul className={s.grid} aria-label={`${plural} to watch`} {...animatedBlock("watch-grid")}>
+      {list.map((w) => (
+        <li key={w.id} {...animatedItem(`watch-${w.id}`)}>
+          <PosterTile item={w} label={tileLabel(w, `added by ${whoIs(w.addedBy)}`)} onPress={() => onOpen(w)} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** See all: every movie to watch, from its shelf on Watch. (Series have theirs as a tab on Series.) */
 export function KindPage({ kind }: { kind: Kind }) {
   const { data: list = [], isPending, error } = useQuery(watchQuery);
-  const { whoIs } = useMembers();
   const { open, start, sheet, bottom } = useToWatch();
   const { plural } = KINDS[kind];
   const shown = toStart(list, kind);
@@ -193,15 +208,7 @@ export function KindPage({ kind }: { kind: Kind }) {
         {!isPending && shown.length === 0 && (
           <p className={`${ui.muted} ${g.empty}`}>No {plural.toLowerCase()} to watch. Tap + to add one.</p>
         )}
-        {shown.length > 0 && (
-          <ul className={s.grid} aria-label={`${plural} to watch`} {...animatedBlock("watch-grid")}>
-            {shown.map((w) => (
-              <li key={w.id} {...animatedItem(`watch-${w.id}`)}>
-                <PosterTile item={w} label={tileLabel(w, `added by ${whoIs(w.addedBy)}`)} onPress={() => open(w)} />
-              </li>
-            ))}
-          </ul>
-        )}
+        {shown.length > 0 && <PosterGrid list={shown} kind={kind} onOpen={open} />}
       </main>
 
       {sheet}
