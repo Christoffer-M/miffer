@@ -1,7 +1,8 @@
-import { type QueryClient, queryOptions } from "@tanstack/react-query";
+import { type QueryClient, queryOptions, useQueries } from "@tanstack/react-query";
 import { api, ok, type Watch } from "../api";
 import { remembered } from "../remember";
-import { isWatching, type SeasonsOf, showsList, watchingLayout } from "../watch";
+import { caughtUp, type Place, share } from "../progress";
+import { isWatching, placeOf, type SeasonsOf, showsList, watchingLayout } from "../watch";
 import { animateListChange } from "../viewTransition";
 
 const watch = remembered("watch", async () => (await ok(api.watch.$get())).json());
@@ -59,6 +60,33 @@ export const seasonsQuery = (tmdbId: number | null) =>
     staleTime: DAY,
     retry: false,
   });
+
+/**
+ * Watched series with episodes past where they ended: TMDB has added a season, or more episodes
+ * to the last one. Only series from search that remember their end (watched since this
+ * existed) can tell; the rest just stay watched.
+ */
+export function useNewEpisodes(list: Watch[]) {
+  const ended = list.filter(
+    (w) => w.kind === "series" && w.watchedAt && w.tmdbId !== null && w.season != null && w.episode != null,
+  );
+  return useQueries({
+    queries: ended.map((w) => seasonsQuery(w.tmdbId)),
+    combine: (results) => {
+      const found = new Map<string, { label: string; place: Place }>();
+      ended.forEach((w, i) => {
+        const seasons = results[i]?.data;
+        if (!seasons || caughtUp(placeOf(w, seasons), seasons)) return;
+        const place = placeOf(w, seasons);
+        const part = share(place, seasons)!;
+        const left = part.total - part.watched;
+        const label = place.episode === 1 ? "New season" : left === 1 ? "1 new episode" : `${left} new episodes`;
+        found.set(w.id, { label, place });
+      });
+      return found;
+    },
+  });
+}
 
 /** The seasons this phone has for each series, without fetching any. */
 export const seasonsFrom =

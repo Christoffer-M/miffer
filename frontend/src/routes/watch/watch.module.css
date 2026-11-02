@@ -275,6 +275,36 @@
   display: flex;
 }
 
+/* New episodes since it was watched, under the title on Watched. */
+.tag {
+  align-self: flex-start;
+  margin-top: -2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* On Watch's Watched link when a watched series has new episodes (the count is in its label). */
+.iconWithDot {
+  position: relative;
+  display: flex;
+}
+.dot {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-bright);
+  box-shadow: 0 0 0 2px var(--ground);
+}
+
 /* The title under the poster: two lines at most. */
 .caption {
   font-size: 13px;
@@ -338,7 +368,66 @@
   outline-offset: 2px;
 }
 
-/* Watched: a month heading per group. */
+/* Watched: movies or series, as tabs under the title, the chosen one underlined. Tabs only
+   groups its list and panels, so the screen's column layout carries on as without it. */
+.tabs {
+  display: contents;
+}
+.tabbedHeader {
+  padding-bottom: 8px;
+}
+.kindTabs {
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+}
+.kindTab {
+  position: relative; /* holds the underline */
+  flex: 1;
+  height: 48px;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.kindTab[data-selected] {
+  color: var(--ink);
+  font-weight: 700;
+}
+.kindTab[data-selected] svg {
+  color: var(--accent);
+}
+.kindTab[data-selected]::after {
+  content: "";
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: -1px; /* over the line under the tabs */
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent);
+}
+.kindTab[data-focus-visible] {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+  border-radius: 10px;
+}
+.kindCount {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Watched: a month heading per group. Only the last grid needs room below for Undo. */
+.monthSection:not(:last-child) .grid {
+  padding-bottom: 8px;
+}
 .month {
   margin: 0;
   padding: 18px 8px 6px;

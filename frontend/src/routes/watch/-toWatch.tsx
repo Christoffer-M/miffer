@@ -10,8 +10,9 @@ import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
 import { UndoBar, UndoSpot, useUndo } from "../../components/UndoBar";
 import { useRemoveWatch, useRestoreWatch, useSetProgress, useSetWatched } from "../../mutations/watch";
+import { endOf } from "../../progress";
 import { useMembers } from "../../queries/household";
-import { watchQuery } from "../../queries/watch";
+import { seasonsQuery, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
 import { addedIt, type Kind, KINDS, PosterTile, tileLabel, toStart, WatchSheet } from "../../watch";
 import ui from "../../ui.module.css";
@@ -34,11 +35,20 @@ export function useToWatch() {
   // The poster tapped last; kept after closing so the sheet doesn't empty as it slides away.
   const [tapped, setTapped] = useState<{ item?: Watch; isOpen: boolean }>({ isOpen: false });
   const close = () => setTapped((t) => ({ ...t, isOpen: false }));
+  // A series' seasons, fetched while its sheet is open, so Watched can remember where it ended.
+  const { data: tappedSeasons } = useQuery(
+    seasonsQuery(tapped.item?.kind === "series" ? tapped.item.tmdbId : null),
+  );
 
+  /**
+   * Seen it all: a series remembers the end of its last season as it is now, so Watched can
+   * tell when a new one comes. Undo puts it back on its shelf, not started, as it was.
+   */
   function watched(w: Watch) {
     close();
-    setWatched.mutate({ id: w.id, watched: true });
-    undo.offer(`${w.title} is in Watched`, () => setWatched.mutate({ id: w.id, watched: false }));
+    const end = w.kind === "series" && w.id === tapped.item?.id ? endOf(tappedSeasons) : undefined;
+    setWatched.mutate({ id: w.id, watched: true, place: end });
+    undo.offer(`${w.title} is in Watched`, () => setWatched.mutate({ id: w.id, watched: false, place: null }));
   }
 
   function remove(w: Watch) {

@@ -25,6 +25,12 @@ export function settle(at: Place, seasons?: number[]): Place {
   return { season, episode: season === last ? Math.min(episode, seasons[last - 1] + 1) : episode };
 }
 
+/** Past the last episode there is so far: where a watched series ended, to spot a new season later. */
+export function endOf(seasons?: number[]): Place | undefined {
+  if (!seasons?.length) return undefined;
+  return { season: seasons.length, episode: seasons[seasons.length - 1] + 1 };
+}
+
 /** The episode after `at`: the next season's first once this season's last is watched. */
 export function next(at: Place, seasons?: number[]): Place {
   const here = settle(at, seasons);

@@ -61,23 +61,28 @@ export const useAddWatch = () =>
   );
 
 /**
- * Watched now, or back on the list. `restart` also forgets where a series was up to, so it goes
- * back on its shelf to start over (Put back on Watched); without it, a series comes back to
- * Watching where it was (Undo of Finished).
+ * Watched now, or back on the list. A series can set where it's up to in the same go (app.ts):
+ * null starts it over on its shelf, the end of its last season remembers how far it went, and a
+ * place to go on from takes it back to Watching. Left out, the place stays as it is.
  */
 export const useSetWatched = () =>
   useWatchMutation(
     "it couldn't be changed",
-    ({ id, watched, restart }: { id: string; watched: boolean; restart?: boolean }) =>
-      ok(api.watch[":id"].$patch({ param: { id }, json: { watched, restart } })),
-    (list, { id, watched, restart }) =>
+    ({ id, watched, place }: { id: string; watched: boolean; place?: Place | null }) =>
+      ok(api.watch[":id"].$patch({ param: { id }, json: { watched, place } })),
+    (list, { id, watched, place }) =>
       list.map((w) =>
         w.id !== id
           ? w
           : {
               ...w,
               watchedAt: watched ? new Date().toISOString() : null,
-              ...(restart && !watched && { season: null, episode: null, progressAt: null }),
+              ...(place !== undefined &&
+                w.kind === "series" && {
+                  season: place?.season ?? null,
+                  episode: place?.episode ?? null,
+                  progressAt: place ? new Date().toISOString() : null,
+                }),
             },
       ),
     "check",
