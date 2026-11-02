@@ -5,20 +5,30 @@ import { Button } from "./Button";
 import ui from "../ui.module.css";
 
 /** How long Undo stays up. */
-export const UNDO_MS = 6000;
+const UNDO_MS = 6000;
+
+/**
+ * What an Undo would put back: it goes again after a while, and a new one takes its place and
+ * starts the wait over. Every Undo in the app waits through this, so they all last as long.
+ */
+export function useUndoable<T>() {
+  const [undoable, setUndoable] = useState<T | null>(null);
+
+  useEffect(() => {
+    if (undoable === null) return;
+    const timer = setTimeout(() => setUndoable(null), UNDO_MS);
+    return () => clearTimeout(timer);
+  }, [undoable]);
+
+  return [undoable, setUndoable] as const;
+}
 
 /**
  * The last thing done that can be undone, for an UndoBar: a new one takes its place, and it
  * goes after a while. Offline nothing is offered, as the change itself was refused (offline.ts).
  */
 export function useUndo() {
-  const [undo, setUndo] = useState<{ text: string; run: () => void } | null>(null);
-
-  useEffect(() => {
-    if (!undo) return;
-    const timer = setTimeout(() => setUndo(null), UNDO_MS);
-    return () => clearTimeout(timer);
-  }, [undo]);
+  const [undo, setUndo] = useUndoable<{ text: string; run: () => void }>();
 
   return {
     /** What Undo would undo, said in a few words; null when there's nothing. */

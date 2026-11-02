@@ -61,45 +61,51 @@ export const useAddWatch = () =>
   );
 
 /**
+ * A series' place as the server stores it (placeFields in app.ts): set now, or at `at` for Undo,
+ * so the series goes back where it was on Watching rather than to the top.
+ */
+function placed(place: Place | null, at?: string | null) {
+  const now = new Date().toISOString();
+  return {
+    season: place?.season ?? null,
+    episode: place?.episode ?? null,
+    progressAt: place ? (at && at < now ? at : now) : null,
+  };
+}
+
+type SetWatched = { id: string; watched: boolean; place?: Place | null; at?: string | null };
+
+/** As the server does it: a watched series from search without a place waits for its end. */
+function watchedIn(list: Watch[], { id, watched, place, at }: SetWatched) {
+  return list.map((w) => {
+    if (w.id !== id) return w;
+    const watchedAt = watched ? new Date().toISOString() : null;
+    if (w.kind !== "series") return { ...w, watchedAt };
+    if (place !== undefined) return { ...w, watchedAt, ...placed(place, at) };
+    return watched && w.tmdbId !== null ? { ...w, watchedAt, ...placed(null) } : { ...w, watchedAt };
+  });
+}
+
+/**
  * Watched now, or back on the list. A series can set where it's up to in the same go (app.ts):
  * null starts it over on its shelf, the end of its last season remembers how far it went, and a
- * place to go on from takes it back to Watching. Left out, the place stays as it is.
+ * place to go on from takes it back to Watching. Watched without a place, a series from search
+ * gets its end from the server; otherwise the place stays as it is. `at` is for Undo.
  */
 export const useSetWatched = () =>
   useWatchMutation(
     "it couldn't be changed",
-    ({ id, watched, place }: { id: string; watched: boolean; place?: Place | null }) =>
-      ok(api.watch[":id"].$patch({ param: { id }, json: { watched, place } })),
-    (list, { id, watched, place }) =>
-      list.map((w) =>
-        w.id !== id
-          ? w
-          : {
-              ...w,
-              watchedAt: watched ? new Date().toISOString() : null,
-              ...(place !== undefined &&
-                w.kind === "series" && {
-                  season: place?.season ?? null,
-                  episode: place?.episode ?? null,
-                  progressAt: place ? new Date().toISOString() : null,
-                }),
-            },
-      ),
+    ({ id, watched, place, at }: SetWatched) =>
+      ok(api.watch[":id"].$patch({ param: { id }, json: { watched, place, at: at ?? undefined } })),
+    watchedIn,
     "check",
   );
 
-/** Where a series is up to now: started, on to another episode, or stopped (null). */
-function placeIn(list: Watch[], { id, progress }: { id: string; progress: Place | null }) {
-  return list.map((w) =>
-    w.id === id
-      ? {
-          ...w,
-          season: progress?.season ?? null,
-          episode: progress?.episode ?? null,
-          progressAt: progress ? new Date().toISOString() : null,
-        }
-      : w,
-  );
+type SetProgress = { id: string; progress: Place | null; at?: string | null };
+
+/** Where a series is up to now: started, on to another episode, or stopped (null). Not once it's watched (app.ts). */
+function placeIn(list: Watch[], { id, progress, at }: SetProgress) {
+  return list.map((w) => (w.id === id && !w.watchedAt ? { ...w, ...placed(progress, at) } : w));
 }
 
 /**
@@ -110,8 +116,8 @@ function placeIn(list: Watch[], { id, progress }: { id: string; progress: Place 
 export const useSetProgress = () =>
   useWatchMutation(
     "it couldn't be changed",
-    ({ id, progress: place }: { id: string; progress: Place | null }) =>
-      ok(api.watch[":id"].progress.$put({ param: { id }, json: { progress: place } })),
+    ({ id, progress, at }: SetProgress) =>
+      ok(api.watch[":id"].progress.$put({ param: { id }, json: { progress, at: at ?? undefined } })),
     placeIn,
     (list, v, seasonsOf) => {
       if (isWatching(list.find((w) => w.id === v.id)) !== !!v.progress) return "check";

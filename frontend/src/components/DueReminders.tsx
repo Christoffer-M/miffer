@@ -12,13 +12,10 @@ import { remindersQuery } from "../queries/reminders";
 import { dueAt, dueFor, formatBack, formatDue, nextTime, REPEATS, SNOOZES } from "../reminders";
 import { Button } from "./Button";
 import { ReminderSheet } from "./ReminderSheet";
-import { UndoBar } from "./UndoBar";
+import { UndoBar, useUndoable } from "./UndoBar";
 import confirm from "./Confirm.module.css";
 import ui from "../ui.module.css";
 import s from "./DueReminders.module.css";
-
-/** How long Undo stays up after Done or Snooze. */
-const UNDO_MS = 6000;
 
 // A tapped notification opens the app with ?reminder=<id> (sw.js): that one comes first.
 // Taken off the address before the router reads it, so a reload doesn't put it first again.
@@ -47,7 +44,7 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
   const [notNow, setNotNow] = useState<string[]>([]);
   const [editing, setEditing] = useState<Reminder | null>(null);
   // The last one dealt with: as it was before, and as Done or Snooze left it (once that's through), for Undo.
-  const [undo, setUndo] = useState<{ before: Reminder; after: Promise<ReminderTimes>; text: string } | null>(null);
+  const [undo, setUndo] = useUndoable<{ before: Reminder; after: Promise<ReminderTimes>; text: string }>();
 
   useEffect(() => {
     const opened = () => document.visibilityState === "visible" && setNotNow([]);
@@ -66,12 +63,6 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
       navigator.serviceWorker?.removeEventListener("message", tapped);
     };
   }, []);
-
-  useEffect(() => {
-    if (!undo) return;
-    const timer = setTimeout(() => setUndo(null), UNDO_MS);
-    return () => clearTimeout(timer);
-  }, [undo]);
 
   const queue = dueFor(data, myId ?? session.deviceId ?? "", first).filter((r) => !notNow.includes(r.id));
   const due = queue.find((r) => r.id === shownId) ?? queue[0];
