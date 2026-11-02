@@ -456,15 +456,11 @@ const watchRoutes = new Hono<Env>()
     }
   })
   .post("/", zValidator("json", watchFields.extend({ id: z.uuid() })), async (c) => {
-    const { title, ...rest } = c.req.valid("json");
-    const added = await db
+    // No notification, unlike groceries: a new title can wait until someone opens Watch.
+    await db
       .insert(watch)
-      .values({ ...rest, title, householdId: c.var.householdId, addedBy: c.var.deviceId })
-      .onConflictDoNothing() // a retried request, or already on the list
-      .returning({ id: watch.id });
-    if (added.length) {
-      pushAdded(c.var.householdId, c.var.deviceId, `${title} to watch`).catch((err) => console.error("push failed", err));
-    }
+      .values({ ...c.req.valid("json"), householdId: c.var.householdId, addedBy: c.var.deviceId })
+      .onConflictDoNothing(); // a retried request, or already on the list
     notify(c.var.householdId, "watch");
     return c.body(null, 204);
   })

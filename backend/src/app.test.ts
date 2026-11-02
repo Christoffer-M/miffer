@@ -429,8 +429,16 @@ test("the watchlist is shared, a movie is on it once, and watched ones can come 
   const add = (token: string, body: object) =>
     call("/watch", { method: "POST", token, body: { id: crypto.randomUUID(), tmdbId: null, year: null, posterPath: null, ...body } });
 
+  // Ben has notifications on, but a new title doesn't send one.
+  const endpoint = `https://fcm.googleapis.com/fcm/send/${ben.deviceId}`;
+  await call("/households/me/push", { method: "PUT", token: ben.token, body: { endpoint, keys: { p256dh: "k", auth: "a" } } });
+  const send = vi.spyOn(webpush, "sendNotification").mockResolvedValue({ statusCode: 201, body: "", headers: {} });
+
   const dune = { title: "Dune: Part Two", kind: "movie", tmdbId: 693134, year: 2024, posterPath: "/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg" };
   expect((await add(anna.token, dune)).status).toBe(204);
+  await new Promise((r) => setTimeout(r, 100));
+  expect(send).not.toHaveBeenCalled();
+  send.mockRestore();
   await add(ben.token, dune); // the same movie from the other phone
   await add(ben.token, { title: "Dune", kind: "series", tmdbId: 693134 }); // same number, but a series
   await add(ben.token, { title: "Home video", kind: "movie" });
