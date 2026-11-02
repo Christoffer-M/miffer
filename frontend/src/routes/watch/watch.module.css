@@ -368,48 +368,59 @@
   outline-offset: 2px;
 }
 
-/* Watched: movies or series, as a two-way switch under the title. Tabs only groups
-   its list and panels, so the screen's column layout carries on as without it. */
+/* Watched: movies or series, as tabs under the title, the chosen one underlined. Tabs only
+   groups its list and panels, so the screen's column layout carries on as without it. */
 .tabs {
   display: contents;
 }
+.tabbedHeader {
+  padding-bottom: 8px;
+}
 .kindTabs {
-  margin: 0 20px 4px;
-  padding: 4px;
-  border-radius: 999px;
-  background: var(--line-soft);
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
 }
 .kindTab {
-  height: 40px;
-  border-radius: 999px;
+  position: relative; /* holds the underline */
+  flex: 1;
+  height: 48px;
   color: var(--muted);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
   cursor: pointer;
   outline: none;
   -webkit-tap-highlight-color: transparent;
 }
 .kindTab[data-selected] {
-  background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 1px 3px rgb(20 33 61 / 0.12);
+  font-weight: 700;
 }
 .kindTab[data-selected] svg {
   color: var(--accent);
 }
+.kindTab[data-selected]::after {
+  content: "";
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: -1px; /* over the line under the tabs */
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent);
+}
 .kindTab[data-focus-visible] {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: -4px;
+  border-radius: 10px;
 }
 .kindCount {
   color: var(--muted);
+  font-size: 14px;
   font-weight: 500;
 }
 

@@ -101,7 +101,7 @@ function Watched() {
 
   return (
     <>
-      <header className={g.header} data-vt="list-header">
+      <header className={`${g.header} ${s.tabbedHeader}`} data-vt="list-header">
         <Link to="/watch" className={`${buttonClass("text")} ${s.back}`}>
           <ChevronLeft size={18} aria-hidden />
           Watch
