@@ -82,7 +82,7 @@ function Add() {
           Watch
         </Link>
         <h1 className={ui.display}>Add</h1>
-        <Form onSubmit={submit}>
+        <Form onSubmit={submit} className={g.keepWithKeyboard}>
           <TextField
             label="Movie or series"
             hideLabel

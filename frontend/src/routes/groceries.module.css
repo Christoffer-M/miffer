@@ -18,11 +18,13 @@
 }
 
 /* While the phone keyboard is open (see keyboard.ts): just the title, smaller, so the
-   list keeps a few more rows. The offline notice below still shows when it matters. */
+   list keeps a few more rows. The offline notice below still shows when it matters.
+   A field in the header (keepWithKeyboard, like Add's search) stays: hiding it would
+   take its focus, and that closes the keyboard again straight away. */
 :global(html[data-keyboard]) .header {
   padding: 8px 20px;
 }
-:global(html[data-keyboard]) .header > :not(.titleRow) {
+:global(html[data-keyboard]) .header > :not(.titleRow, .keepWithKeyboard) {
   display: none;
 }
 :global(html[data-keyboard]) .header h1 {
