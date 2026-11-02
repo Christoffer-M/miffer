@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { caughtUp, endOf, next, seasonParts, settle, share, tapEpisode } from "./progress.ts";
+import { caughtUp, endOf, next, seasonParts, seen, seenShort, seenText, settle, share, tapEpisode } from "./progress.ts";
 
 const seasons = [10, 10, 8];
 
@@ -74,4 +74,23 @@ test("a watched series remembers its end, and a new season shows past it", () =>
   assert.equal(caughtUp(end, [10, 10, 12]), false);
   assert.equal(endOf([]), undefined);
   assert.equal(endOf(undefined), undefined);
+});
+
+test("a watched series says how many seasons were seen", () => {
+  const end = endOf(seasons)!;
+  assert.deepEqual(seen(end, seasons), { seasons: 3, episodes: 0 });
+  // A new season on TMDB, or more episodes in the last one: still the three seen then.
+  assert.deepEqual(seen(end, [...seasons, 10]), { seasons: 3, episodes: 0 });
+  assert.deepEqual(seen(end, [10, 10, 10]), { seasons: 2, episodes: 8 });
+  // Finished partway, or typed by hand: up to the episode before the next one up.
+  assert.deepEqual(seen({ season: 2, episode: 5 }, seasons), { seasons: 1, episodes: 4 });
+  assert.deepEqual(seen({ season: 3, episode: 1 }), { seasons: 2, episodes: 0 });
+  assert.deepEqual(seen({ season: 1, episode: 11 }, seasons), { seasons: 1, episodes: 0 });
+  assert.equal(seen({ season: 1, episode: 1 }, seasons), undefined);
+
+  assert.equal(seenText({ seasons: 3, episodes: 0 }), "3 seasons");
+  assert.equal(seenText({ seasons: 1, episodes: 1 }), "1 season and 1 episode");
+  assert.equal(seenText({ seasons: 0, episodes: 4 }), "4 episodes");
+  assert.equal(seenShort({ seasons: 1, episodes: 0 }), "1 season");
+  assert.equal(seenShort({ seasons: 2, episodes: 4 }), "Up to S3 · E4");
 });

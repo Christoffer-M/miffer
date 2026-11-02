@@ -7,7 +7,19 @@ import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
 import { UndoBar, useUndo } from "../../components/UndoBar";
 import { useSetProgress, useSetWatched } from "../../mutations/watch";
-import { caughtUp, endOf, MAX_EPISODE, MAX_SEASON, next, type Place, seasonParts, share, tapEpisode } from "../../progress";
+import {
+  caughtUp,
+  endOf,
+  MAX_EPISODE,
+  MAX_SEASON,
+  next,
+  type Place,
+  seasonParts,
+  seen,
+  seenText,
+  share,
+  tapEpisode,
+} from "../../progress";
 import { useMembers } from "../../queries/household";
 import { seasonsQuery, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
@@ -69,9 +81,12 @@ function Watching() {
   function finished(w: Watch, seasons?: number[]) {
     close();
     const was = { season: w.season ?? 1, episode: w.episode ?? 1 };
-    setWatched.mutate({ id: w.id, watched: true, place: endOf(seasons) });
+    const end = endOf(seasons);
+    // Without the seasons it keeps its place, so it was seen up to the episode before.
+    const part = seen(end ?? was, seasons);
+    setWatched.mutate({ id: w.id, watched: true, place: end });
     // Back on Watching where it was.
-    undo.offer(`${w.title} is in Watched`, () => setWatched.mutate({ id: w.id, watched: false, place: was }));
+    undo.offer(`${w.title} is in Watched${part ? `, ${seenText(part)} seen` : ""}`, () => setWatched.mutate({ id: w.id, watched: false, place: was }));
   }
 
   return (

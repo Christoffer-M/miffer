@@ -69,3 +69,32 @@ export function tapEpisode(at: Place, tapped: Place, seasons: number[]): Place {
   const here = settle(at, seasons);
   return after.season === here.season && after.episode === here.episode ? tapped : after;
 }
+
+/** How much of a series was seen: whole seasons, and episodes into the one after. */
+export type Seen = { seasons: number; episodes: number };
+
+/**
+ * What a watched series' place says was seen. Finished, it remembers the end of its last season
+ * (endOf), so that's all of them, even once TMDB adds another; finished without the seasons
+ * known, it remembers the next episode up, so it's up to the one before. Without the seasons
+ * (typed by hand) S3 E1 is two seasons and S3 E5 two seasons and four episodes.
+ */
+export function seen(at: Place, seasons?: number[]): Seen | undefined {
+  const here = settle(at, seasons);
+  const lastSeen = here.episode - 1;
+  const whole = seasons?.length && here.season <= seasons.length && lastSeen >= seasons[here.season - 1];
+  const result = whole ? { seasons: here.season, episodes: 0 } : { seasons: here.season - 1, episodes: lastSeen };
+  return result.seasons || result.episodes ? result : undefined;
+}
+
+const count = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
+
+/** "3 seasons", "2 seasons and 4 episodes", "4 episodes". */
+export function seenText({ seasons, episodes }: Seen) {
+  return [seasons && count(seasons, "season"), episodes && count(episodes, "episode")].filter(Boolean).join(" and ");
+}
+
+/** As short as fits under a poster: "3 seasons", or "Up to S3 · E4" partway into one. */
+export function seenShort({ seasons, episodes }: Seen) {
+  return episodes ? `Up to S${seasons + 1} · E${episodes}` : count(seasons, "season");
+}

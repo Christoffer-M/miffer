@@ -1,7 +1,7 @@
 import { type QueryClient, queryOptions, useQueries } from "@tanstack/react-query";
 import { api, ok, type Watch } from "../api";
 import { remembered } from "../remember";
-import { caughtUp, type Place, share } from "../progress";
+import { caughtUp, type Place, type Seen, seen, share } from "../progress";
 import { isWatching, placeOf, type SeasonsOf, showsList, watchingLayout } from "../watch";
 import { animateListChange } from "../viewTransition";
 
@@ -82,6 +82,28 @@ export function useNewEpisodes(list: Watch[]) {
         const left = part.total - part.watched;
         const label = place.episode === 1 ? "New season" : left === 1 ? "1 new episode" : `${left} new episodes`;
         found.set(w.id, { label, place });
+      });
+      return found;
+    },
+  });
+}
+
+/**
+ * How much of each watched series was seen: "3 seasons". Series from search wait for their
+ * seasons (the same ones as above, so nothing more is fetched); typed by hand, it's from the
+ * place alone. Series watched without a place (before this existed) don't say.
+ */
+export function useSeen(list: Watch[]) {
+  const watched = list.filter((w) => w.kind === "series" && w.watchedAt && w.season != null && w.episode != null);
+  return useQueries({
+    queries: watched.map((w) => seasonsQuery(w.tmdbId)),
+    combine: (results) => {
+      const found = new Map<string, Seen>();
+      watched.forEach((w, i) => {
+        const seasons = results[i]?.data;
+        if (w.tmdbId !== null && !seasons) return;
+        const part = seen({ season: w.season!, episode: w.episode! }, seasons);
+        if (part) found.set(w.id, part);
       });
       return found;
     },
