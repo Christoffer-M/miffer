@@ -43,6 +43,8 @@ function WatchList() {
             </Link>
             <Link
               to="/watch/watched"
+              // New episodes are on the Series side: open there.
+              search={freshCount ? { kind: "series" } : {}}
               className={s.action}
               aria-label={`Watched, ${watchedCount}${freshCount ? `, ${freshCount} with new episodes` : ""}`}
             >

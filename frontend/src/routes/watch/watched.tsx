@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { type ReactNode, useState } from "react";
+import { Tab, TabList, TabPanel, Tabs } from "react-aria-components";
 import { ChevronLeft, Play, Trash2, Undo2 } from "lucide-react";
 import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
@@ -9,12 +10,17 @@ import { useRemoveWatch, useRestoreWatch, useSetWatched } from "../../mutations/
 import type { Place } from "../../progress";
 import { useNewEpisodes, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
-import { PosterTile, tileLabel, WatchSheet } from "../../watch";
+import { type Kind, KINDS, PosterTile, tileLabel, WatchSheet } from "../../watch";
 import ui from "../../ui.module.css";
 import g from "../groceries.module.css";
 import s from "./watch.module.css";
 
-export const Route = createFileRoute("/watch/watched")({ component: Watched });
+export const Route = createFileRoute("/watch/watched")({
+  // Which kind is shown: movies unless asked for series (Watch asks when there are new episodes).
+  validateSearch: (search: Record<string, unknown>): { kind?: Kind } =>
+    search.kind === "series" || search.kind === "movie" ? { kind: search.kind } : {},
+  component: Watched,
+});
 
 const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
 const month = new Intl.DateTimeFormat("en-GB", { month: "long" });
@@ -38,11 +44,13 @@ function byMonth(watched: Watch[]) {
 }
 
 /**
- * What's been watched, by month. Series with new episodes since (a new season on TMDB) come
- * first, to go on with from there.
+ * What's been watched, movies and series apart, each by month. Series with new episodes since
+ * (a new season on TMDB) come first, to go on with from there.
  */
 function Watched() {
   const { data: list = [], isPending, error } = useQuery(watchQuery);
+  const kind = Route.useSearch().kind ?? "movie";
+  const navigate = useNavigate();
   const fresh = useNewEpisodes(list);
   const setWatched = useSetWatched();
   const removeWatch = useRemoveWatch();
@@ -54,8 +62,7 @@ function Watched() {
   const watchedOn = (w: Watch) => `watched ${day.format(new Date(w.watchedAt!))}`;
 
   const watched = list.filter((w) => w.watchedAt);
-  const withNew = watched.filter((w) => fresh.has(w.id));
-  const groups = byMonth(watched.filter((w) => !fresh.has(w.id)));
+  const ofKind = (k: Kind) => watched.filter((w) => w.kind === k);
 
   const open = tapped.item && (list.find((w) => w.id === tapped.item!.id) ?? tapped.item);
   const openNew = open && fresh.get(open.id);
@@ -78,10 +85,10 @@ function Watched() {
     undo.offer(`Removed ${w.title}`, () => restoreWatch.mutate(w));
   }
 
-  const tile = (w: Watch, name: string) => {
+  const tile = (w: Watch) => {
     const tag = fresh.get(w.id)?.label;
     return (
-      <li key={w.id} {...animatedItem(`${name}-${w.id}`)}>
+      <li key={w.id} {...animatedItem(`watched-${w.id}`)}>
         <PosterTile
           item={w}
           tag={tag}
@@ -103,32 +110,50 @@ function Watched() {
         <p className={ui.muted}>{watched.length} so far</p>
       </header>
 
-      <main className={`${ui.content} ${g.list}`}>
-        {error && <p className={ui.error}>{error.message}</p>}
-        {!isPending && watched.length === 0 && (
-          <p className={`${ui.muted} ${g.empty}`}>Nothing watched yet. Tap a poster on Watch and choose Watched, and it shows up here.</p>
-        )}
-        {withNew.length > 0 && (
-          <section aria-labelledby="new-episodes">
-            <h2 id="new-episodes" className={`${ui.eyebrow} ${s.month}`} {...animatedBlock("month-new")}>
-              New episodes
-            </h2>
-            <ul className={s.grid} {...animatedBlock("grid-new")}>
-              {withNew.map((w) => tile(w, "watched"))}
-            </ul>
-          </section>
-        )}
-        {groups.map(([name, ws]) => (
-          <section key={name} aria-label={name}>
-            <h2 className={`${ui.eyebrow} ${ui.muted} ${s.month}`} {...animatedBlock(`month-${name}`)}>
-              {name}
-            </h2>
-            <ul className={s.grid} {...animatedBlock(`grid-${name}`)}>
-              {ws.map((w) => tile(w, "watched"))}
-            </ul>
-          </section>
+      <Tabs
+        className={s.tabs}
+        selectedKey={kind}
+        onSelectionChange={(k) => navigate({ to: "/watch/watched", search: { kind: k as Kind }, replace: true })}
+      >
+        <TabList aria-label="Movies or series" className={s.kindTabs}>
+          {(["movie", "series"] as const).map((k) => {
+            const { plural, Icon } = KINDS[k];
+            const hasNew = k === "series" && fresh.size > 0;
+            return (
+              <Tab key={k} id={k} className={s.kindTab} aria-label={`${plural}, ${ofKind(k).length}${hasNew ? `, ${fresh.size} with new episodes` : ""}`}>
+                <span className={s.iconWithDot}>
+                  <Icon size={18} aria-hidden />
+                  {hasNew && <span className={s.dot} />}
+                </span>
+                {plural}
+                <span className={s.kindCount}>{ofKind(k).length}</span>
+              </Tab>
+            );
+          })}
+        </TabList>
+
+        {(["movie", "series"] as const).map((k) => (
+          <TabPanel key={k} id={k} className={`${ui.content} ${g.list}`}>
+            {error && <p className={ui.error}>{error.message}</p>}
+            {!isPending && ofKind(k).length === 0 && (
+              <p className={`${ui.muted} ${g.empty}`}>
+                No {KINDS[k].plural.toLowerCase()} watched yet. Tap a poster on Watch and choose Watched, and it shows up here.
+              </p>
+            )}
+            {k === "series" && <NewEpisodes list={ofKind(k).filter((w) => fresh.has(w.id))} tile={tile} />}
+            {byMonth(ofKind(k).filter((w) => !fresh.has(w.id))).map(([name, ws]) => (
+              <section key={name} aria-label={name} className={s.monthSection}>
+                <h2 className={`${ui.eyebrow} ${ui.muted} ${s.month}`} {...animatedBlock(`month-${k}-${name}`)}>
+                  {name}
+                </h2>
+                <ul className={s.grid} {...animatedBlock(`grid-${k}-${name}`)}>
+                  {ws.map((w) => tile(w))}
+                </ul>
+              </section>
+            ))}
+          </TabPanel>
         ))}
-      </main>
+      </Tabs>
 
       {open && (
         <WatchSheet
@@ -180,5 +205,20 @@ function Watched() {
         </div>
       </div>
     </>
+  );
+}
+
+/** Series with new episodes since they were watched, before the months. */
+function NewEpisodes({ list, tile }: { list: Watch[]; tile: (w: Watch) => ReactNode }) {
+  if (!list.length) return null;
+  return (
+    <section aria-labelledby="new-episodes" className={s.monthSection}>
+      <h2 id="new-episodes" className={`${ui.eyebrow} ${s.month}`} {...animatedBlock("month-new")}>
+        New episodes
+      </h2>
+      <ul className={s.grid} {...animatedBlock("grid-new")}>
+        {list.map(tile)}
+      </ul>
+    </section>
   );
 }
