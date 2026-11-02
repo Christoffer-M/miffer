@@ -6,7 +6,7 @@ import type { Watch } from "../../api";
 import { Avatars } from "../../brand";
 import { useOnline } from "../../offline";
 import { useMembers } from "../../queries/household";
-import { useNewEpisodes, watchQuery } from "../../queries/watch";
+import { useWatchedSeries, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
 import { type Kind, KINDS, placeOf, Poster, PosterTile, tileLabel, toStart } from "../../watch";
 import ui from "../../ui.module.css";
@@ -30,7 +30,7 @@ function WatchList() {
   const watching = useWatching(list);
   const watchedCount = list.filter((w) => w.watchedAt).length;
   // Watched series with a new season since: a dot on Watched says so.
-  const freshCount = useNewEpisodes(list).size;
+  const freshCount = useWatchedSeries(list).fresh.size;
 
   return (
     <>

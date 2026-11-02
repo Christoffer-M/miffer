@@ -6,6 +6,8 @@ import { app } from "./app.js";
 import { eq, sql as q } from "drizzle-orm";
 import { db, schema, sql } from "./db/index.js";
 import { fireDue } from "./reminders.js";
+import { fillEnds } from "./watched.js";
+import { readFileSync } from "node:fs";
 
 // A throwaway key pair, only so push.ts turns notifications on. Set before it's imported.
 vi.hoisted(() => {
@@ -571,6 +573,103 @@ test("a series' seasons come from TMDB, without the specials", async () => {
   tmdb.mockResolvedValue(new Response("", { status: 404 }));
   expect((await call("/watch/seasons/1409", { token: anna.token })).status).toBe(502);
   tmdb.mockRestore();
+});
+
+test("a series watched without saying where it ended gets the end of its last season", async () => {
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  // A new answer each time: a body can only be read once.
+  const tmdb = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+    Response.json({ seasons: [{ season_number: 1, episode_count: 10 }, { season_number: 2, episode_count: 8 }] }),
+  );
+  const add = async (tmdbId: number | null) => {
+    const id = crypto.randomUUID();
+    const body = { id, title: `Show ${tmdbId}`, kind: "series", tmdbId, year: null, posterPath: null };
+    await call("/watch", { method: "POST", token: anna.token, body });
+    return id;
+  };
+  const patch = (id: string, body: object) => call(`/watch/${id}`, { method: "PATCH", token: anna.token, body });
+  const find = async (id: string) =>
+    (await (await call("/watch", { token: anna.token })).json()).find((w: { id: string }) => w.id === id);
+  const tmdbIdBase = 900_000 + Math.floor(Math.random() * 90_000); // not kept from an earlier run
+
+  // Finished before the phone had the seasons: the server fills in the end, after answering.
+  const finished = await add(tmdbIdBase);
+  await call(`/watch/${finished}/progress`, { method: "PUT", token: anna.token, body: { progress: { season: 1, episode: 3 } } });
+  expect((await patch(finished, { watched: true, place: null })).status).toBe(204);
+  await expect.poll(() => find(finished)).toMatchObject({ season: 2, episode: 9 });
+
+  // Watched before ends existed: the sweep fills it in.
+  const old = await add(tmdbIdBase + 1);
+  await db.update(schema.watch).set({ watchedAt: new Date() }).where(eq(schema.watch.id, old));
+  await fillEnds();
+  expect(await find(old)).toMatchObject({ season: 2, episode: 9 });
+
+  // Put back before the end is filled in: it stays on its shelf, not on Watching.
+  const putBack = await add(tmdbIdBase + 2);
+  await db.update(schema.watch).set({ watchedAt: new Date() }).where(eq(schema.watch.id, putBack));
+  let answer!: () => void;
+  tmdb.mockImplementationOnce(async () => {
+    await new Promise<void>((resolve) => (answer = resolve));
+    return Response.json({ seasons: [{ season_number: 1, episode_count: 6 }] });
+  });
+  const filling = fillEnds({ id: putBack });
+  await vi.waitFor(() => expect(answer).toBeTypeOf("function"));
+  await patch(putBack, { watched: false, place: null });
+  answer();
+  await filling;
+  expect(await find(putBack)).toMatchObject({ watchedAt: null, season: null, episode: null });
+
+  // TMDB down: left as it is for the next go; typed by hand: nothing to ask.
+  const down = await add(tmdbIdBase + 3);
+  const byHand = await add(null);
+  tmdb.mockImplementation(async () => new Response("", { status: 503 }));
+  await patch(down, { watched: true });
+  await patch(byHand, { watched: true });
+  await fillEnds();
+  expect(await find(down)).toMatchObject({ watchedAt: expect.any(String), season: null });
+  expect(await find(byHand)).toMatchObject({ watchedAt: expect.any(String), season: null });
+  tmdb.mockRestore();
+});
+
+test("series finished partway before Finished meant all of it count as all of it", async () => {
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  const watchedAt = new Date();
+  const earlier = new Date(watchedAt.getTime() - 60_000);
+  const rows = [
+    // Finished partway: the place is from before it was watched.
+    { tmdbId: 1, season: 3, episode: 5, progressAt: earlier },
+    { tmdbId: null, season: 3, episode: 5, progressAt: earlier },
+    { tmdbId: null, season: 3, episode: 1, progressAt: earlier },
+    { tmdbId: null, season: 1, episode: 1, progressAt: earlier },
+    // Watched with its end: left alone, even with more episodes or a new season since.
+    { tmdbId: 2, season: 2, episode: 9, progressAt: watchedAt },
+    { tmdbId: null, season: 2, episode: 4, progressAt: watchedAt },
+  ].map((r) => ({
+    ...r,
+    id: crypto.randomUUID(),
+    title: "Show",
+    kind: "series" as const,
+    watchedAt,
+  }));
+  const [{ householdId }] = await db.select().from(schema.devices).where(eq(schema.devices.id, anna.deviceId));
+  await db.insert(schema.watch).values(rows.map((r) => ({ ...r, householdId })));
+
+  const migration = readFileSync(new URL("../drizzle/0009_watched_all_seasons.sql", import.meta.url), "utf8");
+  for (const statement of migration.split("--> statement-breakpoint")) await sql.unsafe(statement);
+
+  const after = await db.select().from(schema.watch).where(eq(schema.watch.householdId, householdId));
+  const placeOf = (id: string) => {
+    const w = after.find((a) => a.id === id)!;
+    return [w.season, w.episode];
+  };
+  expect(rows.map((r) => placeOf(r.id))).toEqual([
+    [null, null], // the server fills it in (watched.ts)
+    [4, 1],
+    [3, 1],
+    [null, null],
+    [2, 9],
+    [2, 4],
+  ]);
 });
 
 test("faking a new address for each guess still runs into a cap", async () => {

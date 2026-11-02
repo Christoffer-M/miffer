@@ -8,7 +8,20 @@ import { Check, CircleCheckBig, Minus, Plus, Undo2 } from "lucide-react";
 import type { Watch } from "../../api";
 import { Button } from "../../components/Button";
 import { useSetProgress, useSetWatched } from "../../mutations/watch";
-import { caughtUp, endOf, MAX_EPISODE, MAX_SEASON, next, type Place, seasonParts, share, tapEpisode } from "../../progress";
+import {
+  caughtUp,
+  endOf,
+  finishedAt,
+  MAX_EPISODE,
+  MAX_SEASON,
+  next,
+  type Place,
+  seasonParts,
+  seen,
+  seenText,
+  share,
+  tapEpisode,
+} from "../../progress";
 import { useMembers } from "../../queries/household";
 import { seasonsQuery, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
@@ -72,13 +85,20 @@ export function WatchingPanel({ offer }: { offer: Offer }) {
   }
   const tick = (w: Watch) => move(w, next(at(w), seasonsOf(w)), `Watched ${short(at(w))} of ${w.title}`);
 
-  /** Seen it all: it remembers the end of its last season, so Watched can tell when a new one comes. */
+  /**
+   * Seen it all: it remembers the end of its last season, so Watched says how many seasons that
+   * is and can tell when a new one comes. From search with the seasons not loaded yet, it goes
+   * without a place and the server fills in the end (watched.ts); typed by hand, the season it's
+   * in counts as done.
+   */
   function finished(w: Watch, seasons?: number[]) {
     close();
     const was = { season: w.season ?? 1, episode: w.episode ?? 1 };
-    setWatched.mutate({ id: w.id, watched: true, place: endOf(seasons) });
+    const end = endOf(seasons) ?? (w.tmdbId === null ? finishedAt(was) : null);
+    const part = end && seen(end, seasons);
+    setWatched.mutate({ id: w.id, watched: true, place: end });
     // Back on Watching where it was.
-    offer(`${w.title} is in Watched`, () => setWatched.mutate({ id: w.id, watched: false, place: was }));
+    offer(`${w.title} is in Watched${part ? `, ${seenText(part)} seen` : ""}`, () => setWatched.mutate({ id: w.id, watched: false, place: was }));
   }
 
   return (

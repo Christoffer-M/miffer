@@ -57,9 +57,17 @@ export function Poster({ path, kind, size = "small" }: { path: string | null; ki
 }
 
 /** One poster on the wall, with the initial of whoever added it. Tapping opens its sheet. */
-type TileProps = { item: Watch; label: string; onPress: () => void; /** Under the title, e.g. "New season". */ tag?: string };
+type TileProps = {
+  item: Watch;
+  label: string;
+  onPress: () => void;
+  /** A small line under the title, e.g. "3 seasons". */
+  sub?: string;
+  /** Under the title, e.g. "New season". */
+  tag?: string;
+};
 
-export function PosterTile({ item, label, onPress, tag }: TileProps) {
+export function PosterTile({ item, label, onPress, sub, tag }: TileProps) {
   const { members } = useMembers();
   const adder = members.findIndex((m) => m.id === item.addedBy);
   return (
@@ -73,6 +81,11 @@ export function PosterTile({ item, label, onPress, tag }: TileProps) {
       <span className={s.caption} aria-hidden>
         {item.title}
       </span>
+      {sub && (
+        <span className={s.sub} aria-hidden>
+          {sub}
+        </span>
+      )}
       {tag && (
         <span className={s.tag} aria-hidden>
           {tag}

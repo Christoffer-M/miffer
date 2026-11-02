@@ -7,8 +7,8 @@ import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
 import { UndoBar, useUndo } from "../../components/UndoBar";
 import { useRemoveWatch, useRestoreWatch, useSetWatched } from "../../mutations/watch";
-import type { Place } from "../../progress";
-import { useNewEpisodes, watchQuery } from "../../queries/watch";
+import { type Place, seenShort, seenText } from "../../progress";
+import { useWatchedSeries, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
 import { type Kind, KINDS, PosterTile, tileLabel, WatchSheet } from "../../watch";
 import ui from "../../ui.module.css";
@@ -51,7 +51,8 @@ function Watched() {
   const { data: list = [], isPending, error } = useQuery(watchQuery);
   const kind = Route.useSearch().kind ?? "movie";
   const navigate = useNavigate();
-  const fresh = useNewEpisodes(list);
+  // New episodes since, and how much of each was seen, to know where you were when they come.
+  const { fresh, seen } = useWatchedSeries(list);
   const setWatched = useSetWatched();
   const removeWatch = useRemoveWatch();
   const restoreWatch = useRestoreWatch();
@@ -60,12 +61,18 @@ function Watched() {
   const [tapped, setTapped] = useState<{ item?: Watch; isOpen: boolean }>({ isOpen: false });
   const close = () => setTapped((t) => ({ ...t, isOpen: false }));
   const watchedOn = (w: Watch) => `watched ${day.format(new Date(w.watchedAt!))}`;
+  /** "3 seasons", when it's known how much of a series was seen. */
+  const seenOf = (w: Watch) => {
+    const part = seen.get(w.id);
+    return part && seenText(part);
+  };
 
   const watched = list.filter((w) => w.watchedAt);
   const ofKind = (k: Kind) => watched.filter((w) => w.kind === k);
 
   const open = tapped.item && (list.find((w) => w.id === tapped.item!.id) ?? tapped.item);
   const openNew = open && fresh.get(open.id);
+  const openSeen = open && seenOf(open);
 
   /** Back on its shelf: a series starts over rather than going back to Watching. */
   function putBack(w: Watch) {
@@ -87,12 +94,15 @@ function Watched() {
 
   const tile = (w: Watch) => {
     const tag = fresh.get(w.id)?.label;
+    const part = seen.get(w.id);
+    const notes = [part && `${seenText(part)} seen`, tag?.toLowerCase(), watchedOn(w)];
     return (
       <li key={w.id} {...animatedItem(`watched-${w.id}`)}>
         <PosterTile
           item={w}
+          sub={part && seenShort(part)}
           tag={tag}
-          label={tileLabel(w, tag ? `${tag.toLowerCase()}, ${watchedOn(w)}` : watchedOn(w))}
+          label={tileLabel(w, notes.filter(Boolean).join(", "))}
           onPress={() => setTapped({ item: w, isOpen: true })}
         />
       </li>
@@ -160,13 +170,14 @@ function Watched() {
           item={open}
           isOpen={tapped.isOpen}
           onClose={close}
-          note={
+          note={[
+            openSeen && `Seen ${openSeen}`,
             openNew
               ? `${openNew.label}: ${short(openNew.place)} is next`
-              : open.watchedAt
-                ? `Watched ${day.format(new Date(open.watchedAt))}`
-                : ""
-          }
+              : open.watchedAt && `Watched ${day.format(new Date(open.watchedAt))}`,
+          ]
+            .filter(Boolean)
+            .join(". ")}
           actions={
             openNew ? (
               <>

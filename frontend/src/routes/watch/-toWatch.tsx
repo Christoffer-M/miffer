@@ -10,7 +10,7 @@ import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
 import { UndoBar, UndoSpot, useUndo } from "../../components/UndoBar";
 import { useRemoveWatch, useRestoreWatch, useSetProgress, useSetWatched } from "../../mutations/watch";
-import { endOf } from "../../progress";
+import { endOf, seen, seenText } from "../../progress";
 import { useMembers } from "../../queries/household";
 import { seasonsQuery, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
@@ -43,13 +43,15 @@ export function useToWatch() {
 
   /**
    * Seen it all: a series remembers the end of its last season as it is now, so Watched can
-   * tell when a new one comes. Undo puts it back on its shelf, not started, as it was.
+   * tell when a new one comes, and says how many seasons that is. Undo puts it back on its
+   * shelf, not started, as it was.
    */
   function watched(w: Watch) {
     close();
     const end = w.kind === "series" && w.id === tapped.item?.id ? endOf(tappedSeasons) : undefined;
+    const part = end && seen(end, tappedSeasons);
     setWatched.mutate({ id: w.id, watched: true, place: end });
-    undo.offer(`${w.title} is in Watched`, () => setWatched.mutate({ id: w.id, watched: false, place: null }));
+    undo.offer(`${w.title} is in Watched${part ? `, ${seenText(part)} seen` : ""}`, () => setWatched.mutate({ id: w.id, watched: false, place: null }));
   }
 
   function remove(w: Watch) {
