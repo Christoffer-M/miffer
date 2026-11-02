@@ -437,6 +437,23 @@ const watchFields = z.object({
 const watchParam = zValidator("param", z.object({ id: z.uuid() }));
 // The next episode up in a series being watched.
 const progress = z.object({ season: z.number().int().min(1).max(500), episode: z.number().int().min(1).max(5000) });
+type Place = z.infer<typeof progress>;
+// When a place was set: Undo sends the old one back, so the series goes back where it was on
+// Watching (the one watched last is on top) instead of jumping up.
+const progressAt = z.iso.datetime().optional();
+
+/** A series' place as stored. Set now, or at `at` for Undo, though never later than now. */
+function placeFields(place: Place | null, at?: string) {
+  const now = new Date();
+  const when = at && new Date(at) < now ? new Date(at) : now;
+  return { season: place?.season ?? null, episode: place?.episode ?? null, progressAt: place ? when : null };
+}
+
+/** A series takes `value`; a movie's place stays empty. So one update does both kinds. */
+const forSeries = (value: number | Date | null, type: "integer" | "timestamptz") =>
+  sql`case when ${watch.kind} = 'series' then ${value instanceof Date ? value.toISOString() : value}::${sql.raw(type)} end`;
+// Batches of seasons a phone can ask for at once (Watch asks for every series it shows).
+const SEASONS_AT_ONCE = 100;
 
 const watchRoutes = new Hono<Env>()
   .use(auth)
@@ -458,16 +475,40 @@ const watchRoutes = new Hono<Env>()
       return c.json({ error: "Search isn't answering right now." }, 502);
     }
   })
-  // Episodes per season of a series from search, so the phone knows when a season ends.
-  .get("/seasons/:tmdbId", zValidator("param", z.object({ tmdbId: z.coerce.number().int().positive() })), async (c) => {
-    if (!searchOn) return c.json({ error: "Search isn't set up on the server yet." }, 503);
-    try {
-      return c.json(await seasons(c.req.valid("param").tmdbId));
-    } catch (err) {
-      console.error("seasons failed", err);
-      return c.json({ error: "TMDB isn't answering right now." }, 502);
-    }
-  })
+  // Episodes per season of series from search, so the phone knows when a season ends: several
+  // series in one go (?ids=1408,1399), each with its seasons, or null where TMDB didn't answer.
+  .get(
+    "/seasons",
+    zValidator(
+      "query",
+      z.object({
+        ids: z
+          .string()
+          .regex(/^[1-9]\d{0,9}(,[1-9]\d{0,9})*$/)
+          .transform((ids) => [...new Set(ids.split(",").map(Number))])
+          .refine((ids) => ids.length <= SEASONS_AT_ONCE, `At most ${SEASONS_AT_ONCE} at once`),
+      }),
+    ),
+    async (c) => {
+      if (!searchOn) return c.json({ error: "Search isn't set up on the server yet." }, 503);
+      const ids = c.req.valid("query").ids;
+      const found: Record<string, number[] | null> = {};
+      // A few at a time, so a long list doesn't hit TMDB all at once.
+      for (let i = 0; i < ids.length; i += 8) {
+        await Promise.all(
+          ids.slice(i, i + 8).map(async (id) => {
+            try {
+              found[id] = await seasons(id);
+            } catch (err) {
+              console.error("seasons failed", err);
+              found[id] = null;
+            }
+          }),
+        );
+      }
+      return c.json(found);
+    },
+  )
   .post("/", zValidator("json", watchFields.extend({ id: z.uuid() })), async (c) => {
     // No notification, unlike groceries: a new title can wait until someone opens Watch.
     await db
@@ -517,48 +558,64 @@ const watchRoutes = new Hono<Env>()
   // Watched (now), or back on the list. A series can set where it's up to in the same go:
   // `place` null starts it over on its shelf (Put back), the end of its last season remembers how
   // far it went when watched (to spot a new season later), and a place to go on from takes it
-  // back to Watching (Continue). Left out, the place stays as it is (Undo of Finished).
-  // Watched with no place, the server finds the end itself (watched.ts), after answering.
+  // back to Watching (Continue); `at` is for Undo (placeFields).
+  // Watched without a place, a series from search gets its end from the server (watched.ts),
+  // after answering: the phone needn't have its seasons. Typed by hand, and back on the list
+  // without a place, the place stays as it is.
   .patch(
     "/:id",
     watchParam,
-    zValidator("json", z.object({ watched: z.boolean(), place: progress.nullable().optional() })),
+    zValidator("json", z.object({ watched: z.boolean(), place: progress.nullable().optional(), at: progressAt })),
     async (c) => {
-      const { watched, place } = c.req.valid("json");
-      const mine = and(eq(watch.id, c.req.valid("param").id), eq(watch.householdId, c.var.householdId));
-      await db.transaction(async (tx) => {
-        await tx.update(watch).set({ watchedAt: watched ? new Date() : null }).where(mine);
-        if (place === undefined) return;
-        await tx
-          .update(watch)
-          .set({ season: place?.season ?? null, episode: place?.episode ?? null, progressAt: place ? new Date() : null })
-          .where(and(mine, eq(watch.kind, "series"))); // a movie has no episodes
-      });
+      const { watched, place, at } = c.req.valid("json");
+      const set = place !== undefined && placeFields(place, at);
+      await db
+        .update(watch)
+        .set({
+          watchedAt: watched ? new Date() : null,
+          ...(set
+            ? {
+                season: forSeries(set.season, "integer"),
+                episode: forSeries(set.episode, "integer"),
+                progressAt: forSeries(set.progressAt, "timestamptz"),
+              }
+            : watched && {
+                // Left for fillEnds, which fills in series without a place.
+                season: sql`case when ${watch.tmdbId} is null then ${watch.season} end`,
+                episode: sql`case when ${watch.tmdbId} is null then ${watch.episode} end`,
+                progressAt: sql`case when ${watch.tmdbId} is null then ${watch.progressAt} end`,
+              }),
+        })
+        .where(and(eq(watch.id, c.req.valid("param").id), eq(watch.householdId, c.var.householdId)));
       notify(c.var.householdId, "watch");
       if (watched) fillEnds({ id: c.req.valid("param").id }).catch((err) => console.error("filling ends failed", err));
       return c.body(null, 204);
     },
   )
-  // Where a series is up to (started, or the next episode), or null to stop watching it for now.
-  .put("/:id/progress", watchParam, zValidator("json", z.object({ progress: progress.nullable() })), async (c) => {
-    const place = c.req.valid("json").progress;
-    await db
-      .update(watch)
-      .set({
-        season: place?.season ?? null,
-        episode: place?.episode ?? null,
-        progressAt: place ? new Date() : null,
-      })
-      .where(
-        and(
-          eq(watch.id, c.req.valid("param").id),
-          eq(watch.householdId, c.var.householdId),
-          eq(watch.kind, "series"), // a movie has no episodes
-        ),
-      );
-    notify(c.var.householdId, "watch");
-    return c.body(null, 204);
-  })
+  // Where a series is up to (started, or the next episode), or null to stop watching it for now;
+  // `at` is for Undo (placeFields). Not once it's watched: a tick from a phone that hadn't heard
+  // yet mustn't overwrite where it ended.
+  .put(
+    "/:id/progress",
+    watchParam,
+    zValidator("json", z.object({ progress: progress.nullable(), at: progressAt })),
+    async (c) => {
+      const { progress: place, at } = c.req.valid("json");
+      await db
+        .update(watch)
+        .set(placeFields(place, at))
+        .where(
+          and(
+            eq(watch.id, c.req.valid("param").id),
+            eq(watch.householdId, c.var.householdId),
+            eq(watch.kind, "series"), // a movie has no episodes
+            isNull(watch.watchedAt),
+          ),
+        );
+      notify(c.var.householdId, "watch");
+      return c.body(null, 204);
+    },
+  )
   .delete("/:id", watchParam, async (c) => {
     await db.delete(watch).where(and(eq(watch.id, c.req.valid("param").id), eq(watch.householdId, c.var.householdId)));
     notify(c.var.householdId, "watch");

@@ -12,7 +12,8 @@ import { type Kind, KINDS, placeOf, Poster, PosterTile, tileLabel, toStart } fro
 import ui from "../../ui.module.css";
 import g from "../groceries.module.css";
 import { Pick, useToWatch } from "./-toWatch";
-import { short, useWatching } from "./-watching";
+import { short } from "../../progress";
+import { useWatching } from "./-watching";
 import s from "./watch.module.css";
 
 export const Route = createFileRoute("/watch/")({ component: WatchList });

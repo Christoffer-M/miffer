@@ -4,6 +4,9 @@
 
 export type Place = { season: number; episode: number };
 
+/** A place as short as fits beside a title: "S1 · E2". */
+export const short = ({ season, episode }: Place) => `S${season} · E${episode}`;
+
 /** As far as the server takes (app.ts); the steppers stop there. */
 export const MAX_SEASON = 500;
 export const MAX_EPISODE = 5000;

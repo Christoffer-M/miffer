@@ -549,6 +549,23 @@ test("a series being watched keeps its place, and a movie has none", async () =>
   expect(await find(film)).toMatchObject({ watchedAt: expect.any(String), season: null, episode: null });
   await setProgress(show, { season: 2, episode: 4 });
 
+  // Undo puts back when the place was set too, so it goes back where it was on Watching; never
+  // later than now.
+  const earlier = "2026-01-02T03:04:05.000Z";
+  await call(`/watch/${show}/progress`, { method: "PUT", token: anna.token, body: { progress: { season: 2, episode: 3 }, at: earlier } });
+  expect(await find(show)).toMatchObject({ season: 2, episode: 3, progressAt: earlier });
+  await call(`/watch/${show}/progress`, { method: "PUT", token: anna.token, body: { progress: { season: 2, episode: 3 }, at: "2999-01-01T00:00:00.000Z" } });
+  expect(Date.parse((await find(show)).progressAt)).toBeLessThanOrEqual(Date.now());
+  await patch(show, { watched: true, place: { season: 3, episode: 9 } });
+  await patch(show, { watched: false, place: { season: 2, episode: 3 }, at: earlier });
+  expect(await find(show)).toMatchObject({ watchedAt: null, season: 2, episode: 3, progressAt: earlier });
+
+  // Once watched, a tick from a phone that hadn't heard yet leaves where it ended alone.
+  await patch(show, { watched: true, place: { season: 3, episode: 9 } });
+  await setProgress(show, { season: 2, episode: 5 });
+  expect(await find(show)).toMatchObject({ watchedAt: expect.any(String), season: 3, episode: 9 });
+  await patch(show, { watched: false, place: { season: 2, episode: 4 } });
+
   // Stopping clears it.
   await setProgress(show, null);
   expect(await find(show)).toMatchObject({ season: null, episode: null, progressAt: null });
@@ -565,13 +582,18 @@ test("a series' seasons come from TMDB, without the specials", async () => {
       ],
     }),
   );
-  expect(await (await call("/watch/seasons/1408", { token: anna.token })).json()).toEqual([10, 8]);
+  const ask = async (ids: string) => (await call(`/watch/seasons?ids=${ids}`, { token: anna.token })).json();
+  expect(await ask("1408")).toEqual({ 1408: [10, 8] });
   expect(new URL(String(tmdb.mock.calls[0][0])).pathname).toBe("/3/tv/1408");
   // Asked again soon, it's answered without TMDB.
-  expect(await (await call("/watch/seasons/1408", { token: anna.token })).json()).toEqual([10, 8]);
+  expect(await ask("1408")).toEqual({ 1408: [10, 8] });
   expect(tmdb).toHaveBeenCalledTimes(1);
+  // Several in one go; one TMDB doesn't answer for is null, the rest still come.
   tmdb.mockResolvedValue(new Response("", { status: 404 }));
-  expect((await call("/watch/seasons/1409", { token: anna.token })).status).toBe(502);
+  expect(await ask("1409,1408,1409")).toEqual({ 1408: [10, 8], 1409: null });
+  expect((await call("/watch/seasons?ids=0", { token: anna.token })).status).toBe(400);
+  const tooMany = Array.from({ length: 101 }, (_, i) => i + 1).join(",");
+  expect((await call(`/watch/seasons?ids=${tooMany}`, { token: anna.token })).status).toBe(400);
   tmdb.mockRestore();
 });
 
@@ -597,6 +619,12 @@ test("a series watched without saying where it ended gets the end of its last se
   await call(`/watch/${finished}/progress`, { method: "PUT", token: anna.token, body: { progress: { season: 1, episode: 3 } } });
   expect((await patch(finished, { watched: true, place: null })).status).toBe(204);
   await expect.poll(() => find(finished)).toMatchObject({ season: 2, episode: 9 });
+
+  // Watched partway without saying where it ended: the end, not the place it was at.
+  const partway = await add(tmdbIdBase + 4);
+  await call(`/watch/${partway}/progress`, { method: "PUT", token: anna.token, body: { progress: { season: 1, episode: 3 } } });
+  expect((await patch(partway, { watched: true })).status).toBe(204);
+  await expect.poll(() => find(partway)).toMatchObject({ season: 2, episode: 9 });
 
   // Watched before ends existed: the sweep fills it in.
   const old = await add(tmdbIdBase + 1);

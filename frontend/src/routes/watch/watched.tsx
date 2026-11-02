@@ -7,7 +7,7 @@ import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
 import { UndoBar, useUndo } from "../../components/UndoBar";
 import { useRemoveWatch, useRestoreWatch, useSetWatched } from "../../mutations/watch";
-import { type Place, seenShort, seenText } from "../../progress";
+import { type Place, seenShort, seenText, short } from "../../progress";
 import { useWatchedSeries, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
 import { type Kind, KINDS, PosterTile, tileLabel, WatchSheet } from "../../watch";
@@ -25,8 +25,6 @@ export const Route = createFileRoute("/watch/watched")({
 const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
 const month = new Intl.DateTimeFormat("en-GB", { month: "long" });
 const monthAndYear = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" });
-
-const short = ({ season, episode }: Place) => `S${season} · E${episode}`;
 
 /** "November", or "November 2025" for an earlier year. */
 function monthOf(date: Date) {
@@ -84,7 +82,7 @@ function Watched() {
     close();
     const ended = { season: w.season!, episode: w.episode! };
     setWatched.mutate({ id: w.id, watched: false, place });
-    undo.offer(`${w.title} is in Watching`, () => setWatched.mutate({ id: w.id, watched: true, place: ended }));
+    undo.offer(`${w.title} is in Watching`, () => setWatched.mutate({ id: w.id, watched: true, place: ended, at: w.progressAt }));
   }
   function remove(w: Watch) {
     close();
