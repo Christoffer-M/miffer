@@ -35,13 +35,14 @@
   --on-ink-fill: rgb(255 255 255 / 0.1);
   --on-ink-fill-pressed: rgb(255 255 255 / 0.2);
 
-  /* Member colours (brand.tsx): light tint with dark text, all above 4.5:1. */
-  --member-0-tint: var(--accent-tint);
-  --member-0-ink: var(--accent-ink);
+  /* Member colours (brand.tsx): light tint with dark text, all above 4.5:1. Their own values,
+     not the accent's or success's, so retuning those doesn't recolour anyone's avatar. */
+  --member-0-tint: #ffedd5;
+  --member-0-ink: #9a3412;
   --member-1-tint: #dbeafe;
   --member-1-ink: #1d4ed8;
-  --member-2-tint: var(--success-tint);
-  --member-2-ink: var(--success-ink);
+  --member-2-tint: #dcfce7;
+  --member-2-ink: #166534;
   --member-3-tint: #f3e8ff;
   --member-3-ink: #6b21a8;
   --member-4-tint: #fce7f3;
@@ -55,7 +56,8 @@
   --text-sm: 13px; /* meta lines, hints */
   --text-md: 14px; /* secondary text, labels */
   --text-base: 15px; /* body, chips */
-  --text-lg: 16px; /* list items, buttons; inputs need 16px or iOS zooms in on focus */
+  --text-lg: 16px; /* list items, buttons */
+  --text-input: 16px; /* fields: below 16px iOS zooms in on focus, so this stays put */
   --text-xl: 18px; /* card titles, big buttons */
   --text-2xl: 22px; /* shelf titles */
   --text-3xl: 24px; /* link codes */
@@ -81,17 +83,19 @@
   --radius-round: 50%;
 
   /* Elevation */
-  --shadow-float: 0 6px 20px rgb(20 33 61 / 0.25); /* bars floating over the screen */
-  --shadow-accent: 0 6px 20px rgb(194 65 12 / 0.35); /* the + button */
-  --scrim: rgb(20 33 61 / 0.45); /* behind a sheet */
+  --shadow-float: 0 6px 20px color-mix(in srgb, var(--ink) 25%, transparent); /* bars floating over the screen */
+  --shadow-accent: 0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent); /* the + button */
+  --scrim: color-mix(in srgb, var(--ink) 45%, transparent); /* behind a sheet */
 
-  /* Focus */
-  --focus-ring: 2px solid var(--accent);
+  /* Focus: outline: var(--focus-width) solid var(--accent), or --accent-tint on ink. The colour
+     is written where it's used, so it follows a locally set --accent. */
+  --focus-width: 2px;
 
   /* Motion */
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); /* most things arriving or moving */
+  /* Not named ease-in/ease-out: those CSS keywords are other curves, still used for presses. */
+  --ease-decelerate: cubic-bezier(0.2, 0.8, 0.2, 1); /* most things arriving or moving */
   --ease-spring: cubic-bezier(0.2, 0.8, 0.2, 1.4); /* a small overshoot: picked, armed */
-  --ease-in: cubic-bezier(0.4, 0, 1, 1); /* leaving */
+  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1); /* leaving */
   --duration-press: 80ms; /* the squeeze when pressed */
   --duration-fast: 120ms; /* colour changes */
 
@@ -130,7 +134,7 @@ input {
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 240ms;
-  animation-timing-function: var(--ease-out);
+  animation-timing-function: var(--ease-decelerate);
 }
 html:active-view-transition-type(forward)::view-transition-old(root) {
   animation-name: slide-out-left;
@@ -238,16 +242,16 @@ html:active-view-transition-type(back)::view-transition-new(root) {
 ::view-transition-group(.item),
 ::view-transition-group(.block) {
   animation-duration: 340ms;
-  animation-timing-function: var(--ease-out);
+  animation-timing-function: var(--ease-decelerate);
 }
 
 /* Arriving: drops in. */
 ::view-transition-new(.item):only-child {
-  animation: item-in 260ms var(--ease-out) both;
+  animation: item-in 260ms var(--ease-decelerate) both;
 }
 /* Leaving: slides out to the left (delete, Clear)... */
 ::view-transition-old(.item):only-child {
-  animation: item-out-left 280ms var(--ease-in) both;
+  animation: item-out-left 280ms var(--ease-accelerate) both;
 }
 /* ...or to the right when ticked or put back ("check"), like the swipe. */
 html:active-view-transition-type(check)::view-transition-old(.item):only-child {

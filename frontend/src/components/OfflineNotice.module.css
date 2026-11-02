@@ -20,7 +20,7 @@
   color: var(--on-ink-muted);
   font-size: var(--text-base);
   box-shadow: var(--shadow-float);
-  animation: notice-in 200ms var(--ease-out);
+  animation: notice-in 200ms var(--ease-decelerate);
 }
 .notice svg {
   flex-shrink: 0;

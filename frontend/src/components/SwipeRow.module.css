@@ -8,7 +8,7 @@
 
 .content {
   position: relative;
-  transition: transform 220ms var(--ease-out);
+  transition: transform 220ms var(--ease-decelerate);
 }
 /* Follows the finger exactly while dragging, on its own GPU layer. */
 .content[data-dragging] {

@@ -88,7 +88,7 @@
   color: var(--on-solid);
   font-size: var(--text-base);
   box-shadow: var(--shadow-float);
-  animation: undo-in 200ms var(--ease-out);
+  animation: undo-in 200ms var(--ease-decelerate);
 }
 .undoText {
   flex-grow: 1;

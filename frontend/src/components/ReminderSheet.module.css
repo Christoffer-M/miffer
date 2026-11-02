@@ -75,7 +75,7 @@
 
 /* Repeat and the notifications hint ease in when they come up. */
 .reveal {
-  animation: reveal 200ms var(--ease-out);
+  animation: reveal 200ms var(--ease-decelerate);
 }
 @keyframes reveal {
   from {
@@ -91,7 +91,7 @@
   }
 }
 .chip[data-focus-visible] {
-  outline: var(--focus-ring);
+  outline: var(--focus-width) solid var(--accent);
   outline-offset: 2px;
 }
 .withAvatar {
@@ -116,7 +116,7 @@
 }
 /* A plain <input>, so React Aria's data-focused isn't there to style. */
 .native:focus-visible {
-  outline: var(--focus-ring);
+  outline: var(--focus-width) solid var(--accent);
   outline-offset: 1px;
   border-color: transparent;
 }

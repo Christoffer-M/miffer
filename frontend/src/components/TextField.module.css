@@ -28,13 +28,13 @@
   border-radius: var(--radius-lg);
   background: var(--ground);
   color: var(--ink);
-  font-size: var(--text-lg); /* 16px stops iOS zooming in on focus */
+  font-size: var(--text-input); /* 16px stops iOS zooming in on focus */
 }
 .input::placeholder {
   color: var(--placeholder);
 }
 .input[data-focused] {
-  outline: var(--focus-ring);
+  outline: var(--focus-width) solid var(--accent);
   outline-offset: 1px;
   border-color: transparent;
 }

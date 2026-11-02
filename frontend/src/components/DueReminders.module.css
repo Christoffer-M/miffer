@@ -33,10 +33,10 @@
   gap: var(--gap);
 }
 .next {
-  animation: card-next 280ms var(--ease-out);
+  animation: card-next 280ms var(--ease-decelerate);
 }
 .back {
-  animation: card-back 280ms var(--ease-out);
+  animation: card-back 280ms var(--ease-decelerate);
 }
 @keyframes card-next {
   from {
@@ -163,7 +163,7 @@
   border-color: var(--accent);
 }
 .chip[data-focus-visible] {
-  outline: var(--focus-ring);
+  outline: var(--focus-width) solid var(--accent);
   outline-offset: 2px;
 }
 

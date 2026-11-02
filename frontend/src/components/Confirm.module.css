@@ -29,16 +29,16 @@
    The closing animations hold their end state ("forwards"): the sheet is removed a
    frame after the animation ends, and without it that frame flashes the dark overlay back. */
 .overlay[data-entering] {
-  animation: fade 160ms ease-out;
+  animation: fade 160ms var(--ease-decelerate);
 }
 .overlay[data-exiting] {
-  animation: fade 120ms ease-in reverse forwards;
+  animation: fade var(--duration-fast) var(--ease-accelerate) reverse forwards;
 }
 .sheet[data-entering] {
-  animation: slide-up 220ms var(--ease-out);
+  animation: slide-up 220ms var(--ease-decelerate);
 }
 .sheet[data-exiting] {
-  animation: slide-up 140ms ease-in reverse forwards;
+  animation: slide-up 140ms var(--ease-accelerate) reverse forwards;
 }
 
 @keyframes fade {
