@@ -553,6 +553,7 @@
   font-family: var(--display);
   font-size: 30px;
   line-height: 1.15;
+  overflow-wrap: anywhere; /* shown in full; only a word too long for the line breaks */
 }
 .pickMeta {
   margin: 0;
