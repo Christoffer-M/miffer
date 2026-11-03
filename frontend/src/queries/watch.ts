@@ -23,7 +23,9 @@ export const searchQuery = (q: string) =>
   });
 
 const DAY = 24 * 60 * 60 * 1000;
-const SEASONS_KEY = "miffer.last.seasons"; // under remember.ts' prefix, so forgetAll() clears it too
+// Under remember.ts' prefix, so forgetAll() clears it too. Renamed when the server changes
+// what seasons mean: v2 counts only episodes that are out, so v1's announced ones are dropped.
+const SEASONS_KEY = "miffer.last.seasons.v2";
 
 type KeptSeasons = Record<string, { at: number; seasons: number[] }>;
 
@@ -35,6 +37,7 @@ whenForgotten(() => (kept = undefined));
 function keptSeasons(): KeptSeasons {
   if (kept) return kept;
   try {
+    localStorage.removeItem("miffer.last.seasons"); // ponytail: v1, delete this line once every phone has opened since
     kept = JSON.parse(localStorage.getItem(SEASONS_KEY) ?? "{}") as KeptSeasons;
   } catch {
     kept = {};
