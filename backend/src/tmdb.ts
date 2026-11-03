@@ -59,18 +59,27 @@ const SEASONS_FOR_MS = 6 * 60 * 60 * 1000;
 const SEASONS_KEPT = 1000; // series; the oldest goes first
 const seasonsKept = new Map<number, { at: number; seasons: number[] }>();
 
+type Show = {
+  seasons?: { season_number: number; episode_count: number; air_date: string | null }[];
+  last_episode_to_air?: { season_number: number; episode_number: number } | null;
+};
+
 /**
  * How many episodes each season of a series has, in order: [10, 10, 8] for three seasons.
- * Specials (TMDB's season 0) are left out. Counts include episodes announced but not out yet.
+ * Specials (TMDB's season 0) are left out, and so is what isn't out yet: a season announced
+ * for next year, or the rest of one airing now. So a watched series shows a new season when
+ * it comes out, not when it's announced.
  */
 export async function seasons(tmdbId: number) {
   const kept = seasonsKept.get(tmdbId);
   if (kept && Date.now() - kept.at < SEASONS_FOR_MS) return kept.seasons;
-  const show = await get<{ seasons?: { season_number: number; episode_count: number }[] }>(`/tv/${tmdbId}`);
+  const show = await get<Show>(`/tv/${tmdbId}`);
+  const today = new Date().toISOString().slice(0, 10); // TMDB's dates are YYYY-MM-DD
+  const last = show.last_episode_to_air;
   const fresh = (show.seasons ?? [])
-    .filter((s) => s.season_number > 0)
+    .filter((s) => s.season_number > 0 && s.air_date && s.air_date <= today)
     .sort((a, b) => a.season_number - b.season_number)
-    .map((s) => s.episode_count);
+    .map((s) => (s.season_number === last?.season_number ? last.episode_number : s.episode_count));
   seasonsKept.delete(tmdbId); // re-added last: a Map keeps insertion order
   seasonsKept.set(tmdbId, { at: Date.now(), seasons: fresh });
   if (seasonsKept.size > SEASONS_KEPT) seasonsKept.delete(seasonsKept.keys().next().value!);

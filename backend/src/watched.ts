@@ -12,23 +12,19 @@ const { watch } = schema;
 
 /**
  * Gives watched series from search without an end the end of their last season as it is now:
- * one series, or all of them. Only while the series is still watched with no
- * place, so someone putting it back meanwhile wins. TMDB not answering, or a series without
- * seasons there, is left for the next go. Each household with a change hears about it once.
+ * one series, or all of them. An end past what's out (from when TMDB's seasons counted
+ * announced episodes) comes back to the end of what's out, so the next season shows up as new
+ * when it airs. Only while the series is still watched with the same place, so someone moving
+ * it meanwhile wins. TMDB not answering, or a series without seasons there, is left for the
+ * next go. Each household with a change hears about it once.
  */
 export async function fillEnds(only: { id?: string } = {}) {
   if (!searchOn) return;
-  const missing = and(eq(watch.kind, "series"), isNotNull(watch.watchedAt), isNull(watch.season));
+  const watched = and(eq(watch.kind, "series"), isNotNull(watch.watchedAt));
   const rows = await db
-    .select({ id: watch.id, householdId: watch.householdId, tmdbId: watch.tmdbId })
+    .select({ id: watch.id, householdId: watch.householdId, tmdbId: watch.tmdbId, season: watch.season, episode: watch.episode })
     .from(watch)
-    .where(
-      and(
-        missing,
-        isNotNull(watch.tmdbId),
-        only.id ? eq(watch.id, only.id) : undefined,
-      ),
-    );
+    .where(and(watched, isNotNull(watch.tmdbId), only.id ? eq(watch.id, only.id) : undefined));
   const changed = new Set<string>();
   for (const row of rows) {
     let counts: number[];
@@ -39,10 +35,14 @@ export async function fillEnds(only: { id?: string } = {}) {
       continue;
     }
     if (!counts.length) continue;
+    const end = { season: counts.length, episode: counts[counts.length - 1] + 1 };
+    const past = row.season !== null && (row.season > end.season || (row.season === end.season && row.episode! > end.episode));
+    if (row.season !== null && !past) continue;
+    const same = row.season === null ? isNull(watch.season) : and(eq(watch.season, row.season), eq(watch.episode, row.episode!));
     const filled = await db
       .update(watch)
-      .set({ season: counts.length, episode: counts[counts.length - 1] + 1, progressAt: new Date() })
-      .where(and(eq(watch.id, row.id), missing))
+      .set({ ...end, progressAt: new Date() })
+      .where(and(eq(watch.id, row.id), watched, same))
       .returning({ id: watch.id });
     if (filled.length) changed.add(row.householdId);
   }

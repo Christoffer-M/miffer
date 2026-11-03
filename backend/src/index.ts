@@ -53,8 +53,9 @@ const checkReminders = () => fireDue().catch((err) => console.error("reminders f
 checkReminders(); // anything that came due while the server was down goes out now, late
 const reminderTimer = setInterval(checkReminders, 30_000);
 
-// Watched series still without an end (watched.ts): any from before it existed at start, and
-// any TMDB didn't answer for since, every hour.
+// Watched series still without an end, or one past what's out (watched.ts): any from before it
+// existed at start, and any TMDB didn't answer for since, every hour.
+// ponytail: asks TMDB about every watched series each go (kept 6h in tmdb.ts); fine for a household's list.
 const fillWatchedEnds = () => fillEnds().catch((err) => console.error("filling ends failed", err));
 fillWatchedEnds();
 const endsTimer = setInterval(fillWatchedEnds, 60 * 60 * 1000);
