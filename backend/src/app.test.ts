@@ -638,25 +638,41 @@ test("a series' seasons come from TMDB, without the specials", async () => {
   tmdb.mockRestore();
 });
 
-test("a season's episodes come from TMDB, in order, with their stills", async () => {
+test("a season's episodes come from TMDB by its number there, matched by episode number, and are kept", async () => {
   const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
-  const tmdb = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-    Response.json({
-      episodes: [
-        { episode_number: 2, name: "Two", still_path: null },
-        { episode_number: 1, name: "Pilot", still_path: "/pilot.jpg" },
-      ],
-    }),
-  );
-  const res = await call("/watch/episodes?id=1408&season=3", { token: anna.token });
-  expect(await res.json()).toEqual([
-    { name: "Pilot", still: "/pilot.jpg" },
-    { name: "Two", still: null },
-  ]);
-  expect(new URL(String(tmdb.mock.calls[0][0])).pathname).toBe("/3/tv/1408/season/3");
-  tmdb.mockResolvedValue(new Response("", { status: 404 }));
-  expect((await call("/watch/episodes?id=1408&season=9", { token: anna.token })).status).toBe(502);
-  expect((await call("/watch/episodes?id=1408&season=0", { token: anna.token })).status).toBe(400);
+  const tmdb = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+    const path = new URL(String(url)).pathname;
+    if (path === "/3/tv/2001")
+      return Response.json({
+        seasons: [
+          { season_number: 1, episode_count: 3, air_date: "2020-01-01" },
+          { season_number: 2, episode_count: 2, air_date: null }, // no date: not counted
+          { season_number: 3, episode_count: 3, air_date: "2022-01-01" },
+        ],
+      });
+    if (path === "/3/tv/2001/season/3")
+      return Response.json({
+        episodes: [
+          { episode_number: 3, name: "Three", still_path: null },
+          { episode_number: 1, name: "Pilot", still_path: "/pilot.jpg" },
+          { episode_number: 0, name: "Special", still_path: null },
+        ],
+      });
+    return new Response("", { status: 404 });
+  });
+  const ask = (query: string) => call(`/watch/episodes?${query}`, { token: anna.token });
+  // The second season that's out is TMDB's season 3; it has no episode 2, and 0 isn't one.
+  const second = [{ name: "Pilot", still: "/pilot.jpg" }, null, { name: "Three", still: null }];
+  expect(await (await ask("id=2001&season=2")).json()).toEqual(second);
+  // Asked again soon, it's answered without TMDB.
+  const asked = tmdb.mock.calls.length;
+  expect(await (await ask("id=2001&season=2")).json()).toEqual(second);
+  expect(tmdb).toHaveBeenCalledTimes(asked);
+  // A season that isn't out has none; TMDB not answering is a 502.
+  expect(await (await ask("id=2001&season=3")).json()).toEqual([]);
+  expect((await ask("id=2002&season=1")).status).toBe(502);
+  for (const bad of ["id=2001&season=0", "id=2001&season=1e21", "id=99999999999&season=1"])
+    expect((await ask(bad)).status).toBe(400);
   tmdb.mockRestore();
 });
 

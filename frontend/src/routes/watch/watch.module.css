@@ -771,7 +771,10 @@
 .seasons {
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
-  overflow: clip; /* the rows' corners; unlike hidden, the open row still sticks to the sheet's top */
+  /* The rows' corners. Unlike hidden, clip lets the open row stick to the sheet's top; Safari
+     before 16 has no clip and takes hidden, keeping the corners without the sticking. */
+  overflow: hidden;
+  overflow: clip;
 }
 .season + .season {
   border-top: 1px solid var(--line-soft);
@@ -862,6 +865,7 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: transform var(--duration-press) ease-out;
+  scroll-margin: 60px 0; /* room when scrolled into view: the open season's row sticks over the top */
 }
 .episodeRow[data-pressed] {
   transform: scale(0.98);

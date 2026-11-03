@@ -114,7 +114,13 @@ export const watchRoutes = new Hono<Env>()
   // A season's episodes, for Watching's sheet: ?id=1408&season=3 gives [{ name: "Pilot", still: "/a.jpg" }, ...].
   .get(
     "/episodes",
-    zValidator("query", z.object({ id: z.coerce.number().int().positive(), season: z.coerce.number().int().positive() })),
+    zValidator(
+      "query",
+      z.object({
+        id: z.coerce.number().int().positive().max(9_999_999_999), // as /seasons takes
+        season: z.coerce.number().int().positive().max(500), // as a place takes
+      }),
+    ),
     async (c) => {
       if (!searchOn) return c.json({ error: "Search isn't set up on the server yet." }, 503);
       const { id, season } = c.req.valid("query");

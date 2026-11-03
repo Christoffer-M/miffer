@@ -261,19 +261,13 @@ function SeasonList({ tmdbId, at, seasons, onChange }: SeasonListProps) {
   const list = useRef<HTMLDivElement>(null);
 
   // Moved on to another season (its last episode ticked): the sheet scrolls to that season's
-  // first unwatched episode, just far enough to show it and the one after. Not on opening: the
-  // sheet starts at the top, with the poster.
+  // first unwatched episode, with room around it (scroll-margin). Not on opening: the sheet
+  // starts at the top, with the poster.
   const placed = useRef(at.season);
   useEffect(() => {
     if (placed.current === at.season || open !== at.season) return;
     placed.current = at.season;
-    const body = list.current?.closest<HTMLElement>(`.${s.infoBody}`);
-    const first = list.current?.querySelector<HTMLElement>(`.${s.episodeRow}:not([data-seen])`);
-    if (!body || !first) return;
-    const view = body.getBoundingClientRect();
-    const row = first.getBoundingClientRect();
-    if (row.top - row.height < view.top) body.scrollTop -= view.top - first.closest(`.${s.season}`)!.getBoundingClientRect().top;
-    else if (row.bottom + row.height > view.bottom) body.scrollTop += row.bottom + row.height - view.bottom;
+    list.current?.querySelector(`.${s.episodeRow}:not([data-seen])`)?.scrollIntoView({ block: "nearest" });
   }, [at.season, open]);
 
   return (
@@ -343,7 +337,7 @@ function Episodes({ tmdbId, season, at, seasons, onChange }: SeasonListProps & {
               <span className={s.episodeStill}>
                 {still && (
                   <img
-                    src={`https://image.tmdb.org/t/p/w185${still}`}
+                    src={`https://image.tmdb.org/t/p/w300${still}`} // about three times the shown width
                     alt=""
                     loading="lazy"
                     onError={(e) => (e.currentTarget.hidden = true)} // offline: the tint stays
