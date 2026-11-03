@@ -115,7 +115,6 @@ function Watched() {
           Watch
         </Link>
         <h1 className={ui.display}>Watched</h1>
-        <p className={ui.muted}>{watched.length} so far</p>
       </header>
 
       <Tabs
