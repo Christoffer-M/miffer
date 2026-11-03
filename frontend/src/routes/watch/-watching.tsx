@@ -281,7 +281,7 @@ function EpisodePicker({ at, seasons, onChange }: { at: Place; seasons: number[]
         })}
       </div>
       <div className={s.pickerHead}>
-        <span className={`${ui.eyebrow} ${ui.muted}`}>Season {viewing}</span>
+        <span className={`${ui.eyebrow} ${ui.muted}`}>Season {viewing} episodes</span>
         <span className={`${ui.muted} ${ui.small}`}>Tap the last one you saw, again to unmark</span>
       </div>
       <div className={s.episodes} role="group" aria-label={`Season ${viewing} episodes`}>
