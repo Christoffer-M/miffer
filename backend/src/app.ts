@@ -478,7 +478,7 @@ const watchRoutes = new Hono<Env>()
       return c.json({ error: "Search isn't answering right now." }, 502);
     }
   })
-  // Cast, stills and genres of a search result, for the sheet Add shows before adding it.
+  // Plot, rating, cast, stills and genres, for the sheet a movie or series opens in (search results too).
   .get(
     "/details",
     zValidator("query", z.object({ kind: z.enum(["movie", "series"]), id: z.coerce.number().int().positive() })),

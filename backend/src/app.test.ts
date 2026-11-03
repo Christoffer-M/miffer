@@ -501,11 +501,14 @@ test("search finds movies and series on TMDB, by the title people know them by",
   expect((await call("/watch/search?q=druk")).status).toBe(401);
 });
 
-test("details bring a search result's cast, stills and genres, in one request to TMDB", async () => {
+test("details bring a movie or series' plot, rating, cast, stills and genres, in one request to TMDB", async () => {
   const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
   const tmdb = vi.spyOn(globalThis, "fetch").mockResolvedValue(
     Response.json({
       number_of_seasons: 4,
+      overview: "A prime minister.",
+      vote_average: 8.06,
+      vote_count: 900,
       genres: [{ id: 18, name: "Drama" }],
       original_language: "da",
       credits: { cast: [{ name: "Sidse Babett Knudsen", character: "Birgitte Nyborg", profile_path: "/a.jpg" }, { name: "Extra", character: "" }] },
@@ -514,6 +517,8 @@ test("details bring a search result's cast, stills and genres, in one request to
   );
   const res = await call("/watch/details?kind=series&id=31911", { token: anna.token });
   expect(await res.json()).toEqual({
+    overview: "A prime minister.",
+    rating: 8.1,
     runtime: null,
     seasons: 4,
     genres: ["Drama"],

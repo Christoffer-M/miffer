@@ -14,7 +14,7 @@ import { endOf, type Place, seen, seenText, short } from "../../progress";
 import { useMembers } from "../../queries/household";
 import { seasonsQuery, useWatchedSeries, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
-import { addedIt, type Kind, KINDS, PosterTile, tileLabel, toStart, WatchSheet } from "../../watch";
+import { type Kind, KINDS, PosterTile, tileLabel, toStart, WatchSheet } from "../../watch";
 import ui from "../../ui.module.css";
 import g from "../groceries.module.css";
 import s from "./watch.module.css";
@@ -27,7 +27,6 @@ import s from "./watch.module.css";
  */
 export function useToWatch() {
   const { data: list = [] } = useQuery(watchQuery);
-  const { whoIs } = useMembers();
   const offerUndoSpot = useContext(UndoSpot);
   const setWatched = useSetWatched();
   const removeWatch = useRemoveWatch();
@@ -85,7 +84,7 @@ export function useToWatch() {
       item={list.find((w) => w.id === tapped.item!.id) ?? tapped.item}
       isOpen={tapped.isOpen}
       onClose={close}
-      note={isNew ? `${isNew.label}: ${short(isNew.place)} is next` : addedIt(whoIs(tapped.item.addedBy))}
+      note={isNew ? `${isNew.label}: ${short(isNew.place)} is next` : undefined}
       // A series' main button is Start watching, across the top, or Continue with new episodes; a movie's is Watched.
       actions={
         isNew ? (
@@ -148,7 +147,6 @@ export function useToWatch() {
  * Let's watch on a series starts it, so it moves to Watching.
  */
 export function Pick({ list, kind, onStart }: { list: Watch[]; kind: Kind; onStart: (w: Watch) => void }) {
-  const { whoIs } = useMembers();
   const [pick, setPick] = useState<Watch>();
   const [isOpen, setOpen] = useState(false);
   const roll = () =>
@@ -174,7 +172,6 @@ export function Pick({ list, kind, onStart }: { list: Watch[]; kind: Kind; onSta
         isOpen={isOpen}
         onClose={() => setOpen(false)}
         eyebrow="Tonight"
-        note={pick ? addedIt(whoIs(pick.addedBy)) : ""}
         actions={
           <>
             <Button variant="outline" onPress={roll}>

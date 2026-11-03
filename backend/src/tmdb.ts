@@ -53,10 +53,9 @@ export async function search(query: string) {
         title: original && ["da", "en"].includes(r.original_language ?? "") ? original : (r.title ?? r.name ?? ""),
         year: date ? Number(date.slice(0, 4)) : null,
         posterPath: r.poster_path ?? null,
-        // For the sheet that opens on a result, before adding it.
+        // So the sheet that opens on a result has these at once, before its details arrive.
         overview: r.overview || null,
-        // Out of 10; a handful of votes says little, so those aren't shown.
-        rating: r.vote_count && r.vote_count >= 10 ? Math.round(r.vote_average! * 10) / 10 : null,
+        rating: rating(r),
       };
     });
 }
@@ -66,11 +65,18 @@ type Details = {
   number_of_seasons?: number; // series
   genres?: { name: string }[];
   original_language?: string;
+  overview?: string;
+  vote_average?: number;
+  vote_count?: number;
   credits?: { cast?: { name: string; character?: string; profile_path?: string | null }[] };
   images?: { backdrops?: { file_path: string }[] };
 };
 
-/** What Add's sheet shows of a search result beyond search's own: cast, stills, genres. One request to TMDB. */
+/** Out of 10, to one decimal; a handful of votes says little, so those aren't shown. */
+const rating = (r: { vote_average?: number; vote_count?: number }) =>
+  r.vote_count && r.vote_count >= 10 ? Math.round(r.vote_average! * 10) / 10 : null;
+
+/** What a movie or series' sheet shows of it: plot, rating, cast, stills, genres. One request to TMDB. */
 export async function details(kind: "movie" | "series", tmdbId: number) {
   const d = await get<Details>(`/${kind === "movie" ? "movie" : "tv"}/${tmdbId}`, {
     append_to_response: "credits,images",
@@ -78,6 +84,8 @@ export async function details(kind: "movie" | "series", tmdbId: number) {
     language: "en-US",
   });
   return {
+    overview: d.overview || null,
+    rating: rating(d),
     runtime: d.runtime || null,
     seasons: d.number_of_seasons || null,
     genres: (d.genres ?? []).map((g) => g.name),

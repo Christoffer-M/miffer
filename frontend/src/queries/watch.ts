@@ -22,11 +22,12 @@ export const searchQuery = (q: string) =>
     retry: false,
   });
 
-/** Cast, stills and genres of a search result, for Add's sheet. Not kept either. */
-export const detailsQuery = (r: { kind: Watch["kind"]; tmdbId: number }) =>
+/** Plot, rating, cast, stills and genres from TMDB, for a movie or series' sheet. None for one typed by hand. */
+export const detailsQuery = (w: { kind: Watch["kind"]; tmdbId: number | null }) =>
   queryOptions({
-    queryKey: ["details", r.kind, r.tmdbId],
-    queryFn: async () => (await ok(api.watch.details.$get({ query: { kind: r.kind, id: String(r.tmdbId) } }))).json(),
+    queryKey: ["details", w.kind, w.tmdbId],
+    queryFn: async () => (await ok(api.watch.details.$get({ query: { kind: w.kind, id: String(w.tmdbId) } }))).json(),
+    enabled: w.tmdbId !== null,
     staleTime: Infinity,
     retry: false,
   });

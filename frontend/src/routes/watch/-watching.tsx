@@ -23,10 +23,9 @@ import {
   short,
   tapEpisode,
 } from "../../progress";
-import { useMembers } from "../../queries/household";
 import { seasonsQuery, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
-import { addedIt, isWatching, placeOf, Poster, WatchSheet, watchingGroups } from "../../watch";
+import { isWatching, placeOf, Poster, WatchSheet, watchingGroups } from "../../watch";
 import ui from "../../ui.module.css";
 import g from "../groceries.module.css";
 import s from "./watch.module.css";
@@ -65,7 +64,6 @@ export function WatchingPanel({ offer }: { offer: Offer }) {
   const { data: list = [], isPending, error } = useQuery(watchQuery);
   const setProgress = useSetProgress();
   const setWatched = useSetWatched();
-  const { whoIs } = useMembers();
   // The series tapped last; kept after closing so the sheet doesn't empty as it slides away.
   const [tapped, setTapped] = useState<{ item?: Watch; isOpen: boolean }>({ isOpen: false });
   const close = () => setTapped((t) => ({ ...t, isOpen: false }));
@@ -170,7 +168,7 @@ export function WatchingPanel({ offer }: { offer: Offer }) {
           item={open}
           isOpen={tapped.isOpen}
           onClose={close}
-          note={howFar(placeOf(open, openSeasons), openSeasons) || addedIt(whoIs(open.addedBy))}
+          note={howFar(placeOf(open, openSeasons), openSeasons) || undefined}
           actions={
             <>
               <Button
