@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
-import { Button as AriaButton, Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
+import { Button as AriaButton, Dialog, DialogTrigger, Heading, Modal, ModalOverlay, Popover } from "react-aria-components";
 import { ChevronLeft, ChevronRight, Film, Star, Tv } from "lucide-react";
 import type { Watch } from "./api";
 import { caughtUp, count, type Place, settle } from "./progress";
@@ -174,12 +174,20 @@ function About({ item, eyebrow, note, children }: { item: SheetItem; eyebrow?: s
   const length = d?.runtime ? runtime(d.runtime) : d?.seasons ? count(d.seasons, "season") : undefined;
   const language = d?.language && d.language !== "en" ? languages.of(d.language) : undefined; // English goes without saying
   const stills = d?.stills ?? [];
-  // Who added it, in the picture's corner as on the poster wall.
+  // Who added it, in the picture's corner as on the poster wall; a tap says it in words.
   const adder = members.findIndex((m) => m.id === item.addedBy);
-  const badge = adder >= 0 && (
-    <span className={s.badge} role="img" aria-label={addedIt(whoIs(item.addedBy!))}>
-      <Avatar name={members[adder].name} index={adder} />
-    </span>
+  const added = adder >= 0 && addedThis(whoIs(item.addedBy!));
+  const badge = added && (
+    <DialogTrigger>
+      <AriaButton className={`${s.badge} ${s.badgeButton}`} aria-label={added}>
+        <Avatar name={members[adder].name} index={adder} />
+      </AriaButton>
+      <Popover placement="bottom end" offset={2} className={s.addedBy}>
+        <Dialog aria-label={added} className={s.addedByText}>
+          {added}
+        </Dialog>
+      </Popover>
+    </DialogTrigger>
   );
 
   const text = (
@@ -354,8 +362,8 @@ export function watchingLayout(list: Watch[], seasonsOf: SeasonsOf) {
 export const toStart = (list: Watch[], kind?: Kind) =>
   list.filter((w) => !w.watchedAt && !isWatching(w) && (!kind || w.kind === kind));
 
-/** "You added it", "Mia added it". */
-export const addedIt = (who: string) => `${who.charAt(0).toUpperCase()}${who.slice(1)} added it`;
+/** "You added this", "Mia added this". */
+export const addedThis = (who: string) => `${who.charAt(0).toUpperCase()}${who.slice(1)} added this`;
 
 /** What a tile is called for screen readers: "Druk, movie, 2020, added by Mia". */
 export const tileLabel = (w: Watch, note: string) =>

@@ -1035,6 +1035,37 @@
   top: 10px;
   right: 10px;
 }
+/* On a sheet the badge is a button (tap to see who, in words): a full tap target, the avatar where it was. */
+.stillsFrame .badgeButton {
+  top: 2px;
+  right: 2px;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.badgeButton[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+  border-radius: var(--radius-round);
+}
+.addedBy {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--on-solid);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  box-shadow: var(--shadow-float);
+}
+.addedByText {
+  outline: none;
+}
 .stillsStrip {
   aspect-ratio: 16 / 9;
   border-radius: var(--radius-xl);
