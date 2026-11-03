@@ -2,10 +2,11 @@ import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import type { WSContext } from "hono/ws";
-import { app, deviceForToken } from "./app.js";
+import { app } from "./app.js";
+import { deviceForToken } from "./auth.js";
 import { db, sql } from "./db/index.js";
 import { startHeartbeat, subscribe, unsubscribe } from "./live.js";
-import { fireDue } from "./reminders.js";
+import { fireDue } from "./reminderSchedule.js";
 import { fillEnds } from "./watched.js";
 
 await migrate(db, { migrationsFolder: "./drizzle" });
