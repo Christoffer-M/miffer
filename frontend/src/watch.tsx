@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
 import { Button as AriaButton, Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
 import { ChevronLeft, ChevronRight, Film, Star, Tv } from "lucide-react";
 import type { Watch } from "./api";
-import { caughtUp, type Place, settle } from "./progress";
+import { caughtUp, count, type Place, settle } from "./progress";
 import { Avatar } from "./brand";
 import { useMembers } from "./queries/household";
 import { detailsQuery } from "./queries/watch";
@@ -166,11 +166,12 @@ const runtime = (min: number) => (min < 60 ? `${min} min` : `${Math.floor(min / 
  */
 function About({ item, eyebrow, note, children }: { item: SheetItem; eyebrow?: string; note?: string; children?: ReactNode }) {
   const { members, whoIs } = useMembers();
+  const castId = useId();
   const details = useQuery(detailsQuery(item));
   const d = details.data;
   const overview = item.overview ?? d?.overview;
   const rating = item.rating ?? d?.rating;
-  const length = d?.runtime ? runtime(d.runtime) : d?.seasons ? `${d.seasons} season${d.seasons === 1 ? "" : "s"}` : undefined;
+  const length = d?.runtime ? runtime(d.runtime) : d?.seasons ? count(d.seasons, "season") : undefined;
   const language = d?.language && d.language !== "en" ? languages.of(d.language) : undefined; // English goes without saying
   const stills = d?.stills ?? [];
   // Who added it, in the picture's corner as on the poster wall.
@@ -189,7 +190,7 @@ function About({ item, eyebrow, note, children }: { item: SheetItem; eyebrow?: s
       </Heading>
       <div className={s.infoLine}>
         <WatchMeta kind={item.kind} year={item.year} extra={length} />
-        {rating && (
+        {rating != null && (
           <span className={s.rating}>
             <Star size={14} aria-hidden fill="currentColor" />
             {rating.toFixed(1)}
@@ -239,10 +240,10 @@ function About({ item, eyebrow, note, children }: { item: SheetItem; eyebrow?: s
       {overview && <p className={s.overview}>{overview}</p>}
       {d?.cast.length ? (
         <div className={s.pickText}>
-          <span id="cast" className={ui.eyebrow}>
+          <span id={castId} className={ui.eyebrow}>
             Cast
           </span>
-          <ul className={s.cast} aria-labelledby="cast">
+          <ul className={s.cast} aria-labelledby={castId}>
             {d.cast.map((p, i) => (
               <li key={i}>
                 {p.profilePath ? (
@@ -267,7 +268,7 @@ function About({ item, eyebrow, note, children }: { item: SheetItem; eyebrow?: s
   );
 }
 
-/** Stills side by side: swipe them (native scroll snapping), or the arrows and dots scroll to one. */
+/** Stills side by side: swipe them (native scroll snapping) or use the arrows; the dots show where you are. */
 function Stills({ paths, badge }: { paths: string[]; badge: ReactNode }) {
   const strip = useRef<HTMLDivElement>(null);
   const [at, setAt] = useState(0);
@@ -284,8 +285,9 @@ function Stills({ paths, badge }: { paths: string[]; badge: ReactNode }) {
           className={s.stillsStrip}
           onScroll={(e) => setAt(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
         >
-          {paths.map((p) => (
-            <img key={p} src={`https://image.tmdb.org/t/p/w780${p}`} alt="" loading="lazy" />
+          {paths.map((p, i) => (
+            // The one after this one loads ahead, so it's there when swiped to.
+            <img key={p} src={`https://image.tmdb.org/t/p/w780${p}`} alt="" loading={i <= at + 1 ? "eager" : "lazy"} />
           ))}
         </div>
         {n > 1 && (
@@ -301,9 +303,9 @@ function Stills({ paths, badge }: { paths: string[]; badge: ReactNode }) {
         {badge}
       </div>
       {n > 1 && (
-        <div className={s.dots}>
+        <div className={s.dots} aria-hidden>
           {paths.map((p, i) => (
-            <AriaButton key={p} className={s.stillDot} aria-label={`Still ${i + 1}`} aria-current={i === at || undefined} onPress={() => go(i)} />
+            <span key={p} className={s.stillDot} data-current={i === at || undefined} />
           ))}
         </div>
       )}

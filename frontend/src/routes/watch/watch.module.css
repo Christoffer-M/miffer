@@ -242,9 +242,8 @@
   font-weight: 600;
 }
 
-/* Already on the list: shown, but nothing to do. */
+/* Already on the list: greyed, but still opens its sheet to see what it is. */
 .onList {
-  cursor: default;
   color: var(--muted);
 }
 .onList .poster {
@@ -598,8 +597,9 @@
   margin: 0;
 }
 
-/* A sheet's buttons: with three, the first (the main one) goes across the top. */
-.sheetActions > :first-child:nth-last-child(3) {
+/* A sheet's buttons: with three, the first (the main one) goes across the top; one alone goes across. */
+.sheetActions > :first-child:nth-last-child(3),
+.sheetActions > :only-child {
   grid-column: 1 / -1;
 }
 
@@ -1082,21 +1082,9 @@
 .dots {
   display: flex;
   justify-content: center;
-  gap: 2px;
+  gap: 8px;
 }
 .stillDot {
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  border: 0;
-  background: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-.stillDot::after {
-  content: "";
   width: 6px;
   height: 6px;
   border-radius: var(--radius-pill);
@@ -1105,7 +1093,7 @@
     width var(--duration-fast),
     background var(--duration-fast);
 }
-.stillDot[aria-current]::after {
+.stillDot[data-current] {
   width: 18px;
   background: var(--accent);
 }

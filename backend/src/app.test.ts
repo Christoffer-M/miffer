@@ -505,14 +505,21 @@ test("details bring a movie or series' plot, rating, cast, stills and genres, in
   const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
   const tmdb = vi.spyOn(globalThis, "fetch").mockResolvedValue(
     Response.json({
-      number_of_seasons: 4,
+      // Specials and a season announced for later don't count.
+      seasons: [
+        { season_number: 0, air_date: "2010-01-01" },
+        { season_number: 1, air_date: "2010-09-26" },
+        { season_number: 2, air_date: "2011-09-25" },
+        { season_number: 3, air_date: "2099-01-01" },
+      ],
       overview: "A prime minister.",
       vote_average: 8.06,
       vote_count: 900,
       genres: [{ id: 18, name: "Drama" }],
       original_language: "da",
       credits: { cast: [{ name: "Sidse Babett Knudsen", character: "Birgitte Nyborg", profile_path: "/a.jpg" }, { name: "Extra", character: "" }] },
-      images: { backdrops: [{ file_path: "/b.jpg" }] },
+      // Untagged stills first, then ones with an English title on them.
+      images: { backdrops: [{ file_path: "/e.jpg", iso_639_1: "en" }, { file_path: "/b.jpg", iso_639_1: null }] },
     }),
   );
   const res = await call("/watch/details?kind=series&id=31911", { token: anna.token });
@@ -520,14 +527,14 @@ test("details bring a movie or series' plot, rating, cast, stills and genres, in
     overview: "A prime minister.",
     rating: 8.1,
     runtime: null,
-    seasons: 4,
+    seasons: 2,
     genres: ["Drama"],
     language: "da",
     cast: [
       { name: "Sidse Babett Knudsen", character: "Birgitte Nyborg", profilePath: "/a.jpg" },
       { name: "Extra", character: null, profilePath: null },
     ],
-    stills: ["/b.jpg"],
+    stills: ["/b.jpg", "/e.jpg"],
   });
   const asked = new URL(String(tmdb.mock.calls[0][0]));
   expect([asked.pathname, asked.searchParams.get("append_to_response")]).toEqual(["/3/tv/31911", "credits,images"]);

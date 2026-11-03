@@ -62,14 +62,14 @@ export async function search(query: string) {
 
 type Details = {
   runtime?: number | null; // movies, in minutes
-  number_of_seasons?: number; // series
+  seasons?: { season_number: number; air_date: string | null }[]; // series
   genres?: { name: string }[];
   original_language?: string;
   overview?: string;
   vote_average?: number;
   vote_count?: number;
   credits?: { cast?: { name: string; character?: string; profile_path?: string | null }[] };
-  images?: { backdrops?: { file_path: string }[] };
+  images?: { backdrops?: { file_path: string; iso_639_1: string | null }[] };
 };
 
 /** Out of 10, to one decimal; a handful of votes says little, so those aren't shown. */
@@ -80,14 +80,14 @@ const rating = (r: { vote_average?: number; vote_count?: number }) =>
 export async function details(kind: "movie" | "series", tmdbId: number) {
   const d = await get<Details>(`/${kind === "movie" ? "movie" : "tv"}/${tmdbId}`, {
     append_to_response: "credits,images",
-    include_image_language: "null", // stills without a title written on them
+    include_image_language: "null,en", // English titles written on them only when there's nothing else
     language: "en-US",
   });
   return {
     overview: d.overview || null,
     rating: rating(d),
     runtime: d.runtime || null,
-    seasons: d.number_of_seasons || null,
+    seasons: out(d.seasons).length || null, // as Watching counts them
     genres: (d.genres ?? []).map((g) => g.name),
     language: d.original_language || null, // a code, "da": the phone names it
     cast: (d.credits?.cast ?? []).slice(0, 10).map((p) => ({
@@ -95,7 +95,10 @@ export async function details(kind: "movie" | "series", tmdbId: number) {
       character: p.character || null,
       profilePath: p.profile_path ?? null,
     })),
-    stills: (d.images?.backdrops ?? []).slice(0, 8).map((b) => b.file_path),
+    stills: (d.images?.backdrops ?? [])
+      .sort((a, b) => Number(a.iso_639_1 !== null) - Number(b.iso_639_1 !== null)) // stable: TMDB's order otherwise
+      .slice(0, 8)
+      .map((b) => b.file_path),
   };
 }
 
@@ -109,6 +112,12 @@ type Show = {
   last_episode_to_air?: { season_number: number; episode_number: number } | null;
 };
 
+/** A series' seasons that are out: not specials (TMDB's season 0), not one announced for later. */
+function out<S extends { season_number: number; air_date: string | null }>(seasons: S[] = []) {
+  const today = new Date().toISOString().slice(0, 10); // TMDB's dates are YYYY-MM-DD
+  return seasons.filter((s) => s.season_number > 0 && s.air_date && s.air_date <= today);
+}
+
 /**
  * How many episodes each season of a series has, in order: [10, 10, 8] for three seasons.
  * Specials (TMDB's season 0) are left out, and so is what isn't out yet: a season announced
@@ -119,10 +128,8 @@ export async function seasons(tmdbId: number) {
   const kept = seasonsKept.get(tmdbId);
   if (kept && Date.now() - kept.at < SEASONS_FOR_MS) return kept.seasons;
   const show = await get<Show>(`/tv/${tmdbId}`);
-  const today = new Date().toISOString().slice(0, 10); // TMDB's dates are YYYY-MM-DD
   const last = show.last_episode_to_air;
-  const fresh = (show.seasons ?? [])
-    .filter((s) => s.season_number > 0 && s.air_date && s.air_date <= today)
+  const fresh = out(show.seasons)
     .sort((a, b) => a.season_number - b.season_number)
     .map((s) => (s.season_number === last?.season_number ? last.episode_number : s.episode_count));
   seasonsKept.delete(tmdbId); // re-added last: a Map keeps insertion order
