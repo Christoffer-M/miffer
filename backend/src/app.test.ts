@@ -638,13 +638,21 @@ test("a series' seasons come from TMDB, without the specials", async () => {
   tmdb.mockRestore();
 });
 
-test("a season's episode names come from TMDB, in order", async () => {
+test("a season's episodes come from TMDB, in order, with their stills", async () => {
   const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
   const tmdb = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-    Response.json({ episodes: [{ episode_number: 2, name: "Two" }, { episode_number: 1, name: "Pilot" }] }),
+    Response.json({
+      episodes: [
+        { episode_number: 2, name: "Two", still_path: null },
+        { episode_number: 1, name: "Pilot", still_path: "/pilot.jpg" },
+      ],
+    }),
   );
   const res = await call("/watch/episodes?id=1408&season=3", { token: anna.token });
-  expect(await res.json()).toEqual(["Pilot", "Two"]);
+  expect(await res.json()).toEqual([
+    { name: "Pilot", still: "/pilot.jpg" },
+    { name: "Two", still: null },
+  ]);
   expect(new URL(String(tmdb.mock.calls[0][0])).pathname).toBe("/3/tv/1408/season/3");
   tmdb.mockResolvedValue(new Response("", { status: 404 }));
   expect((await call("/watch/episodes?id=1408&season=9", { token: anna.token })).status).toBe(502);

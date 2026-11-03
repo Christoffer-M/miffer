@@ -527,7 +527,7 @@ const watchRoutes = new Hono<Env>()
       return c.json(found);
     },
   )
-  // A season's episode names, for Watching's sheet: ?id=1408&season=3 gives ["Pilot", ...].
+  // A season's episodes, for Watching's sheet: ?id=1408&season=3 gives [{ name: "Pilot", still: "/a.jpg" }, ...].
   .get(
     "/episodes",
     zValidator("query", z.object({ id: z.coerce.number().int().positive(), season: z.coerce.number().int().positive() })),

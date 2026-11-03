@@ -138,12 +138,13 @@ export async function seasons(tmdbId: number) {
   return fresh;
 }
 
-/** The names of a season's episodes, in order: index 0 is episode 1. */
+type Episode = { episode_number: number; name: string; still_path?: string | null };
+
+/** A season's episodes, in order (index 0 is episode 1): each one's name and still, a TMDB image name. */
 export async function episodes(tmdbId: number, season: number) {
   // ponytail: not kept like seasons; a phone asks once per season it opens, keep them if TMDB complains
-  const { episodes = [] } = await get<{ episodes?: { episode_number: number; name: string }[] }>(
-    `/tv/${tmdbId}/season/${season}`,
-    { language: "en-US" },
-  );
-  return episodes.sort((a, b) => a.episode_number - b.episode_number).map((e) => e.name);
+  const { episodes = [] } = await get<{ episodes?: Episode[] }>(`/tv/${tmdbId}/season/${season}`, { language: "en-US" });
+  return episodes
+    .sort((a, b) => a.episode_number - b.episode_number)
+    .map((e) => ({ name: e.name, still: e.still_path ?? null }));
 }

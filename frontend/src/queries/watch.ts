@@ -125,7 +125,7 @@ export const seasonsQuery = (tmdbId: number | null) =>
     retry: false,
   });
 
-/** A season's episode names, when Watching's sheet opens it. Not kept on the phone: offline it shows numbers. */
+/** A season's episode names and stills, when Watching's sheet opens it. Not kept on the phone: offline it shows numbers. */
 export const episodesQuery = (tmdbId: number | null, season: number) =>
   queryOptions({
     queryKey: ["episodes", tmdbId, season],

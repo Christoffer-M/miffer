@@ -312,15 +312,23 @@ function SeasonList({ tmdbId, at, seasons, onChange }: SeasonListProps) {
   );
 }
 
-/** A season's episodes, by name once TMDB has them; numbers alone before that, or offline. */
+/** A season's episodes, with their names and stills once TMDB has them; numbers alone before that, or offline. */
 function Episodes({ tmdbId, season, at, seasons, onChange }: SeasonListProps & { season: number }) {
-  const { data: names } = useQuery(episodesQuery(tmdbId, season));
+  const { data: found } = useQuery(episodesQuery(tmdbId, season));
   const seenUpTo = seasonParts(at, seasons)[season - 1];
+  const list = useRef<HTMLOListElement>(null);
+
+  // Opened partway through: scrolled to the first unwatched one, the last one watched above it.
+  useEffect(() => {
+    const first = list.current?.querySelector<HTMLElement>(`.${s.episodeRow}:not([data-seen])`);
+    if (first) list.current!.scrollTop = first.offsetTop - first.offsetHeight;
+  }, []);
+
   return (
-    <ol className={s.episodeList} aria-label={`Season ${season} episodes`}>
+    <ol className={s.episodeList} ref={list} aria-label={`Season ${season} episodes`}>
       {Array.from({ length: seasons[season - 1] }, (_, i) => {
         const episode = i + 1;
-        const name = names?.[i];
+        const { name, still } = found?.[i] ?? {};
         const seen = episode <= seenUpTo;
         const tapTo = tapEpisode(at, { season, episode }, seasons);
         const isLastSeen = seen && tapTo.season === season && tapTo.episode === episode;
@@ -332,8 +340,21 @@ function Episodes({ tmdbId, season, at, seasons, onChange }: SeasonListProps & {
               aria-label={`Episode ${episode}${name ? `, ${name}` : ""}${isLastSeen ? ", the last one watched: tap to unmark" : seen ? ", watched" : ""}`}
               onPress={() => onChange(tapTo)}
             >
-              <span className={s.episodeNumber}>{episode}</span>
-              <span className={s.episodeName}>{name || `Episode ${episode}`}</span>
+              <span className={s.episodeStill}>
+                {still && (
+                  <img
+                    src={`https://image.tmdb.org/t/p/w185${still}`}
+                    alt=""
+                    loading="lazy"
+                    onError={(e) => (e.currentTarget.hidden = true)} // offline: the tint stays
+                  />
+                )}
+              </span>
+              <span className={s.episodeText}>
+                {name && <span className={s.episodeNumber}>Episode {episode}</span>}
+                <span className={s.episodeName}>{name || `Episode ${episode}`}</span>
+              </span>
+              <span className={s.episodeCheck}>{seen && <Check size={16} strokeWidth={3} aria-hidden />}</span>
             </AriaButton>
           </li>
         );
