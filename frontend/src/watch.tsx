@@ -1,10 +1,12 @@
-import { type ReactNode, useState } from "react";
-import { Button as AriaButton, Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
-import { Film, Tv } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { type ReactNode, useId, useRef, useState } from "react";
+import { Button as AriaButton, Dialog, DialogTrigger, Heading, Modal, ModalOverlay, Popover } from "react-aria-components";
+import { ChevronLeft, ChevronRight, Film, Star, Tv } from "lucide-react";
 import type { Watch } from "./api";
-import { caughtUp, type Place, settle } from "./progress";
+import { caughtUp, count, type Place, settle } from "./progress";
 import { Avatar } from "./brand";
 import { useMembers } from "./queries/household";
+import { detailsQuery } from "./queries/watch";
 import ui from "./ui.module.css";
 import sheet from "./components/Confirm.module.css";
 import s from "./routes/watch/watch.module.css";
@@ -107,47 +109,215 @@ export function PosterTile({ item, label, onPress, sub, tag, flag }: TileProps) 
   );
 }
 
+/** A movie or series on the list, or a search result, which brings its plot and rating along. */
+type SheetItem = Pick<Watch, "title" | "kind" | "year" | "posterPath" | "tmdbId"> & {
+  addedBy?: string | null;
+  overview?: string | null;
+  rating?: number | null;
+};
+
 type SheetProps = {
   /** Kept while the sheet slides away, so it doesn't empty out as it goes. */
-  item?: Watch;
+  item?: SheetItem;
   isOpen: boolean;
   onClose: () => void;
   /** Above the title, e.g. "Tonight". */
   eyebrow?: string;
-  /** The line under the meta, e.g. "Mia added it". */
-  note: string;
+  /** A line under the genres, e.g. "Watched 3 Nov". Who added it is a badge on the picture. */
+  note?: string;
   /** Two buttons, or three with the first (the main one) across the whole width. */
   actions: ReactNode;
-  /** Between the title and the buttons, e.g. where a series is up to. */
+  /** Under the title, e.g. where a series is up to. */
   children?: ReactNode;
 };
 
-/** A poster big, with what's known about it and two things to do. Slides up from the bottom. */
+/**
+ * A movie or series big, the same wherever it's tapped: stills, rating, genres, plot and cast from
+ * TMDB, and what can be done with it. Tall: its middle scrolls, the buttons stay put. Slides up from the bottom.
+ */
 export function WatchSheet({ item, isOpen, onClose, eyebrow, note, actions, children }: SheetProps) {
   return (
     <ModalOverlay isOpen={isOpen} onOpenChange={(open) => !open && onClose()} isDismissable className={sheet.overlay}>
-      <Modal className={sheet.sheet}>
-        <Dialog className={sheet.dialog}>
+      <Modal className={`${sheet.sheet} ${s.infoSheet}`}>
+        <Dialog className={`${sheet.dialog} ${s.info}`}>
           {item && (
             <>
-              <div className={s.pick}>
-                <Poster path={item.posterPath} kind={item.kind} size="large" />
-                <div className={s.pickText}>
-                  {eyebrow && <span className={ui.eyebrow}>{eyebrow}</span>}
-                  <Heading slot="title" className={s.pickTitle}>
-                    {item.title}
-                  </Heading>
-                  <WatchMeta kind={item.kind} year={item.year} />
-                  <span className={`${ui.muted} ${ui.small}`}>{note}</span>
-                </div>
+              <div className={s.infoBody}>
+                {/* Afresh for another one (Tonight's Another), so the stills start at the first. */}
+                <About key={`${item.kind}-${item.tmdbId ?? item.title}`} item={item} eyebrow={eyebrow} note={note}>
+                  {children}
+                </About>
               </div>
-              {children}
               <div className={`${sheet.actions} ${s.sheetActions}`}>{actions}</div>
             </>
           )}
         </Dialog>
       </Modal>
     </ModalOverlay>
+  );
+}
+
+const languages = new Intl.DisplayNames(["en"], { type: "language" });
+const runtime = (min: number) => (min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`);
+
+/**
+ * A sheet's middle. A search result's plot and rating show at once; the rest arrives from TMDB.
+ * Without stills (typed by hand, or TMDB has none) the poster goes beside the title instead.
+ */
+function About({ item, eyebrow, note, children }: { item: SheetItem; eyebrow?: string; note?: string; children?: ReactNode }) {
+  const { members, whoIs } = useMembers();
+  const castId = useId();
+  const details = useQuery(detailsQuery(item));
+  const d = details.data;
+  const overview = item.overview ?? d?.overview;
+  const rating = item.rating ?? d?.rating;
+  const length = d?.runtime ? runtime(d.runtime) : d?.seasons ? count(d.seasons, "season") : undefined;
+  const language = d?.language && d.language !== "en" ? languages.of(d.language) : undefined; // English goes without saying
+  const stills = d?.stills ?? [];
+  // Who added it, in the picture's corner as on the poster wall; a tap says it in words.
+  const adder = members.findIndex((m) => m.id === item.addedBy);
+  const added = adder >= 0 && addedThis(whoIs(item.addedBy!));
+  const badge = added && (
+    <DialogTrigger>
+      <AriaButton className={`${s.badge} ${s.badgeButton}`} aria-label={added}>
+        <Avatar name={members[adder].name} index={adder} />
+      </AriaButton>
+      <Popover placement="bottom end" offset={2} className={s.addedBy}>
+        <Dialog aria-label={added} className={s.addedByText}>
+          {added}
+        </Dialog>
+      </Popover>
+    </DialogTrigger>
+  );
+
+  const text = (
+    <div className={s.pickText}>
+      {eyebrow && <span className={ui.eyebrow}>{eyebrow}</span>}
+      <Heading slot="title" className={s.pickTitle}>
+        {item.title}
+      </Heading>
+      <div className={s.infoLine}>
+        <WatchMeta kind={item.kind} year={item.year} extra={length} />
+        {rating != null && (
+          <span className={s.rating}>
+            <Star size={14} aria-hidden fill="currentColor" />
+            {rating.toFixed(1)}
+            <span>/ 10</span>
+          </span>
+        )}
+      </div>
+      {(d?.genres.length || language) && (
+        <div className={s.genres}>
+          {d?.genres.map((g) => (
+            <span key={g} className={s.genre}>
+              {g}
+            </span>
+          ))}
+          {language && <span className={`${s.genre} ${s.genreNeutral}`}>{language}</span>}
+        </div>
+      )}
+      {note && <span className={`${ui.muted} ${ui.small}`}>{note}</span>}
+    </div>
+  );
+
+  return (
+    <>
+      {/* The tint holds the stills' place while they load. */}
+      {details.isLoading || stills.length ? (
+        <>
+          {stills.length ? (
+            <Stills paths={stills} badge={badge} />
+          ) : (
+            <div className={s.stillsFrame}>
+              <div className={s.stillsStrip} />
+              {badge}
+            </div>
+          )}
+          {text}
+        </>
+      ) : (
+        <div className={s.pick}>
+          <span className={s.stillsFrame}>
+            <Poster path={item.posterPath} kind={item.kind} size="large" />
+            {badge}
+          </span>
+          {text}
+        </div>
+      )}
+      {children}
+      {overview && <p className={s.overview}>{overview}</p>}
+      {d?.cast.length ? (
+        <div className={s.pickText}>
+          <span id={castId} className={ui.eyebrow}>
+            Cast
+          </span>
+          <ul className={s.cast} aria-labelledby={castId}>
+            {d.cast.map((p, i) => (
+              <li key={i}>
+                {p.profilePath ? (
+                  <img className={s.face} src={`https://image.tmdb.org/t/p/w185${p.profilePath}`} alt="" loading="lazy" />
+                ) : (
+                  <span className={s.face} aria-hidden>
+                    {p.name
+                      .split(" ")
+                      .map((w) => w[0])
+                      .join("")
+                      .slice(0, 2)}
+                  </span>
+                )}
+                <span className={s.castName}>{p.name}</span>
+                {p.character && <span className={s.castRole}>{p.character}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+/** Stills side by side: swipe them (native scroll snapping) or use the arrows; the dots show where you are. */
+function Stills({ paths, badge }: { paths: string[]; badge: ReactNode }) {
+  const strip = useRef<HTMLDivElement>(null);
+  const [at, setAt] = useState(0);
+  const n = paths.length;
+  const go = (i: number) => {
+    const el = strip.current!;
+    el.scrollTo({ left: ((i + n) % n) * el.clientWidth, behavior: "smooth" });
+  };
+  return (
+    <div className={s.stills} role="group" aria-roledescription="carousel" aria-label="Stills">
+      <div className={s.stillsFrame}>
+        <div
+          ref={strip}
+          className={s.stillsStrip}
+          onScroll={(e) => setAt(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
+        >
+          {paths.map((p, i) => (
+            // The one after this one loads ahead, so it's there when swiped to.
+            <img key={p} src={`https://image.tmdb.org/t/p/w780${p}`} alt="" loading={i <= at + 1 ? "eager" : "lazy"} />
+          ))}
+        </div>
+        {n > 1 && (
+          <>
+            <AriaButton className={`${s.stillsArrow} ${s.prev}`} aria-label="Previous still" onPress={() => go(at - 1)}>
+              <ChevronLeft size={20} aria-hidden />
+            </AriaButton>
+            <AriaButton className={`${s.stillsArrow} ${s.next}`} aria-label="Next still" onPress={() => go(at + 1)}>
+              <ChevronRight size={20} aria-hidden />
+            </AriaButton>
+          </>
+        )}
+        {badge}
+      </div>
+      {n > 1 && (
+        <div className={s.dots} aria-hidden>
+          {paths.map((p, i) => (
+            <span key={p} className={s.stillDot} data-current={i === at || undefined} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -192,8 +362,8 @@ export function watchingLayout(list: Watch[], seasonsOf: SeasonsOf) {
 export const toStart = (list: Watch[], kind?: Kind) =>
   list.filter((w) => !w.watchedAt && !isWatching(w) && (!kind || w.kind === kind));
 
-/** "You added it", "Mia added it". */
-export const addedIt = (who: string) => `${who.charAt(0).toUpperCase()}${who.slice(1)} added it`;
+/** "You added this", "Mia added this". */
+export const addedThis = (who: string) => `${who.charAt(0).toUpperCase()}${who.slice(1)} added this`;
 
 /** What a tile is called for screen readers: "Druk, movie, 2020, added by Mia". */
 export const tileLabel = (w: Watch, note: string) =>

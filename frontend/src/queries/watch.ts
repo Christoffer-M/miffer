@@ -22,6 +22,16 @@ export const searchQuery = (q: string) =>
     retry: false,
   });
 
+/** Plot, rating, cast, stills and genres from TMDB, for a movie or series' sheet. None for one typed by hand. */
+export const detailsQuery = (w: { kind: Watch["kind"]; tmdbId: number | null }) =>
+  queryOptions({
+    queryKey: ["details", w.kind, w.tmdbId],
+    queryFn: async () => (await ok(api.watch.details.$get({ query: { kind: w.kind, id: String(w.tmdbId) } }))).json(),
+    enabled: w.tmdbId !== null,
+    staleTime: Infinity,
+    retry: false,
+  });
+
 const DAY = 24 * 60 * 60 * 1000;
 // Under remember.ts' prefix, so forgetAll() clears it too. Renamed when the server changes
 // what seasons mean: v2 counts only episodes that are out, so v1's announced ones are dropped.

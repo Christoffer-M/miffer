@@ -242,9 +242,8 @@
   font-weight: 600;
 }
 
-/* Already on the list: shown, but nothing to do. */
+/* Already on the list: greyed, but still opens its sheet to see what it is. */
 .onList {
-  cursor: default;
   color: var(--muted);
 }
 .onList .poster {
@@ -598,8 +597,9 @@
   margin: 0;
 }
 
-/* A sheet's buttons: with three, the first (the main one) goes across the top. */
-.sheetActions > :first-child:nth-last-child(3) {
+/* A sheet's buttons: with three, the first (the main one) goes across the top; one alone goes across. */
+.sheetActions > :first-child:nth-last-child(3),
+.sheetActions > :only-child {
   grid-column: 1 / -1;
 }
 
@@ -951,4 +951,224 @@
   font-weight: 700;
   text-align: center;
   outline: none;
+}
+
+/* A movie or series' sheet (WatchSheet in watch.tsx). Tall: its middle scrolls, the buttons stay put. */
+.infoSheet {
+  max-height: calc(var(--app-height, 100dvh) - 48px);
+  display: flex;
+}
+.info {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  gap: 16px;
+}
+/* Edge to edge, so the cast row runs off the sides as it scrolls. */
+.infoBody {
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 -20px;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.infoBody > * {
+  flex-shrink: 0;
+}
+.infoLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+.rating svg {
+  color: var(--accent);
+}
+.rating span {
+  font-weight: 400;
+}
+.genres {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.genre {
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.genreNeutral {
+  background: var(--neutral-tint);
+  color: var(--neutral-ink);
+}
+.overview {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-base);
+  line-height: 1.5;
+}
+
+/* Stills, one at a time. The tint shows while they load. */
+.stills {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.stillsFrame {
+  position: relative; /* holds the arrows and who added it */
+  flex-shrink: 0;
+}
+.stillsFrame .badge {
+  top: 10px;
+  right: 10px;
+}
+/* On a sheet the badge is a button (tap to see who, in words): a full tap target, the avatar where it was. */
+.stillsFrame .badgeButton {
+  top: 2px;
+  right: 2px;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.badgeButton[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+  border-radius: var(--radius-round);
+}
+.addedBy {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--on-solid);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  box-shadow: var(--shadow-float);
+}
+.addedByText {
+  outline: none;
+}
+.stillsStrip {
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-xl);
+  background: var(--accent-tint);
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.stillsStrip::-webkit-scrollbar {
+  display: none;
+}
+.stillsStrip img {
+  width: 100%;
+  height: 100%;
+  flex-shrink: 0;
+  object-fit: cover;
+  scroll-snap-align: start;
+}
+.stillsArrow {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  border: 0;
+  border-radius: var(--radius-round);
+  background: rgb(var(--ink-rgb) / 0.55);
+  color: var(--on-solid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.stillsArrow[data-focus-visible] {
+  outline: var(--focus-width) solid var(--accent-tint);
+  outline-offset: 2px;
+}
+.prev {
+  left: 6px;
+}
+.next {
+  right: 6px;
+}
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.stillDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+  transition:
+    width var(--duration-fast),
+    background var(--duration-fast);
+}
+.stillDot[data-current] {
+  width: 18px;
+  background: var(--accent);
+}
+
+/* The cast, sideways: portraits 2:3 as TMDB has them, left-aligned under "Cast". */
+.cast {
+  margin: 4px -20px 0;
+  padding: 0 20px;
+  list-style: none;
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cast::-webkit-scrollbar {
+  display: none;
+}
+.cast li {
+  width: 76px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.face {
+  width: 64px;
+  height: 96px;
+  border-radius: var(--radius-lg);
+  object-fit: cover;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.castName {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.25;
+}
+.castRole {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  line-height: 1.25;
 }
