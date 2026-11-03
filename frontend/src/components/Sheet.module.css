@@ -1,0 +1,62 @@
+/* react-aria lays the overlay over the whole page and slides the sheet in, out and along with a
+   swipe by scrolling it (Sheet.tsx). These only say how it looks. */
+.overlay {
+  z-index: var(--z-sheet);
+}
+/* A list animating behind an open sheet stays behind it (tokens.css). */
+:global(.list-transition) .overlay {
+  view-transition-name: overlay;
+}
+
+.backdrop {
+  background: var(--scrim);
+}
+/* The backdrop's swipeAnimation: clear while the sheet is off screen, the scrim once it's all the way up. */
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* content-box: react-aria pads its bottom by a screen's height (overscrollPadding), so pulling it
+   up shows more sheet rather than the page. That padding mustn't count towards max-height. */
+.sheet {
+  box-sizing: content-box;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100% - 24px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  overflow: clip;
+}
+
+/* Says the sheet swipes down. In the content's top padding, so it covers nothing. */
+.grabber {
+  position: absolute;
+  z-index: 1;
+  top: 6px;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  margin-left: -18px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+/* Scrolls when the sheet is too tall; at the top, swiping down moves the sheet instead. The page
+   doesn't resize for the phone keyboard (keyboard.ts): --sheet-scroll-padding-y is how much of the
+   sheet it covers, so the last field can still scroll up above it. */
+.content {
+  outline: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 20px calc(20px + env(safe-area-inset-bottom) + var(--sheet-scroll-padding-y, 0px));
+}

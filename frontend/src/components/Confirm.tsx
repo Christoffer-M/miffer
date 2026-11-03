@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
-import { Dialog, DialogTrigger, Heading, ModalOverlay } from "react-aria-components";
+import { Heading, SheetTrigger } from "react-aria-components";
 import { Button } from "./Button";
 import { Sheet } from "./Sheet";
 import s from "./Confirm.module.css";
@@ -16,36 +16,32 @@ type Props = {
 /** Asks before doing something hard to undo. Shown as a sheet from the bottom of the screen. */
 export function Confirm({ children, title, message, confirmLabel, onConfirm }: Props) {
   return (
-    <DialogTrigger>
+    <SheetTrigger>
       {children}
-      <ModalOverlay isDismissable className={s.overlay}>
-        <Sheet>
-          <Dialog role="alertdialog" className={s.dialog}>
-            {({ close }) => (
-              <>
-                <Heading slot="title" className={s.title}>
-                  {title}
-                </Heading>
-                <p className={s.message}>{message}</p>
-                <div className={s.actions}>
-                  <Button variant="outline" onPress={close} autoFocus>
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="danger"
-                    onPress={() => {
-                      onConfirm();
-                      close();
-                    }}
-                  >
-                    {confirmLabel}
-                  </Button>
-                </div>
-              </>
-            )}
-          </Dialog>
-        </Sheet>
-      </ModalOverlay>
-    </DialogTrigger>
+      <Sheet role="alertdialog">
+        {({ close }) => (
+          <>
+            <Heading slot="title" className={s.title}>
+              {title}
+            </Heading>
+            <p className={s.message}>{message}</p>
+            <div className={s.actions}>
+              <Button variant="outline" onPress={close} autoFocus>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onPress={() => {
+                  onConfirm();
+                  close();
+                }}
+              >
+                {confirmLabel}
+              </Button>
+            </div>
+          </>
+        )}
+      </Sheet>
+    </SheetTrigger>
   );
 }

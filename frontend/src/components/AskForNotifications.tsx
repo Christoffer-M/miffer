@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Dialog, Heading, ModalOverlay } from "react-aria-components";
+import { Heading } from "react-aria-components";
 import { canPush, useSetPush } from "../mutations/household";
 import { meQuery } from "../queries/household";
 import { Button } from "./Button";
@@ -23,26 +23,22 @@ export function AskForNotifications() {
     !notNow && canPush && !!data?.pushKey && !data.pushOn && Notification.permission !== "denied";
 
   return (
-    <ModalOverlay isOpen={ask} onOpenChange={(open) => !open && setNotNow(true)} isDismissable className={s.overlay}>
-      <Sheet>
-        <Dialog className={s.dialog}>
-          <Heading slot="title" className={s.title}>
-            Know when something's added?
-          </Heading>
-          <p className={s.message}>
-            Get a notification when someone in your household adds to the list, when a reminder is due, and when a series you've watched gets a new season.
-          </p>
-          {setPush.error && <p className={ui.error}>{setPush.error.message}</p>}
-          <div className={s.actions}>
-            <Button variant="outline" onPress={() => setNotNow(true)}>
-              Not now
-            </Button>
-            <Button onPress={() => setPush.mutate(true)} isDisabled={setPush.isPending}>
-              Turn on
-            </Button>
-          </div>
-        </Dialog>
-      </Sheet>
-    </ModalOverlay>
+    <Sheet isOpen={ask} onOpenChange={(open) => !open && setNotNow(true)}>
+      <Heading slot="title" className={s.title}>
+        Know when something's added?
+      </Heading>
+      <p className={s.message}>
+        Get a notification when someone in your household adds to the list, when a reminder is due, and when a series you've watched gets a new season.
+      </p>
+      {setPush.error && <p className={ui.error}>{setPush.error.message}</p>}
+      <div className={s.actions}>
+        <Button variant="outline" onPress={() => setNotNow(true)}>
+          Not now
+        </Button>
+        <Button onPress={() => setPush.mutate(true)} isDisabled={setPush.isPending}>
+          Turn on
+        </Button>
+      </div>
+    </Sheet>
   );
 }
