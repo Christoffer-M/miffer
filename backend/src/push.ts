@@ -43,7 +43,15 @@ export async function pushAdded(householdId: string, deviceId: string, item: str
   await Promise.all(phones.map(({ id, push }) => id !== deviceId && push && send(id, push, { body })));
 }
 
-const REPEATS = { day: "daily", week: "weekly", month: "monthly" };
+/** Tells everyone in the household with notifications on that a series they watched has a new season out. */
+export async function pushNewSeason(householdId: string, watchId: string, title: string, season: number) {
+  if (!pushKey) return;
+  const phones = await householdPhones(householdId);
+  const payload = { title, body: `Season ${season} is out`, tag: `season-${watchId}`, url: "/watch/watched" };
+  await Promise.all(phones.map(({ id, push }) => push && send(id, push, payload)));
+}
+
+const REPEATS ={ day: "daily", week: "weekly", month: "monthly" };
 
 /** Nudges whoever a reminder is for: one phone, or everyone when it's for no one in particular. */
 export async function pushReminder(r: typeof schema.reminders.$inferSelect) {

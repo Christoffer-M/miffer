@@ -1,0 +1,1 @@
+ALTER TABLE "watch" ADD COLUMN "told_season" integer;

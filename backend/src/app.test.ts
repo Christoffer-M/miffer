@@ -694,6 +694,45 @@ test("a series watched without saying where it ended gets the end of its last se
   tmdb.mockRestore();
 });
 
+test("a new season of a watched series is announced once, even with the app closed", async () => {
+  const send = vi.spyOn(webpush, "sendNotification").mockResolvedValue({ statusCode: 201, body: "", headers: {} });
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  const endpoint = `https://fcm.googleapis.com/fcm/send/${anna.deviceId}`;
+  await call("/households/me/push", { method: "PUT", token: anna.token, body: { endpoint, keys: { p256dh: "k", auth: "a" } } });
+  let out = 2;
+  const tmdb = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+    Response.json({
+      seasons: Array.from({ length: out }, (_, i) => ({ season_number: i + 1, episode_count: 8, air_date: "2020-01-01" })),
+    }),
+  );
+  const later = (hours: number) => vi.spyOn(Date, "now").mockReturnValue(Date.now() + hours * 60 * 60 * 1000); // past tmdb.ts' 6h
+  const tmdbId = 700_000 + Math.floor(Math.random() * 90_000);
+  const title = `Severance ${tmdbId}`;
+  const id = crypto.randomUUID();
+  await call("/watch", { method: "POST", token: anna.token, body: { id, title, kind: "series", tmdbId, year: null, posterPath: null } });
+  // Season 2 came out after it was watched, but before this existed: not news.
+  await db.update(schema.watch).set({ watchedAt: new Date(), season: 1, episode: 9 }).where(eq(schema.watch.id, id));
+  const sentHere = () => send.mock.calls.filter(([, payload]) => String(payload).includes(title));
+
+  await fillEnds();
+  expect(sentHere()).toHaveLength(0);
+
+  out = 3;
+  later(7);
+  await fillEnds();
+  await fillEnds(); // and only once
+  expect(sentHere()).toEqual([
+    [
+      expect.objectContaining({ endpoint }),
+      JSON.stringify({ title, body: "Season 3 is out", tag: `season-${id}`, url: "/watch/watched" }),
+      expect.anything(),
+    ],
+  ]);
+  vi.mocked(Date.now).mockRestore();
+  tmdb.mockRestore();
+  send.mockRestore();
+});
+
 test("series finished partway before Finished meant all of it count as all of it", async () => {
   const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
   const watchedAt = new Date();

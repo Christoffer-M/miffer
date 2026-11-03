@@ -52,8 +52,19 @@ self.addEventListener("push", (e) => {
   try {
     data = e.data.json();
   } catch {} // no or odd payload: still show something, or Safari drops the subscription
-  e.waitUntil(data.reminder ? showReminder(data) : showAdded(data.body ?? "Something was added to the list"));
+  e.waitUntil(
+    data.reminder
+      ? showReminder(data)
+      : data.url
+        ? showNews(data)
+        : showAdded(data.body ?? "Something was added to the list"),
+  );
 });
+
+// News with a screen to open on a tap, like a new season out (push.ts).
+function showNews({ title, body, tag, url }) {
+  return self.registration.showNotification(title, { body, tag, data: { url } });
+}
 
 // Several adds in a row stack up in one notification (the last few) instead of one each.
 function showAdded(body) {
