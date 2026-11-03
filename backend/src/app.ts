@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import { zValidator } from "@hono/zod-validator";
-import { and, desc, eq, gt, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gt, isNull, lte, sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { type Context, Hono } from "hono";
 import { createMiddleware } from "hono/factory";
@@ -455,11 +455,14 @@ const forSeries = (value: number | Date | null, type: "integer" | "timestamptz")
 // Batches of seasons a phone can ask for at once (Watch asks for every series it shows).
 const SEASONS_AT_ONCE = 100;
 
+// What phones get of a watch row: all but toldSeason, which only the server uses (watched.ts).
+const { toldSeason: _, ...watchShown } = getTableColumns(watch);
+
 const watchRoutes = new Hono<Env>()
   .use(auth)
   .get("/", async (c) => {
     const rows = await db
-      .select()
+      .select(watchShown)
       .from(watch)
       .where(eq(watch.householdId, c.var.householdId))
       .orderBy(desc(watch.createdAt));
