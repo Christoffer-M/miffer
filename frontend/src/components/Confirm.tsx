@@ -1,6 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 import { Dialog, DialogTrigger, Heading, Modal, ModalOverlay } from "react-aria-components";
 import { Button } from "./Button";
+import { SheetGrabber } from "./SheetGrabber";
 import s from "./Confirm.module.css";
 
 type Props = {
@@ -19,6 +20,7 @@ export function Confirm({ children, title, message, confirmLabel, onConfirm }: P
       {children}
       <ModalOverlay isDismissable className={s.overlay}>
         <Modal className={s.sheet}>
+          <SheetGrabber />
           <Dialog role="alertdialog" className={s.dialog}>
             {({ close }) => (
               <>

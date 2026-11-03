@@ -4,6 +4,7 @@ import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
 import { canPush, useSetPush } from "../mutations/household";
 import { meQuery } from "../queries/household";
 import { Button } from "./Button";
+import { SheetGrabber } from "./SheetGrabber";
 import s from "./Confirm.module.css";
 import ui from "../ui.module.css";
 
@@ -24,6 +25,7 @@ export function AskForNotifications() {
   return (
     <ModalOverlay isOpen={ask} onOpenChange={(open) => !open && setNotNow(true)} isDismissable className={s.overlay}>
       <Modal className={s.sheet}>
+        <SheetGrabber />
         <Dialog className={s.dialog}>
           <Heading slot="title" className={s.title}>
             Know when something's added?

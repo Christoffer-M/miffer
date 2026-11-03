@@ -12,6 +12,7 @@ import { remindersQuery } from "../queries/reminders";
 import { dueAt, dueFor, formatBack, formatDue, nextTime, REPEATS, SNOOZES } from "../reminders";
 import { Button } from "./Button";
 import { ReminderSheet } from "./ReminderSheet";
+import { SheetGrabber } from "./SheetGrabber";
 import { UndoBar, useUndoable } from "./UndoBar";
 import confirm from "./Confirm.module.css";
 import ui from "../ui.module.css";
@@ -124,6 +125,7 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
         className={confirm.overlay}
       >
         <Modal className={`${confirm.sheet} ${s.sheet}`}>
+          <SheetGrabber />
           {shown && (
             <Dialog className={s.dialog}>
               {/* One item in the column, so the empty status line under the handle takes no room. */}

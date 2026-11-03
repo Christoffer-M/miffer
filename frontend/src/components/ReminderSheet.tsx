@@ -21,6 +21,7 @@ import { isOffline } from "../offline";
 import { meQuery, useMembers } from "../queries/household";
 import { quickTimes, toLocalInput } from "../reminders";
 import { Button } from "./Button";
+import { SheetGrabber } from "./SheetGrabber";
 import { TextField } from "./TextField";
 import confirm from "./Confirm.module.css";
 import field from "./TextField.module.css";
@@ -76,6 +77,7 @@ export function ReminderSheet({ reminder, onClose }: { reminder?: Reminder; onCl
   return (
     <ModalOverlay isOpen isDismissable onOpenChange={(open) => !open && onClose()} className={confirm.overlay}>
       <Modal className={`${confirm.sheet} ${s.sheet}`}>
+        <SheetGrabber />
         <Dialog className={confirm.dialog}>
           <Form className={s.form} onSubmit={save}>
             <div className={s.head}>
