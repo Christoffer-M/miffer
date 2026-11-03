@@ -22,6 +22,15 @@ export const searchQuery = (q: string) =>
     retry: false,
   });
 
+/** Cast, stills and genres of a search result, for Add's sheet. Not kept either. */
+export const detailsQuery = (r: { kind: Watch["kind"]; tmdbId: number }) =>
+  queryOptions({
+    queryKey: ["details", r.kind, r.tmdbId],
+    queryFn: async () => (await ok(api.watch.details.$get({ query: { kind: r.kind, id: String(r.tmdbId) } }))).json(),
+    staleTime: Infinity,
+    retry: false,
+  });
+
 const DAY = 24 * 60 * 60 * 1000;
 // Under remember.ts' prefix, so forgetAll() clears it too. Renamed when the server changes
 // what seasons mean: v2 counts only episodes that are out, so v1's announced ones are dropped.

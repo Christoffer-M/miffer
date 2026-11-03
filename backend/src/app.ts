@@ -10,7 +10,7 @@ import { db, schema } from "./db/index.js";
 import { notify } from "./live.js";
 import { isPushEndpoint, pushAdded, pushKey } from "./push.js";
 import { complete, isTimeZone } from "./reminders.js";
-import { search, searchOn, seasons } from "./tmdb.js";
+import { details, search, searchOn, seasons } from "./tmdb.js";
 import { fillEnds } from "./watched.js";
 
 const { households, devices, items, itemHistory, linkCodes, reminders, watch } = schema;
@@ -478,6 +478,21 @@ const watchRoutes = new Hono<Env>()
       return c.json({ error: "Search isn't answering right now." }, 502);
     }
   })
+  // Cast, stills and genres of a search result, for the sheet Add shows before adding it.
+  .get(
+    "/details",
+    zValidator("query", z.object({ kind: z.enum(["movie", "series"]), id: z.coerce.number().int().positive() })),
+    async (c) => {
+      if (!searchOn) return c.json({ error: "Search isn't set up on the server yet." }, 503);
+      const { kind, id } = c.req.valid("query");
+      try {
+        return c.json(await details(kind, id));
+      } catch (err) {
+        console.error("details failed", err);
+        return c.json({ error: "TMDB isn't answering right now." }, 502);
+      }
+    },
+  )
   // Episodes per season of series from search, so the phone knows when a season ends: several
   // series in one go (?ids=1408,1399), each with its seasons, or null where TMDB didn't answer.
   .get(

@@ -13,6 +13,9 @@ type Result = {
   original_name?: string;
   first_air_date?: string;
   poster_path?: string | null;
+  overview?: string;
+  vote_average?: number;
+  vote_count?: number;
 };
 
 /** Asks TMDB's API for `path`. */
@@ -50,8 +53,42 @@ export async function search(query: string) {
         title: original && ["da", "en"].includes(r.original_language ?? "") ? original : (r.title ?? r.name ?? ""),
         year: date ? Number(date.slice(0, 4)) : null,
         posterPath: r.poster_path ?? null,
+        // For the sheet that opens on a result, before adding it.
+        overview: r.overview || null,
+        // Out of 10; a handful of votes says little, so those aren't shown.
+        rating: r.vote_count && r.vote_count >= 10 ? Math.round(r.vote_average! * 10) / 10 : null,
       };
     });
+}
+
+type Details = {
+  runtime?: number | null; // movies, in minutes
+  number_of_seasons?: number; // series
+  genres?: { name: string }[];
+  original_language?: string;
+  credits?: { cast?: { name: string; character?: string; profile_path?: string | null }[] };
+  images?: { backdrops?: { file_path: string }[] };
+};
+
+/** What Add's sheet shows of a search result beyond search's own: cast, stills, genres. One request to TMDB. */
+export async function details(kind: "movie" | "series", tmdbId: number) {
+  const d = await get<Details>(`/${kind === "movie" ? "movie" : "tv"}/${tmdbId}`, {
+    append_to_response: "credits,images",
+    include_image_language: "null", // stills without a title written on them
+    language: "en-US",
+  });
+  return {
+    runtime: d.runtime || null,
+    seasons: d.number_of_seasons || null,
+    genres: (d.genres ?? []).map((g) => g.name),
+    language: d.original_language || null, // a code, "da": the phone names it
+    cast: (d.credits?.cast ?? []).slice(0, 10).map((p) => ({
+      name: p.name,
+      character: p.character || null,
+      profilePath: p.profile_path ?? null,
+    })),
+    stills: (d.images?.backdrops ?? []).slice(0, 8).map((b) => b.file_path),
+  };
 }
 
 // Seasons asked for lately, so every phone opening Watching doesn't ask TMDB again.
