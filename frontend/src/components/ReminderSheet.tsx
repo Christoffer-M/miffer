@@ -93,18 +93,25 @@ export function ReminderSheet({ reminder, onClose }: { reminder?: Reminder; onCl
           <span id={ids.when} className={field.label}>
             When
           </span>
-          <div className={s.chips} role="group" aria-labelledby={ids.when}>
+          {/* None picked for a time typed below, or no time; tapping the picked one keeps it. */}
+          <ToggleButtonGroup
+            aria-labelledby={ids.when}
+            className={s.chips}
+            selectionMode="single"
+            disallowEmptySelection
+            selectedKeys={quick.filter((q) => remindAt?.getTime() === q.at.getTime()).map((q) => q.label)}
+            onSelectionChange={(keys) => {
+              const [key] = keys;
+              const picked = quick.find((q) => q.label === key);
+              if (picked) setRemindAt(picked.at);
+            }}
+          >
             {quick.map((q) => (
-              <ToggleButton
-                key={q.label}
-                className={s.chip}
-                isSelected={remindAt?.getTime() === q.at.getTime()}
-                onChange={() => setRemindAt(q.at)}
-              >
+              <ToggleButton key={q.label} id={q.label} className={s.chip}>
                 {q.label}
               </ToggleButton>
             ))}
-          </div>
+          </ToggleButtonGroup>
           <div className={s.timeRow}>
             <input
               type="datetime-local"

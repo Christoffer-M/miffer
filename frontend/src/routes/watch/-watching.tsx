@@ -3,7 +3,16 @@
 
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { Button as AriaButton, Group, Input, Label, NumberField } from "react-aria-components";
+import {
+  Button as AriaButton,
+  Disclosure,
+  DisclosureGroup,
+  DisclosurePanel,
+  Group,
+  Input,
+  Label,
+  NumberField,
+} from "react-aria-components";
 import { Check, ChevronDown, CircleCheckBig, Minus, Plus, Undo2 } from "lucide-react";
 import type { Watch } from "../../api";
 import { Button } from "../../components/Button";
@@ -272,7 +281,13 @@ function SeasonList({ tmdbId, at, seasons, onChange }: SeasonListProps) {
 
   return (
     <div className={s.places}>
-      <div className={s.seasons} ref={list}>
+      {/* One season open at a time (the group's default). */}
+      <DisclosureGroup
+        className={s.seasons}
+        ref={list}
+        expandedKeys={open ? [open] : []}
+        onExpandedChange={(keys) => setOpen(Number([...keys][0] ?? 0))}
+      >
         {seasons.map((n, i) => {
           const season = i + 1;
           const isOpen = season === open;
@@ -280,14 +295,13 @@ function SeasonList({ tmdbId, at, seasons, onChange }: SeasonListProps) {
           const started = !complete && parts[i] > 0;
           const status = complete ? "Watched" : started ? `${parts[i]} of ${n}` : `${n} episodes`;
           return (
-            <div key={season} className={s.season}>
+            <Disclosure key={season} id={season} className={s.season}>
               <AriaButton
+                slot="trigger"
                 className={s.seasonRow}
                 data-open={isOpen || undefined}
                 data-complete={complete || undefined}
                 data-started={started || undefined}
-                aria-expanded={isOpen}
-                onPress={() => setOpen(isOpen ? 0 : season)}
               >
                 <span className={s.seasonName}>Season {season}</span>
                 <span className={s.seasonStatus}>
@@ -296,11 +310,14 @@ function SeasonList({ tmdbId, at, seasons, onChange }: SeasonListProps) {
                 </span>
                 <ChevronDown className={s.chevron} size={18} strokeWidth={2.5} aria-hidden />
               </AriaButton>
-              {isOpen && <Episodes tmdbId={tmdbId} season={season} at={at} seasons={seasons} onChange={onChange} />}
-            </div>
+              {/* Only the open one's episodes, so the closed seasons aren't fetched from TMDB. */}
+              <DisclosurePanel>
+                {isOpen && <Episodes tmdbId={tmdbId} season={season} at={at} seasons={seasons} onChange={onChange} />}
+              </DisclosurePanel>
+            </Disclosure>
           );
         })}
-      </div>
+      </DisclosureGroup>
       <span className={`${ui.muted} ${ui.small}`}>Tap the last episode you watched, again to unmark.</span>
     </div>
   );

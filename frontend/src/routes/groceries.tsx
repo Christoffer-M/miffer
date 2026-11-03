@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useContext, useState } from "react";
-import { Button as AriaButton, Form } from "react-aria-components";
+import { Button as AriaButton, Form, VisuallyHidden } from "react-aria-components";
 import { Check, Plus, Trash2, Undo2, X } from "lucide-react";
 import { type Item, session } from "../api";
 import { Avatars } from "../brand";
@@ -209,7 +209,7 @@ function Groceries() {
                   <span key={sg.name} className={`${s.chip} ${s.chipOnList}`}>
                     <Check size={16} aria-hidden />
                     {name}
-                    <span className={s.srOnly}>, on the list</span>
+                    <VisuallyHidden elementType="span">, on the list</VisuallyHidden>
                   </span>
                 ) : (
                   <AriaButton

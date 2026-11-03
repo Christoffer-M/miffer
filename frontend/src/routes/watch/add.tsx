@@ -5,7 +5,7 @@ import { Button as AriaButton, Form } from "react-aria-components";
 import { ChevronLeft, Plus, Undo2 } from "lucide-react";
 import { type SearchResult, session, type Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
-import { TextField } from "../../components/TextField";
+import { SearchField } from "../../components/SearchField";
 import { type NewWatch, useAddWatch, useSetWatched } from "../../mutations/watch";
 import { isOffline } from "../../offline";
 import { searchQuery, watchQuery } from "../../queries/watch";
@@ -90,7 +90,7 @@ function Add() {
         </Link>
         <h1 className={ui.display}>Add</h1>
         <Form onSubmit={submit} className={g.keepWithKeyboard}>
-          <TextField
+          <SearchField
             label="Movie or series"
             hideLabel
             placeholder="Search for a movie or series"

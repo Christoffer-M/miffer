@@ -178,7 +178,7 @@
 }
 
 .chip {
-  position: relative; /* keeps its .srOnly text inside the row; else it widens the page */
+  position: relative; /* keeps its VisuallyHidden text inside the row; else it widens the page */
   flex-shrink: 0;
   min-height: var(--tap-min);
   display: inline-flex;
@@ -216,15 +216,6 @@
   background: transparent;
   color: var(--muted);
   cursor: default;
-}
-/* Read by screen readers, not shown. */
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 .stripNote {

@@ -4,6 +4,7 @@ import {
   type InputProps,
   Label,
   type TextFieldProps,
+  VisuallyHidden,
 } from "react-aria-components";
 import s from "./TextField.module.css";
 
@@ -20,9 +21,10 @@ type Props = Omit<TextFieldProps, "className" | "children"> & {
 /** A labelled text input. */
 export function TextField({ label, hideLabel, placeholder, className, inputProps, ...props }: Props) {
   const { className: inputClass, ...restInput } = inputProps ?? {};
+  const labelEl = <Label className={s.label}>{label}</Label>;
   return (
     <AriaTextField {...props} className={`${s.field} ${className ?? ""}`}>
-      <Label className={hideLabel ? s.hidden : s.label}>{label}</Label>
+      {hideLabel ? <VisuallyHidden>{labelEl}</VisuallyHidden> : labelEl}
       <Input {...restInput} placeholder={placeholder} className={`${s.input} ${typeof inputClass === "string" ? inputClass : ""}`} />
     </AriaTextField>
   );

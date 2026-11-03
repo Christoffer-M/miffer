@@ -1,0 +1,40 @@
+/* The input with the clear button inside its right end. */
+.box {
+  position: relative;
+  display: flex;
+}
+.input {
+  flex: 1;
+  padding-right: var(--tap-min);
+}
+/* Our own clear button instead of the browser's. */
+.input::-webkit-search-cancel-button,
+.input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.clear {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  width: var(--tap-min);
+  height: var(--tap-min);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.clear[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: -4px;
+}
+.field[data-empty] .clear {
+  display: none;
+}
