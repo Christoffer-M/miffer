@@ -61,7 +61,7 @@ export const useAddWatch = () =>
   );
 
 /**
- * A series' place as the server stores it (placeFields in app.ts): set now, or at `at` for Undo,
+ * A series' place as the server stores it (placeFields in routes/watch.ts): set now, or at `at` for Undo,
  * so the series goes back where it was on Watching rather than to the top.
  */
 function placed(place: Place | null, at?: string | null) {
@@ -87,7 +87,7 @@ function watchedIn(list: Watch[], { id, watched, place, at }: SetWatched) {
 }
 
 /**
- * Watched now, or back on the list. A series can set where it's up to in the same go (app.ts):
+ * Watched now, or back on the list. A series can set where it's up to in the same go (routes/watch.ts):
  * null starts it over on its shelf, the end of its last season remembers how far it went, and a
  * place to go on from takes it back to Watching. Watched without a place, a series from search
  * gets its end from the server; otherwise the place stays as it is. `at` is for Undo.
@@ -103,7 +103,7 @@ export const useSetWatched = () =>
 
 type SetProgress = { id: string; progress: Place | null; at?: string | null };
 
-/** Where a series is up to now: started, on to another episode, or stopped (null). Not once it's watched (app.ts). */
+/** Where a series is up to now: started, on to another episode, or stopped (null). Not once it's watched (routes/watch.ts). */
 function placeIn(list: Watch[], { id, progress, at }: SetProgress) {
   return list.map((w) => (w.id === id && !w.watchedAt ? { ...w, ...placed(progress, at) } : w));
 }
