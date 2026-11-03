@@ -29,7 +29,7 @@ export function AskForNotifications() {
             Know when something's added?
           </Heading>
           <p className={s.message}>
-            Get a notification when someone in your household adds to the list, and when a reminder is due.
+            Get a notification when someone in your household adds to the list, when a reminder is due, and when a series you've watched gets a new season.
           </p>
           {setPush.error && <p className={ui.error}>{setPush.error.message}</p>}
           <div className={s.actions}>

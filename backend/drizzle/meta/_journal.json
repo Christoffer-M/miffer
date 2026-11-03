@@ -71,6 +71,13 @@
       "when": 1793660175690,
       "tag": "0009_watched_all_seasons",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793704235690,
+      "tag": "0010_new_season_told",
+      "breakpoints": true
     }
   ]
 }
