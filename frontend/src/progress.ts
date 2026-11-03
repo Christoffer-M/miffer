@@ -101,7 +101,8 @@ export function seen(at: Place, seasons?: number[]): Seen | undefined {
   return result.seasons || result.episodes ? result : undefined;
 }
 
-const count = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
+/** "1 season", "3 seasons". */
+export const count = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 
 /** "3 seasons", "2 seasons and 4 episodes", "4 episodes". */
 export function seenText({ seasons, episodes }: Seen) {

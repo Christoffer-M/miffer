@@ -476,9 +476,9 @@ test("search finds movies and series on TMDB, by the title people know them by",
   const tmdb = vi.spyOn(globalThis, "fetch").mockResolvedValue(
     Response.json({
       results: [
-        { id: 1, media_type: "movie", title: "Another Round", original_title: "Druk", original_language: "da", release_date: "2020-09-24", poster_path: "/aDcIt4NHURLKnAEu7gow51Yd00Q.jpg" },
+        { id: 1, media_type: "movie", title: "Another Round", original_title: "Druk", original_language: "da", release_date: "2020-09-24", poster_path: "/aDcIt4NHURLKnAEu7gow51Yd00Q.jpg", overview: "Four teachers test a theory.", vote_average: 7.654, vote_count: 3000 },
         { id: 2, media_type: "person", name: "Mads Mikkelsen" },
-        { id: 3, media_type: "tv", name: "Squid Game", original_name: "오징어 게임", original_language: "ko", first_air_date: "2021-09-17" },
+        { id: 3, media_type: "tv", name: "Squid Game", original_name: "오징어 게임", original_language: "ko", first_air_date: "2021-09-17", overview: "", vote_average: 9, vote_count: 3 },
         { id: 4, media_type: "movie", title: "Untitled", original_title: "Untitled", original_language: "en", release_date: "" },
       ],
     }),
@@ -486,9 +486,10 @@ test("search finds movies and series on TMDB, by the title people know them by",
 
   const res = await call("/watch/search?q=druk", { token: anna.token });
   expect(await res.json()).toEqual([
-    { tmdbId: 1, kind: "movie", title: "Druk", year: 2020, posterPath: "/aDcIt4NHURLKnAEu7gow51Yd00Q.jpg" },
-    { tmdbId: 3, kind: "series", title: "Squid Game", year: 2021, posterPath: null },
-    { tmdbId: 4, kind: "movie", title: "Untitled", year: null, posterPath: null },
+    { tmdbId: 1, kind: "movie", title: "Druk", year: 2020, posterPath: "/aDcIt4NHURLKnAEu7gow51Yd00Q.jpg", overview: "Four teachers test a theory.", rating: 7.7 },
+    // Too few votes to say anything.
+    { tmdbId: 3, kind: "series", title: "Squid Game", year: 2021, posterPath: null, overview: null, rating: null },
+    { tmdbId: 4, kind: "movie", title: "Untitled", year: null, posterPath: null, overview: null, rating: null },
   ]);
   const asked = new URL(String(tmdb.mock.calls[0][0]));
   expect([asked.pathname, asked.searchParams.get("query"), asked.searchParams.get("api_key")]).toEqual(["/3/search/multi", "druk", "test-key"]);
@@ -498,6 +499,46 @@ test("search finds movies and series on TMDB, by the title people know them by",
   expect((await call("/watch/search?q=druk", { token: anna.token })).status).toBe(502);
   tmdb.mockRestore();
   expect((await call("/watch/search?q=druk")).status).toBe(401);
+});
+
+test("details bring a movie or series' plot, rating, cast, stills and genres, in one request to TMDB", async () => {
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  const tmdb = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    Response.json({
+      // Specials and a season announced for later don't count.
+      seasons: [
+        { season_number: 0, air_date: "2010-01-01" },
+        { season_number: 1, air_date: "2010-09-26" },
+        { season_number: 2, air_date: "2011-09-25" },
+        { season_number: 3, air_date: "2099-01-01" },
+      ],
+      overview: "A prime minister.",
+      vote_average: 8.06,
+      vote_count: 900,
+      genres: [{ id: 18, name: "Drama" }],
+      original_language: "da",
+      credits: { cast: [{ name: "Sidse Babett Knudsen", character: "Birgitte Nyborg", profile_path: "/a.jpg" }, { name: "Extra", character: "" }] },
+      // Untagged stills first, then ones with an English title on them.
+      images: { backdrops: [{ file_path: "/e.jpg", iso_639_1: "en" }, { file_path: "/b.jpg", iso_639_1: null }] },
+    }),
+  );
+  const res = await call("/watch/details?kind=series&id=31911", { token: anna.token });
+  expect(await res.json()).toEqual({
+    overview: "A prime minister.",
+    rating: 8.1,
+    runtime: null,
+    seasons: 2,
+    genres: ["Drama"],
+    language: "da",
+    cast: [
+      { name: "Sidse Babett Knudsen", character: "Birgitte Nyborg", profilePath: "/a.jpg" },
+      { name: "Extra", character: null, profilePath: null },
+    ],
+    stills: ["/b.jpg", "/e.jpg"],
+  });
+  const asked = new URL(String(tmdb.mock.calls[0][0]));
+  expect([asked.pathname, asked.searchParams.get("append_to_response")]).toEqual(["/3/tv/31911", "credits,images"]);
+  tmdb.mockRestore();
 });
 
 test("a series being watched keeps its place, and a movie has none", async () => {

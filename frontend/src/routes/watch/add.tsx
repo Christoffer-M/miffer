@@ -2,15 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button as AriaButton, Form } from "react-aria-components";
-import { ChevronLeft, Undo2 } from "lucide-react";
+import { ChevronLeft, Plus, Undo2 } from "lucide-react";
 import { type SearchResult, session, type Watch } from "../../api";
-import { buttonClass } from "../../components/Button";
+import { Button, buttonClass } from "../../components/Button";
 import { TextField } from "../../components/TextField";
 import { type NewWatch, useAddWatch, useSetWatched } from "../../mutations/watch";
 import { isOffline } from "../../offline";
 import { searchQuery, watchQuery } from "../../queries/watch";
 import { lower } from "../../suggest";
-import { isWatching, KINDS, Poster, WatchMeta } from "../../watch";
+import { isWatching, KINDS, Poster, WatchMeta, WatchSheet } from "../../watch";
 import ui from "../../ui.module.css";
 import g from "../groceries.module.css";
 import s from "./watch.module.css";
@@ -41,6 +41,11 @@ function Add() {
   const setWatched = useSetWatched();
   const navigate = useNavigate();
   const [draft, setDraft] = useState("");
+  // The result tapped last, to see what it is before adding; kept after closing so the sheet doesn't empty as it slides away.
+  const [tapped, setTapped] = useState<{ result?: SearchResult; isOpen: boolean }>({ isOpen: false });
+  const close = () => setTapped((t) => ({ ...t, isOpen: false }));
+  const tappedOn = tapped.result && findOn(list, tapped.result);
+  const onList = tappedOn && !tappedOn.watchedAt; // nothing to add: the sheet only shows it
 
   const typed = draft.trim();
   const q = useSettled(typed);
@@ -52,7 +57,9 @@ function Add() {
   async function add(w: NewWatch) {
     const existing = findOn(list, w);
     const change = () => {
-      if (!existing) addWatch.mutate({ id: crypto.randomUUID(), ...w, addedBy: session.deviceId });
+      // Only what the list keeps: a search result also brings its plot and rating along.
+      const { title, kind, tmdbId, year, posterPath } = w;
+      if (!existing) addWatch.mutate({ id: crypto.randomUUID(), title, kind, tmdbId, year, posterPath, addedBy: session.deviceId });
       else if (existing.watchedAt) setWatched.mutate({ id: existing.id, watched: false, place: null });
     };
     // Refused offline, and said so: this page stays, with what was typed, to try again.
@@ -100,7 +107,7 @@ function Add() {
         {typed.length >= 2 && (
           <div className={s.resultList} aria-label="Search results" role="group" aria-busy={searching}>
             {results.map((r) => (
-              <Result key={`${r.kind}-${r.tmdbId}`} result={r} on={findOn(list, r)} onAdd={() => add(r)} />
+              <Result key={`${r.kind}-${r.tmdbId}`} result={r} on={findOn(list, r)} onPress={() => setTapped({ result: r, isOpen: true })} />
             ))}
             {searching && results.length === 0 && <span className={`${ui.muted} ${s.searchNote}`}>Searching…</span>}
             {!searching && search.error && <span className={`${ui.muted} ${s.searchNote}`}>{search.error.message}</span>}
@@ -128,34 +135,51 @@ function Add() {
           </div>
         )}
       </main>
+
+      {tapped.result && (
+        <WatchSheet
+          // Who added it, when it's on the list already.
+          item={{ ...tapped.result, addedBy: tappedOn?.addedBy }}
+          isOpen={tapped.isOpen}
+          onClose={close}
+          eyebrow={onList ? (isWatching(tappedOn) ? "Watching" : "On the list") : tappedOn?.watchedAt ? "Watched" : undefined}
+          actions={
+            onList ? (
+              <Button variant="outline" onPress={close} autoFocus>
+                Close
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onPress={close}>
+                  Cancel
+                </Button>
+                <Button onPress={() => (close(), add(tapped.result!))} autoFocus>
+                  {tappedOn?.watchedAt ? <Undo2 size={18} aria-hidden /> : <Plus size={18} aria-hidden />}
+                  {tappedOn?.watchedAt ? "Watch again" : "Add"}
+                </Button>
+              </>
+            )
+          }
+        />
+      )}
     </>
   );
 }
 
-/** One search result: tap to add it, or to put it back from Watched. */
-function Result({ result: r, on, onAdd }: { result: SearchResult; on?: Watch; onAdd: () => void }) {
-  const label = (
-    <>
+/** One search result: tap to see what it is, and add it from there (or put it back from Watched). */
+function Result({ result: r, on, onPress }: { result: SearchResult; on?: Watch; onPress: () => void }) {
+  const onList = on && !on.watchedAt;
+  return (
+    // Keeps focus (and the phone keyboard) on the field, for the next search.
+    <AriaButton className={`${s.result} ${onList ? s.onList : ""}`} preventFocusOnPress onPress={onPress}>
       <Poster path={r.posterPath} kind={r.kind} />
       <span className={s.text}>
         <strong>{r.title}</strong>
         <WatchMeta kind={r.kind} year={r.year} />
       </span>
-    </>
-  );
-  if (on && !on.watchedAt) {
-    return (
-      <span className={`${s.result} ${s.onList}`}>
-        {label}
+      {onList ? (
         <span className={s.status}>{isWatching(on) ? "Watching" : "On the list"}</span>
-      </span>
-    );
-  }
-  return (
-    // Keeps focus (and the phone keyboard) on the field, for the next search.
-    <AriaButton className={s.result} preventFocusOnPress onPress={onAdd}>
-      {label}
-      {on ? (
+      ) : on ? (
         <span className={s.status}>
           <Undo2 size={14} aria-hidden /> Watched
         </span>

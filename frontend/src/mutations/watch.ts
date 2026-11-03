@@ -7,7 +7,7 @@ import { animateListChange, type ListChange } from "../viewTransition";
 import { refetchWhenLast } from "./settle";
 
 /** A movie or series to add: a search result, or typed by hand (no tmdbId, year or poster). */
-export type NewWatch = Omit<SearchResult, "tmdbId" | "year"> & { tmdbId: number | null; year: number | null };
+export type NewWatch = Omit<SearchResult, "tmdbId" | "year" | "overview" | "rating"> & { tmdbId: number | null; year: number | null };
 
 /**
  * As for groceries (items.ts): shows at once, animated on the Watch screens, then the server
