@@ -3,12 +3,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useContext, useState } from "react";
+import { useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
 import { Check, ChevronLeft, Dices, Play, Plus, Trash2, Undo2 } from "lucide-react";
 import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
-import { UndoBar, UndoSpot, useUndo } from "../../components/UndoBar";
+import { useUndo, useUndoSpot } from "../../components/UndoBar";
 import { useRemoveWatch, useRestoreWatch, useSetProgress, useSetWatched } from "../../mutations/watch";
 import { endOf, type Place, seen, seenText, short } from "../../progress";
 import { useMembers } from "../../queries/household";
@@ -27,7 +27,7 @@ import s from "./watch.module.css";
  */
 export function useToWatch() {
   const { data: list = [] } = useQuery(watchQuery);
-  const offerUndoSpot = useContext(UndoSpot);
+  const undoSpot = useUndoSpot();
   const setWatched = useSetWatched();
   const removeWatch = useRemoveWatch();
   const restoreWatch = useRestoreWatch();
@@ -128,11 +128,8 @@ export function useToWatch() {
   // Undo floats above the tabs, beside the + button.
   const bottom = (
     <div className={`${s.undoBottom} ${s.withFab}`}>
-      <div className={g.undoSlot} role="status">
-        {undo.text && <UndoBar text={undo.text} onUndo={undo.run} />}
-        {/* A due reminder's Undo goes here too. */}
-        <div ref={offerUndoSpot} className={g.undoSpot} />
-      </div>
+      {/* This screen's Undo, or a due reminder's. */}
+      <div ref={undoSpot} className={g.undoSlot} />
       <Link to="/watch/add" className={s.fab} aria-label="Add a movie or series">
         <Plus size={28} aria-hidden />
       </Link>

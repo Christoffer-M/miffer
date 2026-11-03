@@ -1,13 +1,18 @@
-/* Takes no room at the top of the screen: the notice floats over the header, and over a sheet. */
-.slot {
-  position: relative;
+/* Takes no room at the top of the screen: the notice floats over the header, and over a sheet.
+   The region is portalled to the end of the page, so it lines up with .screen (480px) itself. */
+.region {
+  position: fixed;
   z-index: var(--z-notice);
-}
-.slot > * {
-  position: absolute;
-  top: 8px;
+  top: calc(8px + env(safe-area-inset-top));
   left: 12px;
   right: 12px;
+  max-width: calc(480px - 24px);
+  margin: 0 auto;
+  border-radius: var(--radius-xl);
+}
+.region[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .notice {

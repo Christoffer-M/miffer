@@ -235,7 +235,3 @@
   gap: 8px; /* a reminder's Undo and this screen's own, when both are up */
   pointer-events: none; /* the empty slot doesn't block taps on the list */
 }
-/* Lays its contents out as part of the slot, and takes no room while empty. */
-.undoSpot {
-  display: contents;
-}

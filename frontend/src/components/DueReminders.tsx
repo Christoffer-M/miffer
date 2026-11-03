@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useRef, useState } from "react";
 import { Button as AriaButton, Heading } from "react-aria-components";
 import { AlarmClock, Bell, Check, ChevronRight, Pencil, Repeat } from "lucide-react";
 import { type Reminder, session } from "../api";
@@ -13,7 +12,7 @@ import { dueAt, dueFor, formatBack, formatDue, nextTime, REPEATS, SNOOZES } from
 import { Button } from "./Button";
 import { ReminderSheet } from "./ReminderSheet";
 import { Sheet } from "./Sheet";
-import { UndoBar, useUndoable } from "./UndoBar";
+import { useUndo, useUndoSpot } from "./UndoBar";
 import ui from "../ui.module.css";
 import s from "./DueReminders.module.css";
 
@@ -31,9 +30,9 @@ const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1
 /**
  * What's due for this phone, one at a time, as soon as the app opens: Done, Snooze, or Not now.
  * Not now puts them off until the app is opened again; anything that comes due meanwhile still shows.
- * Undo shows just above the tabs, or in `undoSpot` when the screen has a bar of its own there (UndoBar.tsx).
+ * Undo shows in the sheet while it's open, else wherever the screen has it (UndoBar.tsx).
  */
-export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
+export function DueReminders() {
   const { data = [] } = useQuery(remindersQuery);
   const { members, myId, whoIs } = useMembers();
   const complete = useCompleteReminder();
@@ -43,8 +42,9 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
   const [shownId, setShownId] = useState<string | null>(null);
   const [notNow, setNotNow] = useState<string[]>([]);
   const [editing, setEditing] = useState<Reminder | null>(null);
-  // The last one dealt with: as it was before, and as Done or Snooze left it (once that's through), for Undo.
-  const [undo, setUndo] = useUndoable<{ before: Reminder; after: Promise<ReminderTimes>; text: string }>();
+  const undo = useUndo();
+  // In the sheet while it's open: the screen behind can't be tapped then.
+  const undoInSheet = useUndoSpot(1);
 
   useEffect(() => {
     const opened = () => document.visibilityState === "visible" && setNotNow([]);
@@ -73,6 +73,20 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
   // Which way the next one slides in: on from Done, Snooze or Skip, back for Undo. Not when the sheet opens.
   const [moved, setMoved] = useState<"next" | "back" | null>(null);
   if (!due && moved) setMoved(null);
+  // For an Undo pressed later: whether the sheet is open by then.
+  const dueNow = useRef(due);
+  dueNow.current = due;
+
+  /** Offers to put `before` back, as Done or Snooze left it (once that's through: `after`). */
+  function offerUndo(before: Reminder, after: Promise<ReminderTimes>, text: string) {
+    undo.offer(text, () => {
+      const { id, remindAt, snoozedUntil, notified, done } = before;
+      restore.mutate({ id, remindAt, snoozedUntil, notified, done, ifStill: after });
+      if (isOffline()) return;
+      setShownId(id);
+      if (dueNow.current) setMoved("back");
+    });
+  }
 
   function done(r: Reminder) {
     const next = r.repeat && r.remindAt && nextTime(new Date(r.remindAt), r.repeat);
@@ -80,7 +94,7 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
     after.catch(() => {}); // the refetch shows it wasn't done; an Undo then finds nothing to undo
     if (isOffline()) return; // refused: it stays up
     setMoved("next");
-    setUndo({ before: r, after, text: next ? `Done, back ${formatBack(next)}` : `Done: ${r.title}` });
+    offerUndo(r, after, next ? `Done, back ${formatBack(next)}` : `Done: ${r.title}`);
   }
 
   function snooze(r: Reminder, until: Date) {
@@ -88,27 +102,13 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
     change.mutate({ id: r.id, snoozedUntil });
     if (isOffline()) return;
     setMoved("next");
-    const after = Promise.resolve({ remindAt: r.remindAt, snoozedUntil, done: false });
-    setUndo({ before: r, after, text: `Snoozed, back ${formatBack(until)}` });
-  }
-
-  function undoLast() {
-    if (!undo) return;
-    const { id, remindAt, snoozedUntil, notified, done } = undo.before;
-    restore.mutate({ id, remindAt, snoozedUntil, notified, done, ifStill: undo.after });
-    if (isOffline()) return;
-    setShownId(id);
-    if (due) setMoved("back");
-    setUndo(null);
+    offerUndo(r, Promise.resolve({ remindAt: r.remindAt, snoozedUntil, done: false }), `Snoozed, back ${formatBack(until)}`);
   }
 
   function skip() {
     setShownId(queue[(at + 1) % queue.length].id);
     setMoved("next");
   }
-
-  // In the sheet while it's open (the screen behind can't be tapped then), else above the tab bar.
-  const undoBar = undo && <UndoBar text={undo.text} onUndo={undoLast} className={due ? s.undoInSheet : ""} />;
 
   // Who it's from, unless it's this phone's own.
   const from = shown?.createdBy && whoIs(shown.createdBy);
@@ -124,7 +124,7 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
       >
         {shown && (
           <>
-            <div role="status">{due && undoBar}</div>
+            {due && <div ref={undoInSheet} className={s.undoInSheet} />}
             {/* The reminder itself: slides in as the next one comes up. */}
             <div key={shown.id} className={`${s.card} ${moved ? s[moved] : ""}`}>
               <div className={s.head}>
@@ -204,12 +204,6 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
       </Sheet>
 
       {editing && <ReminderSheet reminder={editing} onClose={() => setEditing(null)} />}
-
-      {/* Always there (empty when there's nothing to undo) so screen readers announce it. */}
-      <div className={s.undoSlot} role="status">
-        {!due && !undoSpot && undoBar}
-      </div>
-      {!due && undoSpot && undoBar && createPortal(undoBar, undoSpot)}
     </>
   );
 }
