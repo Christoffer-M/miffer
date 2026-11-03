@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useContext, useState } from "react";
-import { Button as AriaButton, Form } from "react-aria-components";
+import { useState } from "react";
+import { Button as AriaButton, Form, VisuallyHidden } from "react-aria-components";
 import { Check, Plus, Trash2, Undo2, X } from "lucide-react";
 import { type Item, session } from "../api";
 import { Avatars } from "../brand";
@@ -9,7 +9,7 @@ import { Button } from "../components/Button";
 import { Checkbox } from "../components/Checkbox";
 import { SwipeRow } from "../components/SwipeRow";
 import { TextField } from "../components/TextField";
-import { UndoBar, UndoSpot, useUndoable } from "../components/UndoBar";
+import { useUndo, useUndoSpot } from "../components/UndoBar";
 import { useAddItem, useClearDone, useRemoveItem, useRestoreItems, useSetDone } from "../mutations/items";
 import { useMembers } from "../queries/household";
 import { historyQuery, itemsQuery } from "../queries/items";
@@ -33,7 +33,6 @@ function Groceries() {
   const { data: items = [], isPending, error } = useQuery(itemsQuery);
   const online = useOnline();
   const { whoIs } = useMembers();
-  const offerUndoSpot = useContext(UndoSpot);
   const addItem = useAddItem();
   const setDone = useSetDone();
   const removeItem = useRemoveItem();
@@ -42,9 +41,8 @@ function Groceries() {
   const { data: history = [] } = useQuery(historyQuery);
   const [draft, setDraft] = useState("");
   const [typing, setTyping] = useState(false);
-  // What was removed last, for Undo. A new removal takes its place.
-  const [lastRemoved, setRemoved] = useUndoable<Item[]>();
-  const removed = lastRemoved ?? [];
+  const undo = useUndo();
+  const undoSpot = useUndoSpot();
 
   const todo = items.filter((i) => !i.done);
   const done = items.filter((i) => i.done);
@@ -61,17 +59,14 @@ function Groceries() {
 
   function remove(item: Item) {
     removeItem.mutate(item.id);
-    if (!isOffline()) setRemoved([item]);
+    undo.offer(`Removed ${item.name}`, () => restoreItems.mutate([item]));
   }
 
   function clear() {
     clearDone.mutate();
-    if (!isOffline()) setRemoved(done);
-  }
-
-  function undo() {
-    restoreItems.mutate(removed);
-    if (!isOffline()) setRemoved(null);
+    undo.offer(done.length === 1 ? `Removed ${done[0].name}` : `Cleared ${done.length} items`, () =>
+      restoreItems.mutate(done),
+    );
   }
 
   function add(e: React.FormEvent) {
@@ -166,18 +161,9 @@ function Groceries() {
       </main>
 
       <Form className={s.addBar} onSubmit={add} data-vt="add-bar">
-        {/* Floats just above the bar, over the list, so nothing moves when it comes and goes.
-            Always there (empty when there's nothing to undo) so screen readers announce it. */}
-        <div className={s.undoSlot} role="status">
-          {removed.length > 0 && (
-            <UndoBar
-              text={removed.length === 1 ? `Removed ${removed[0].name}` : `Cleared ${removed.length} items`}
-              onUndo={undo}
-            />
-          )}
-          {/* A due reminder's Undo goes here too, rather than over the add bar. */}
-          <div ref={offerUndoSpot} className={s.undoSpot} />
-        </div>
+        {/* Undo (this screen's, or a due reminder's) floats just above the bar, over the list,
+            so nothing moves when it comes and goes. */}
+        <div ref={undoSpot} className={s.undoSlot} />
         {/* Suggestions show while focus is anywhere in here: the field, a suggestion or Add. */}
         <div
           className={s.focusArea}
@@ -209,7 +195,7 @@ function Groceries() {
                   <span key={sg.name} className={`${s.chip} ${s.chipOnList}`}>
                     <Check size={16} aria-hidden />
                     {name}
-                    <span className={s.srOnly}>, on the list</span>
+                    <VisuallyHidden elementType="span">, on the list</VisuallyHidden>
                   </span>
                 ) : (
                   <AriaButton

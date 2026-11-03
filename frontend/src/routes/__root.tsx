@@ -6,7 +6,7 @@ import { connectLive, session, useToken } from "../api";
 import { AskForNotifications } from "../components/AskForNotifications";
 import { DueReminders } from "../components/DueReminders";
 import { OfflineNotice } from "../components/OfflineNotice";
-import { UndoSpot } from "../components/UndoBar";
+import { UndoToasts } from "../components/UndoBar";
 import { changesPending } from "../mutations/settle";
 import { meQuery } from "../queries/household";
 import { refreshItems } from "../queries/items";
@@ -26,7 +26,8 @@ function Root() {
   const { queryClient } = Route.useRouteContext();
   const token = useToken();
   const path = useLocation({ select: (l) => l.pathname });
-  const [undoSpot, setUndoSpot] = useState<HTMLElement | null>(null);
+  // Where Undo shows on a screen without a spot of its own (UndoBar.tsx): just above the tabs.
+  const [undoFallback, setUndoFallback] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -43,13 +44,14 @@ function Root() {
   return (
     <div className={s.screen}>
       <OfflineNotice />
-      <UndoSpot value={setUndoSpot}>
-        <Outlet />
-      </UndoSpot>
+      <Outlet />
       {/* Not over the name screen, where a new household's code is waiting to be shared. */}
       {token && path !== "/name" && <AskForNotifications />}
-      {/* After the notifications sheet, so a due reminder comes up on top of it. Just above the tabs, for its Undo. */}
-      {token && path !== "/name" && <DueReminders undoSpot={undoSpot} />}
+      {/* After the notifications sheet, so a due reminder comes up on top of it. */}
+      {token && path !== "/name" && <DueReminders />}
+      {/* Takes no room: Undo floats just above the tabs (or the bottom, while the keyboard hides them). */}
+      <div ref={setUndoFallback} className={s.undoSlot} />
+      <UndoToasts fallback={undoFallback} />
       {token && (
         <nav className={s.tabs} aria-label="miffer">
           <Link to="/" className={s.tab} activeOptions={{ exact: true }}>

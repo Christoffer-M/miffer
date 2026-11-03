@@ -76,6 +76,18 @@
   gap: 14px;
 }
 
+/* The toast region Undo shows in (UndoBar.tsx); F6 focuses it. */
+.undoRegion {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* a reminder's Undo and the screen's own, when both are up */
+  border-radius: var(--radius-xl);
+}
+.undoRegion[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
 /* The dark Undo bar after removing groceries or dealing with a due reminder. */
 .undo {
   pointer-events: auto;
@@ -87,7 +99,7 @@
   background: var(--ink);
   color: var(--on-solid);
   font-size: var(--text-base);
-  box-shadow: var(--shadow-float);
+  box-shadow: var(--undo-shadow, var(--shadow-float)); /* none inside a sheet */
   animation: undo-in 200ms var(--ease-decelerate);
 }
 .undoText {

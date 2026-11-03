@@ -164,22 +164,12 @@
   font-size: var(--text-base);
 }
 
+/* Where Undo shows while the sheet is open (UndoBar.tsx); empty in between. */
 .undoInSheet {
+  --undo-shadow: none;
+}
+.undoInSheet > :not(:empty) {
   margin-top: var(--gap);
-  box-shadow: none;
-}
-
-/* Sits between the screen and the tabs and takes no room: Undo floats just above the tabs
-   (or the bottom, while the keyboard hides them), over whatever screen is open. */
-.undoSlot {
-  position: relative;
-  z-index: var(--z-undo);
-}
-.undoSlot > * {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 8px;
 }
 
 @media (prefers-reduced-motion: reduce) {

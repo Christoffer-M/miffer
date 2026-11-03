@@ -5,7 +5,7 @@ import { Tab, TabList, TabPanel, Tabs } from "react-aria-components";
 import { ChevronLeft, Play, Trash2, Undo2 } from "lucide-react";
 import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
-import { UndoBar, useUndo } from "../../components/UndoBar";
+import { useUndo, useUndoSpot } from "../../components/UndoBar";
 import { useRemoveWatch, useRestoreWatch, useSetWatched } from "../../mutations/watch";
 import { type Place, seenShort, seenText, short } from "../../progress";
 import { useWatchedSeries, watchQuery } from "../../queries/watch";
@@ -55,6 +55,7 @@ function Watched() {
   const removeWatch = useRemoveWatch();
   const restoreWatch = useRestoreWatch();
   const undo = useUndo();
+  const undoSpot = useUndoSpot();
   // The poster tapped last; kept after closing so the sheet doesn't empty as it slides away.
   const [tapped, setTapped] = useState<{ item?: Watch; isOpen: boolean }>({ isOpen: false });
   const close = () => setTapped((t) => ({ ...t, isOpen: false }));
@@ -208,9 +209,8 @@ function Watched() {
       )}
 
       <div className={s.undoBottom}>
-        <div className={g.undoSlot} role="status">
-          {undo.text && <UndoBar text={undo.text} onUndo={undo.run} />}
-        </div>
+        {/* This screen's Undo, or a due reminder's. */}
+        <div ref={undoSpot} className={g.undoSlot} />
       </div>
     </>
   );

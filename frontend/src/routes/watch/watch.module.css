@@ -794,7 +794,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 /* The open one stays on top while its episodes scroll under it. */
-.seasonRow[data-open] {
+.season[data-expanded] .seasonRow {
   position: sticky;
   top: 0;
   z-index: 1;
@@ -809,7 +809,7 @@
   font-size: var(--text-lg);
   font-weight: 600;
 }
-.seasonRow[data-open] .seasonName {
+.season[data-expanded] .seasonName {
   font-weight: 700;
 }
 .seasonStatus {
@@ -833,7 +833,7 @@
   color: var(--muted);
   transition: transform var(--duration-fast) ease-out;
 }
-.seasonRow[data-open] .chevron {
+.season[data-expanded] .chevron {
   transform: rotate(180deg);
 }
 
