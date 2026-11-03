@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button as AriaButton, Heading } from "react-aria-components";
 import { AlarmClock, Bell, Check, ChevronRight, Pencil, Repeat } from "lucide-react";
 import { type Reminder, session } from "../api";
@@ -75,7 +75,9 @@ export function DueReminders() {
   if (!due && moved) setMoved(null);
   // For an Undo pressed later: whether the sheet is open by then.
   const dueNow = useRef(due);
-  dueNow.current = due;
+  useLayoutEffect(() => {
+    dueNow.current = due;
+  });
 
   /** Offers to put `before` back, as Done or Snooze left it (once that's through: `after`). */
   function offerUndo(before: Reminder, after: Promise<ReminderTimes>, text: string) {

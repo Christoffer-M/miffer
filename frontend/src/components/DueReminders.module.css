@@ -168,7 +168,7 @@
 .undoInSheet {
   --undo-shadow: none;
 }
-.undoInSheet > * {
+.undoInSheet > :not(:empty) {
   margin-top: var(--gap);
 }
 

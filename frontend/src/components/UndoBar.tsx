@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { UNSAFE_PortalProvider } from "react-aria";
 import {
   Text,
@@ -74,9 +74,17 @@ export function useUndoSpot(priority = 0) {
  * The dark Undo bar, as a React Aria toast: announced when it shows, reachable with F6, and kept
  * usable over a sheet. It shows in the current spot, or in `fallback` (just above the tabs).
  */export function UndoToasts({ fallback }: { fallback: HTMLElement | null }) {
-  const container = useSyncExternalStore(subscribe, currentSpot) ?? fallback;
+  const spot = useSyncExternalStore(subscribe, currentSpot) ?? fallback;
+  // The region always renders into this one element, which is moved to the current spot. Portalling
+  // into the spot itself would remount the toast on every move, restarting its wait and announcing
+  // it again (say, when the last due reminder is dealt with and Undo leaves the sheet).
+  const [host] = useState(() => document.createElement("div"));
+  useLayoutEffect(() => {
+    spot?.appendChild(host);
+    return () => host.remove();
+  }, [spot, host]);
   return (
-    <UNSAFE_PortalProvider getContainer={() => container}>
+    <UNSAFE_PortalProvider getContainer={() => host}>
       {/* No aria-label: React Aria's own ("Notifications (1)") changes with the count, which is what
           registers the region for F6 once it shows. A fixed one leaves F6 unable to reach it. */}
       <ToastRegion queue={queue} className={ui.undoRegion}>

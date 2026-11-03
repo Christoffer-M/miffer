@@ -299,7 +299,6 @@ function SeasonList({ tmdbId, at, seasons, onChange }: SeasonListProps) {
               <AriaButton
                 slot="trigger"
                 className={s.seasonRow}
-                data-open={isOpen || undefined}
                 data-complete={complete || undefined}
                 data-started={started || undefined}
               >

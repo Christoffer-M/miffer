@@ -64,7 +64,9 @@ function Groceries() {
 
   function clear() {
     clearDone.mutate();
-    undo.offer(`Cleared ${done.length} items`, () => restoreItems.mutate(done));
+    undo.offer(done.length === 1 ? `Removed ${done[0].name}` : `Cleared ${done.length} items`, () =>
+      restoreItems.mutate(done),
+    );
   }
 
   function add(e: React.FormEvent) {

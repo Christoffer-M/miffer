@@ -3,13 +3,14 @@
   position: relative;
   display: flex;
 }
-.input {
+/* Under .box so it wins over TextField's .input padding whichever stylesheet loads last. */
+.box .input {
   flex: 1;
   padding-right: var(--tap-min);
 }
 /* Our own clear button instead of the browser's. */
-.input::-webkit-search-cancel-button,
-.input::-webkit-search-decoration {
+.box .input::-webkit-search-cancel-button,
+.box .input::-webkit-search-decoration {
   -webkit-appearance: none;
   appearance: none;
 }
