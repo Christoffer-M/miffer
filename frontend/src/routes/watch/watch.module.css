@@ -774,6 +774,7 @@
 }
 .pickerHead {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
