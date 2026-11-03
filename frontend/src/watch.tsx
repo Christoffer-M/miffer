@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
-import { Button as AriaButton, Dialog, DialogTrigger, Heading, Modal, ModalOverlay, Popover } from "react-aria-components";
+import { Button as AriaButton, Dialog, DialogTrigger, Heading, Popover } from "react-aria-components";
 import { ChevronLeft, ChevronRight, Film, Star, Tv } from "lucide-react";
 import type { Watch } from "./api";
 import { caughtUp, count, type Place, settle } from "./progress";
 import { Avatar } from "./brand";
+import { Sheet } from "./components/Sheet";
 import { useMembers } from "./queries/household";
 import { detailsQuery } from "./queries/watch";
 import ui from "./ui.module.css";
@@ -137,23 +138,19 @@ type SheetProps = {
  */
 export function WatchSheet({ item, isOpen, onClose, eyebrow, note, actions, children }: SheetProps) {
   return (
-    <ModalOverlay isOpen={isOpen} onOpenChange={(open) => !open && onClose()} isDismissable className={sheet.overlay}>
-      <Modal className={`${sheet.sheet} ${s.infoSheet}`}>
-        <Dialog className={`${sheet.dialog} ${s.info}`}>
-          {item && (
-            <>
-              <div className={s.infoBody}>
-                {/* Afresh for another one (Tonight's Another), so the stills start at the first. */}
-                <About key={`${item.kind}-${item.tmdbId ?? item.title}`} item={item} eyebrow={eyebrow} note={note}>
-                  {children}
-                </About>
-              </div>
-              <div className={`${sheet.actions} ${s.sheetActions}`}>{actions}</div>
-            </>
-          )}
-        </Dialog>
-      </Modal>
-    </ModalOverlay>
+    <Sheet isOpen={isOpen} onOpenChange={(open) => !open && onClose()} className={s.infoSheet} contentClassName={s.info}>
+      {item && (
+        <>
+          <div className={s.infoBody}>
+            {/* Afresh for another one (Tonight's Another), so the stills start at the first. */}
+            <About key={`${item.kind}-${item.tmdbId ?? item.title}`} item={item} eyebrow={eyebrow} note={note}>
+              {children}
+            </About>
+          </div>
+          <div className={`${sheet.actions} ${s.sheetActions}`}>{actions}</div>
+        </>
+      )}
+    </Sheet>
   );
 }
 

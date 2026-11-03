@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Button as AriaButton, Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
+import { Button as AriaButton, Heading } from "react-aria-components";
 import { AlarmClock, Bell, Check, ChevronRight, Pencil, Repeat } from "lucide-react";
 import { type Reminder, session } from "../api";
 import { Avatar } from "../brand";
@@ -12,8 +12,8 @@ import { remindersQuery } from "../queries/reminders";
 import { dueAt, dueFor, formatBack, formatDue, nextTime, REPEATS, SNOOZES } from "../reminders";
 import { Button } from "./Button";
 import { ReminderSheet } from "./ReminderSheet";
+import { Sheet } from "./Sheet";
 import { UndoBar, useUndoable } from "./UndoBar";
-import confirm from "./Confirm.module.css";
 import ui from "../ui.module.css";
 import s from "./DueReminders.module.css";
 
@@ -117,98 +117,91 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
 
   return (
     <>
-      <ModalOverlay
+      <Sheet
         isOpen={!!due && !editing}
-        isDismissable
         onOpenChange={(open) => !open && setNotNow(queue.map((r) => r.id))}
-        className={confirm.overlay}
+        contentClassName={s.content}
       >
-        <Modal className={`${confirm.sheet} ${s.sheet}`}>
-          {shown && (
-            <Dialog className={s.dialog}>
-              {/* One item in the column, so the empty status line under the handle takes no room. */}
-              <div className={s.top}>
-                <div className={s.handle} aria-hidden />
-                <div role="status">{due && undoBar}</div>
-              </div>
-              {/* The reminder itself: slides in as the next one comes up. */}
-              <div key={shown.id} className={`${s.card} ${moved ? s[moved] : ""}`}>
-                <div className={s.head}>
-                  <span className={s.bell}>
-                    <Bell size={20} aria-hidden className={ui.ring} />
-                  </span>
-                  <div className={s.when}>
-                    <span className={ui.eyebrow}>Due · {formatDue(new Date(dueAt(shown)!))}</span>
-                    {queue.length > 1 && (
-                      <span className={s.count}>
-                        {at + 1} of {queue.length}
-                      </span>
-                    )}
-                  </div>
-                  <Button variant="icon" aria-label="Edit reminder" onPress={() => setEditing(shown)}>
-                    <Pencil size={20} aria-hidden />
-                  </Button>
-                </div>
-
-                <div className={s.body}>
-                  <Heading slot="title" className={s.title}>
-                    {shown.title}
-                  </Heading>
-                  {(sender || shown.repeat) && (
-                    <p className={s.meta}>
-                      {sender && (
-                        <>
-                          {senderMember && <Avatar name={senderMember.name} index={members.indexOf(senderMember)} small />}
-                          <span>From {sender}</span>
-                        </>
-                      )}
-                      {sender && shown.repeat && <span aria-hidden>·</span>}
-                      {shown.repeat && (
-                        <>
-                          <Repeat size={14} aria-hidden />
-                          <span>{capitalize(REPEATS[shown.repeat])}</span>
-                        </>
-                      )}
-                    </p>
-                  )}
-                  {shown.notes && <p className={s.notes}>{shown.notes}</p>}
-                </div>
-              </div>
-
-              <div className={s.actions}>
-                <Button className={s.done} onPress={() => done(shown)}>
-                  <Check size={22} strokeWidth={2.5} aria-hidden />
-                  Done
-                </Button>
-                <div className={s.snooze} role="group" aria-labelledby="due-snooze">
-                  <span id="due-snooze" className={s.snoozeLabel}>
-                    <AlarmClock size={15} aria-hidden />
-                    Snooze
-                  </span>
-                  <div className={s.snoozeTimes}>
-                    {SNOOZES.map((t) => (
-                      <AriaButton key={t.label} className={s.chip} onPress={() => snooze(shown, t.at())}>
-                        {t.label}
-                      </AriaButton>
-                    ))}
-                  </div>
-                </div>
-                <div className={s.footer}>
-                  <Button variant="text" className={s.notNow} onPress={() => setNotNow(queue.map((r) => r.id))}>
-                    Not now
-                  </Button>
+        {shown && (
+          <>
+            <div role="status">{due && undoBar}</div>
+            {/* The reminder itself: slides in as the next one comes up. */}
+            <div key={shown.id} className={`${s.card} ${moved ? s[moved] : ""}`}>
+              <div className={s.head}>
+                <span className={s.bell}>
+                  <Bell size={20} aria-hidden className={ui.ring} />
+                </span>
+                <div className={s.when}>
+                  <span className={ui.eyebrow}>Due · {formatDue(new Date(dueAt(shown)!))}</span>
                   {queue.length > 1 && (
-                    <Button variant="text" className={s.skip} onPress={skip}>
-                      Skip
-                      <ChevronRight size={18} strokeWidth={2.5} aria-hidden />
-                    </Button>
+                    <span className={s.count}>
+                      {at + 1} of {queue.length}
+                    </span>
                   )}
                 </div>
+                <Button variant="icon" aria-label="Edit reminder" onPress={() => setEditing(shown)}>
+                  <Pencil size={20} aria-hidden />
+                </Button>
               </div>
-            </Dialog>
-          )}
-        </Modal>
-      </ModalOverlay>
+
+              <div className={s.body}>
+                <Heading slot="title" className={s.title}>
+                  {shown.title}
+                </Heading>
+                {(sender || shown.repeat) && (
+                  <p className={s.meta}>
+                    {sender && (
+                      <>
+                        {senderMember && <Avatar name={senderMember.name} index={members.indexOf(senderMember)} small />}
+                        <span>From {sender}</span>
+                      </>
+                    )}
+                    {sender && shown.repeat && <span aria-hidden>·</span>}
+                    {shown.repeat && (
+                      <>
+                        <Repeat size={14} aria-hidden />
+                        <span>{capitalize(REPEATS[shown.repeat])}</span>
+                      </>
+                    )}
+                  </p>
+                )}
+                {shown.notes && <p className={s.notes}>{shown.notes}</p>}
+              </div>
+            </div>
+
+            <div className={s.actions}>
+              <Button className={s.done} onPress={() => done(shown)}>
+                <Check size={22} strokeWidth={2.5} aria-hidden />
+                Done
+              </Button>
+              <div className={s.snooze} role="group" aria-labelledby="due-snooze">
+                <span id="due-snooze" className={s.snoozeLabel}>
+                  <AlarmClock size={15} aria-hidden />
+                  Snooze
+                </span>
+                <div className={s.snoozeTimes}>
+                  {SNOOZES.map((t) => (
+                    <AriaButton key={t.label} className={s.chip} onPress={() => snooze(shown, t.at())}>
+                      {t.label}
+                    </AriaButton>
+                  ))}
+                </div>
+              </div>
+              <div className={s.footer}>
+                <Button variant="text" className={s.notNow} onPress={() => setNotNow(queue.map((r) => r.id))}>
+                  Not now
+                </Button>
+                {queue.length > 1 && (
+                  <Button variant="text" className={s.skip} onPress={skip}>
+                    Skip
+                    <ChevronRight size={18} strokeWidth={2.5} aria-hidden />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </Sheet>
 
       {editing && <ReminderSheet reminder={editing} onClose={() => setEditing(null)} />}
 

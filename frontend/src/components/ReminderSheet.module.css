@@ -1,7 +1,5 @@
-/* Taller than the Confirm sheet it builds on: scrolls on a short phone instead of running off the top. */
-.sheet {
-  max-height: calc(var(--app-height, 100dvh) - 24px);
-  overflow-y: auto;
+/* Closer to the top than other sheets: its header row has the close and save buttons. */
+.content {
   padding-top: 12px;
 }
 

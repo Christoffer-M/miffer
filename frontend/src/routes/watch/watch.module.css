@@ -997,8 +997,7 @@
 
 /* A movie or series' sheet (WatchSheet in watch.tsx). Tall: its middle scrolls, the buttons stay put. */
 .infoSheet {
-  max-height: calc(var(--app-height, 100dvh) - 48px);
-  display: flex;
+  max-height: calc(100% - 48px);
 }
 .info {
   flex: 1;

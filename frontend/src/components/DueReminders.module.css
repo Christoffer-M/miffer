@@ -1,29 +1,10 @@
-/* Builds on the Confirm sheet; scrolls on a short phone instead of running off the top. */
-.sheet {
-  max-height: calc(var(--app-height, 100dvh) - 24px);
-  overflow-y: auto;
-  padding-top: 10px;
-  padding-bottom: calc(24px + env(safe-area-inset-bottom));
-}
-
-.dialog {
+/* The sheet's content (Sheet.tsx). Under the grabber, then the status line: empty, it still
+   takes a gap, so the card sits where it did below the old handle. */
+.content {
   --gap: 18px;
-  outline: none;
-  display: flex;
-  flex-direction: column;
   gap: var(--gap);
-}
-
-.top {
-  display: flex;
-  flex-direction: column;
-}
-.handle {
-  width: 40px;
-  height: 4px;
-  border-radius: var(--radius-pill);
-  background: var(--line);
-  align-self: center;
+  padding-top: 14px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom) + var(--sheet-scroll-padding-y, 0px));
 }
 
 /* The reminder itself: slides in as the next one comes up. */
