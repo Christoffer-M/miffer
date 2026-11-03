@@ -1,15 +1,27 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import { zValidator } from "@hono/zod-validator";
 import { and, eq } from "drizzle-orm";
 import { createMiddleware } from "hono/factory";
+import { z } from "zod";
 import { db, schema } from "./db/index.js";
 
 const { devices } = schema;
 
-export const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
+const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
+const newToken = () => randomBytes(32).toString("base64url");
 
 export async function deviceForToken(token: string) {
   const [device] = await db.select().from(devices).where(eq(devices.tokenHash, hashToken(token)));
   return device;
+}
+
+export async function addDevice(householdId: string, name: string) {
+  const token = newToken();
+  const [device] = await db
+    .insert(devices)
+    .values({ householdId, name, tokenHash: hashToken(token) })
+    .returning({ id: devices.id });
+  return { token, deviceId: device.id };
 }
 
 export type Env = { Variables: { deviceId: string; householdId: string } };
@@ -22,6 +34,9 @@ export const auth = createMiddleware<Env>(async (c, next) => {
   c.set("householdId", device.householdId);
   await next();
 });
+
+// The `:id` of a household's row: a member, item, reminder or watch title.
+export const idParam = zValidator("param", z.object({ id: z.uuid() }));
 
 export const isMember = async (householdId: string, deviceId: string) =>
   (

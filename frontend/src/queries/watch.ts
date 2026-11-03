@@ -72,7 +72,7 @@ function keep(tmdbId: number, seasons: number[]) {
 }
 
 // Series asked for together (all those on a screen) go to the server in one request.
-const AT_ONCE = 100; // as many as app.ts takes
+const AT_ONCE = 100; // as many as routes/watch.ts takes
 type Asked = { resolve: (seasons: number[]) => void; reject: (err: Error) => void };
 let asked = new Map<number, Asked[]>();
 

@@ -1,11 +1,11 @@
-import { randomBytes, randomInt } from "node:crypto";
+import { randomInt } from "node:crypto";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import { zValidator } from "@hono/zod-validator";
 import { and, eq, gt, lte, sql } from "drizzle-orm";
 import { type Context, Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
-import { auth, type Env, hashToken } from "../auth.js";
+import { addDevice, auth, type Env, idParam } from "../auth.js";
 import { db, schema } from "../db/index.js";
 import { notify } from "../live.js";
 import { isPushEndpoint, pushKey } from "../push.js";
@@ -50,18 +50,8 @@ function clientAddress(c: Context) {
   }
 }
 
-const newToken = () => randomBytes(32).toString("base64url");
 const newCode = () =>
   Array.from({ length: 6 }, () => CODE_CHARS[randomInt(CODE_CHARS.length)]).join("");
-
-async function addDevice(householdId: string, name: string) {
-  const token = newToken();
-  const [device] = await db
-    .insert(devices)
-    .values({ householdId, name, tokenHash: hashToken(token) })
-    .returning({ id: devices.id });
-  return { token, deviceId: device.id };
-}
 
 /** A new code for linking one more phone, alongside any others still out. */
 async function addCode(householdId: string) {
@@ -155,7 +145,7 @@ export const householdRoutes = new Hono<Env>()
     return c.body(null, 204);
   })
   // Removing a phone revokes its token right away. Removing yourself is "leave".
-  .delete("/members/:id", auth, zValidator("param", z.object({ id: z.uuid() })), async (c) => {
+  .delete("/members/:id", auth, idParam, async (c) => {
     await db
       .delete(devices)
       .where(and(eq(devices.id, c.req.valid("param").id), eq(devices.householdId, c.var.householdId)));

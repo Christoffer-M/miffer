@@ -2,14 +2,13 @@ import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-import { auth, type Env } from "../auth.js";
+import { auth, type Env, idParam } from "../auth.js";
 import { db, schema } from "../db/index.js";
 import { notify } from "../live.js";
 import { pushAdded } from "../push.js";
 
 const { devices, items, itemHistory } = schema;
 
-const itemParam = zValidator("param", z.object({ id: z.uuid() }));
 
 export const itemRoutes = new Hono<Env>()
   .use(auth)
@@ -97,7 +96,7 @@ export const itemRoutes = new Hono<Env>()
       return c.body(null, 204);
     },
   )
-  .patch("/:id", itemParam, zValidator("json", z.object({ done: z.boolean() })), async (c) => {
+  .patch("/:id", idParam, zValidator("json", z.object({ done: z.boolean() })), async (c) => {
     await db
       .update(items)
       .set({ done: c.req.valid("json").done, updatedAt: new Date() })
@@ -113,7 +112,7 @@ export const itemRoutes = new Hono<Env>()
     notify(c.var.householdId);
     return c.body(null, 204);
   })
-  .delete("/:id", itemParam, async (c) => {
+  .delete("/:id", idParam, async (c) => {
     await db
       .delete(items)
       .where(and(eq(items.id, c.req.valid("param").id), eq(items.householdId, c.var.householdId)));

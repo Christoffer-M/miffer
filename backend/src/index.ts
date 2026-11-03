@@ -6,7 +6,7 @@ import { app } from "./app.js";
 import { deviceForToken } from "./auth.js";
 import { db, sql } from "./db/index.js";
 import { startHeartbeat, subscribe, unsubscribe } from "./live.js";
-import { fireDue } from "./reminders.js";
+import { fireDue } from "./reminderSchedule.js";
 import { fillEnds } from "./watched.js";
 
 await migrate(db, { migrationsFolder: "./drizzle" });

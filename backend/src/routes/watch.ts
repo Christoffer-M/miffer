@@ -2,7 +2,7 @@ import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, getTableColumns, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-import { auth, type Env, isMember } from "../auth.js";
+import { auth, type Env, idParam, isMember } from "../auth.js";
 import { db, schema } from "../db/index.js";
 import { notify } from "../live.js";
 import { details, search, searchOn, seasons } from "../tmdb.js";
@@ -19,7 +19,6 @@ const watchFields = z.object({
   // Only a TMDB image name: phones put it in an image address.
   posterPath: z.string().regex(/^\/\w+\.(jpg|png)$/).nullable(),
 });
-const watchParam = zValidator("param", z.object({ id: z.uuid() }));
 // The next episode up in a series being watched.
 const progress = z.object({ season: z.number().int().min(1).max(500), episode: z.number().int().min(1).max(5000) });
 type Place = z.infer<typeof progress>;
@@ -167,7 +166,7 @@ export const watchRoutes = new Hono<Env>()
   // without a place, the place stays as it is.
   .patch(
     "/:id",
-    watchParam,
+    idParam,
     zValidator("json", z.object({ watched: z.boolean(), place: progress.nullable().optional(), at: progressAt })),
     async (c) => {
       const { watched, place, at } = c.req.valid("json");
@@ -200,7 +199,7 @@ export const watchRoutes = new Hono<Env>()
   // yet mustn't overwrite where it ended.
   .put(
     "/:id/progress",
-    watchParam,
+    idParam,
     zValidator("json", z.object({ progress: progress.nullable(), at: progressAt })),
     async (c) => {
       const { progress: place, at } = c.req.valid("json");
@@ -219,7 +218,7 @@ export const watchRoutes = new Hono<Env>()
       return c.body(null, 204);
     },
   )
-  .delete("/:id", watchParam, async (c) => {
+  .delete("/:id", idParam, async (c) => {
     await db.delete(watch).where(and(eq(watch.id, c.req.valid("param").id), eq(watch.householdId, c.var.householdId)));
     notify(c.var.householdId, "watch");
     return c.body(null, 204);

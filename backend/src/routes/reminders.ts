@@ -3,10 +3,10 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import { z } from "zod";
-import { auth, type Env, isMember } from "../auth.js";
+import { auth, type Env, idParam, isMember } from "../auth.js";
 import { db, schema } from "../db/index.js";
 import { notify } from "../live.js";
-import { complete, isTimeZone } from "../reminders.js";
+import { complete, isTimeZone } from "../reminderSchedule.js";
 
 const { reminders } = schema;
 
@@ -19,7 +19,6 @@ const reminderFields = z.object({
   forDevice: z.uuid().nullable(),
   timeZone: z.string().max(64).refine(isTimeZone, "Unknown time zone"),
 });
-const reminderParam = zValidator("param", z.object({ id: z.uuid() }));
 // Where a reminder stands, for Undo.
 const reminderTimes = z.object({
   remindAt: z.iso.datetime().nullable(),
@@ -58,7 +57,7 @@ export const reminderRoutes = new Hono<Env>()
   // Edit, snooze, or put back from Done. A new time sends it again when that comes.
   .patch(
     "/:id",
-    reminderParam,
+    idParam,
     zValidator("json", reminderFields.extend({ snoozedUntil: z.iso.datetime(), done: z.literal(false) }).partial()),
     async (c) => {
       const { remindAt, snoozedUntil, ...rest } = c.req.valid("json");
@@ -79,7 +78,7 @@ export const reminderRoutes = new Hono<Env>()
     },
   )
   // Answers with its times as they are now, so an Undo can tell whether anything changed it since.
-  .post("/:id/done", reminderParam, async (c) => {
+  .post("/:id/done", idParam, async (c) => {
     const now = await complete(c.var.householdId, c.req.valid("param").id);
     if (!now) return c.json({ error: NO_REMINDER }, 404);
     notify(c.var.householdId, "reminders");
@@ -89,7 +88,7 @@ export const reminderRoutes = new Hono<Env>()
   // Only while it's as this phone left it (`ifStill`): a change from another phone since then wins.
   .put(
     "/:id/state",
-    reminderParam,
+    idParam,
     zValidator("json", reminderTimes.extend({ notified: z.boolean(), ifStill: reminderTimes })),
     async (c) => {
       const { remindAt, snoozedUntil, ifStill, ...rest } = c.req.valid("json");
@@ -119,7 +118,7 @@ export const reminderRoutes = new Hono<Env>()
     notify(c.var.householdId, "reminders");
     return c.body(null, 204);
   })
-  .delete("/:id", reminderParam, async (c) => {
+  .delete("/:id", idParam, async (c) => {
     await db
       .delete(reminders)
       .where(and(eq(reminders.id, c.req.valid("param").id), eq(reminders.householdId, c.var.householdId)));

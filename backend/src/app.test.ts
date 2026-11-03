@@ -5,7 +5,7 @@ import webpush from "web-push";
 import { app } from "./app.js";
 import { eq, sql as q } from "drizzle-orm";
 import { db, schema, sql } from "./db/index.js";
-import { fireDue } from "./reminders.js";
+import { fireDue } from "./reminderSchedule.js";
 import { fillEnds } from "./watched.js";
 import { readFileSync } from "node:fs";
 
