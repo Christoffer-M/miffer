@@ -5,14 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useContext, useState } from "react";
 import { Button as AriaButton } from "react-aria-components";
-import { Check, ChevronLeft, Dices, Play, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronLeft, Dices, Play, Plus, Trash2, Undo2 } from "lucide-react";
 import type { Watch } from "../../api";
 import { Button, buttonClass } from "../../components/Button";
 import { UndoBar, UndoSpot, useUndo } from "../../components/UndoBar";
 import { useRemoveWatch, useRestoreWatch, useSetProgress, useSetWatched } from "../../mutations/watch";
-import { endOf, seen, seenText } from "../../progress";
+import { endOf, type Place, seen, seenText, short } from "../../progress";
 import { useMembers } from "../../queries/household";
-import { seasonsQuery, watchQuery } from "../../queries/watch";
+import { seasonsQuery, useWatchedSeries, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
 import { addedIt, type Kind, KINDS, PosterTile, tileLabel, toStart, WatchSheet } from "../../watch";
 import ui from "../../ui.module.css";
@@ -21,7 +21,8 @@ import s from "./watch.module.css";
 
 /**
  * Tapping a poster to watch: its sheet, with Remove and Watched (and Start watching, for a
- * series), all with Undo. The screen shows `sheet` and `bottom` (Undo and the + button) after its list;
+ * series), all with Undo. A watched series with new episodes since (`fresh`, first on Watch's Series
+ * shelf) goes on from them instead. The screen shows `sheet` and `bottom` (Undo and the + button) after its list;
  * `undo` is there for the screen's other changes, so one Undo bar serves them all.
  */
 export function useToWatch() {
@@ -33,6 +34,7 @@ export function useToWatch() {
   const restoreWatch = useRestoreWatch();
   const setProgress = useSetProgress();
   const undo = useUndo();
+  const { fresh } = useWatchedSeries(list);
   // The poster tapped last; kept after closing so the sheet doesn't empty as it slides away.
   const [tapped, setTapped] = useState<{ item?: Watch; isOpen: boolean }>({ isOpen: false });
   const close = () => setTapped((t) => ({ ...t, isOpen: false }));
@@ -67,32 +69,59 @@ export function useToWatch() {
     undo.offer(`${w.title} is in Watching`, () => setProgress.mutate({ id: w.id, progress: null }));
   }
 
+  /** On to the new episodes: back on Watching, at the first of them, as on Watched. */
+  function goOn(w: Watch, place: Place) {
+    close();
+    const ended = { season: w.season!, episode: w.episode! };
+    setWatched.mutate({ id: w.id, watched: false, place });
+    undo.offer(`${w.title} is in Watching`, () => setWatched.mutate({ id: w.id, watched: true, place: ended, at: w.progressAt }));
+  }
+
   const isSeries = tapped.item?.kind === "series";
+  const isNew = tapped.item && fresh.get(tapped.item.id);
   const sheet = tapped.item && (
     <WatchSheet
       // As it is now: someone may have changed it since it was tapped.
       item={list.find((w) => w.id === tapped.item!.id) ?? tapped.item}
       isOpen={tapped.isOpen}
       onClose={close}
-      note={addedIt(whoIs(tapped.item.addedBy))}
-      // A series' main button is Start watching, across the top; a movie's is Watched.
+      note={isNew ? `${isNew.label}: ${short(isNew.place)} is next` : addedIt(whoIs(tapped.item.addedBy))}
+      // A series' main button is Start watching, across the top, or Continue with new episodes; a movie's is Watched.
       actions={
-        <>
-          {isSeries && (
-            <Button onPress={() => start(tapped.item!)} autoFocus>
+        isNew ? (
+          <>
+            <Button onPress={() => goOn(tapped.item!, isNew.place)} autoFocus>
               <Play size={18} aria-hidden />
-              Start watching
+              Continue at {short(isNew.place)}
             </Button>
-          )}
-          <Button variant="outline" onPress={() => remove(tapped.item!)}>
-            <Trash2 size={18} aria-hidden />
-            Remove
-          </Button>
-          <Button variant={isSeries ? "outline" : "primary"} onPress={() => watched(tapped.item!)} autoFocus={!isSeries}>
-            <Check size={18} aria-hidden />
-            Watched
-          </Button>
-        </>
+            <Button variant="outline" onPress={() => remove(tapped.item!)}>
+              <Trash2 size={18} aria-hidden />
+              Remove
+            </Button>
+            {/* Back on its shelf, not started, as on Watched. */}
+            <Button variant="outline" onPress={() => (close(), setWatched.mutate({ id: tapped.item!.id, watched: false, place: null }))}>
+              <Undo2 size={18} aria-hidden />
+              Start over
+            </Button>
+          </>
+        ) : (
+          <>
+            {isSeries && (
+              <Button onPress={() => start(tapped.item!)} autoFocus>
+                <Play size={18} aria-hidden />
+                Start watching
+              </Button>
+            )}
+            <Button variant="outline" onPress={() => remove(tapped.item!)}>
+              <Trash2 size={18} aria-hidden />
+              Remove
+            </Button>
+            <Button variant={isSeries ? "outline" : "primary"} onPress={() => watched(tapped.item!)} autoFocus={!isSeries}>
+              <Check size={18} aria-hidden />
+              Watched
+            </Button>
+          </>
+        )
       }
     />
   );
@@ -111,7 +140,7 @@ export function useToWatch() {
     </div>
   );
 
-  return { open: (item: Watch) => setTapped({ item, isOpen: true }), start, sheet, bottom, undo };
+  return { open: (item: Watch) => setTapped({ item, isOpen: true }), start, sheet, bottom, undo, fresh };
 }
 
 /**

@@ -6,8 +6,9 @@ import { Avatars, Wordmark } from "../brand";
 import { useMembers } from "../queries/household";
 import { itemsQuery } from "../queries/items";
 import { remindersQuery } from "../queries/reminders";
-import { watchQuery } from "../queries/watch";
+import { useWatchedSeries, watchQuery } from "../queries/watch";
 import { Poster } from "../watch";
+import type { Watch } from "../api";
 import { clock, dueAt, formatWhen, sortReminders } from "../reminders";
 import ui from "../ui.module.css";
 import s from "./index.module.css";
@@ -17,6 +18,13 @@ export const Route = createFileRoute("/")({ component: Home });
 function greeting() {
   const hour = new Date().getHours();
   return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+}
+
+/** On the Watch card's line: "1 new season", "2 new episodes" (more of the last one), "2 with new episodes". */
+function freshText(series: Watch[], fresh: ReturnType<typeof useWatchedSeries>["fresh"]) {
+  if (series.length > 1) return `${series.length} with new episodes`;
+  const { label, place } = fresh.get(series[0].id)!;
+  return place.episode === 1 ? "1 new season" : label;
 }
 
 function Home() {
@@ -31,6 +39,10 @@ function Home() {
   const toWatch = watchList.filter((w) => !w.watchedAt);
   const movies = toWatch.filter((w) => w.kind === "movie").length;
   const watchFromOthers = toWatch.find((w) => w.addedBy && w.addedBy !== session.deviceId); // newest first
+  // Watched series with new episodes since: said on the card's line, first on the row with a dot.
+  const { fresh } = useWatchedSeries(watchList);
+  const freshSeries = watchList.filter((w) => fresh.has(w.id));
+  const shelf = [...freshSeries, ...toWatch];
 
   return (
     <>
@@ -108,16 +120,24 @@ function Home() {
               <strong>Watch</strong>
               <span>
                 {movies} {movies === 1 ? "movie" : "movies"} · {toWatch.length - movies} series
+                {freshSeries.length > 0 && <strong className={s.fresh}> · {freshText(freshSeries, fresh)}</strong>}
               </span>
             </div>
             <ChevronRight size={20} aria-hidden />
           </div>
-          {toWatch.length > 0 && (
-            <div className={s.posters} aria-label={toWatch.slice(0, 5).map((w) => w.title).join(", ")}>
-              {toWatch.slice(0, 5).map((w) => (
-                <Poster key={w.id} path={w.posterPath} kind={w.kind} />
-              ))}
-              {toWatch.length > 5 && <span className={`${ui.muted} ${ui.small}`}>+{toWatch.length - 5}</span>}
+          {shelf.length > 0 && (
+            <div className={s.posters} aria-label={shelf.slice(0, 5).map((w) => w.title).join(", ")}>
+              {shelf.slice(0, 5).map((w) =>
+                fresh.has(w.id) ? (
+                  <span key={w.id} className={s.dotted}>
+                    <Poster path={w.posterPath} kind={w.kind} />
+                    <span className={s.dot} />
+                  </span>
+                ) : (
+                  <Poster key={w.id} path={w.posterPath} kind={w.kind} />
+                ),
+              )}
+              {shelf.length > 5 && <span className={`${ui.muted} ${ui.small}`}>+{shelf.length - 5}</span>}
             </div>
           )}
           {watchFromOthers && (
