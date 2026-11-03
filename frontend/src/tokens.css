@@ -1,17 +1,112 @@
-/* The only global CSS: design tokens and element defaults. Component styles live in *.module.css. */
+/*
+ * The only global CSS: design tokens and element defaults. Component styles live in *.module.css.
+ * Use these instead of literal colours, sizes, radii, shadows and easings, so every screen
+ * draws from the same few values. Spacing (padding, margin, gap) is still written in px.
+ * Tokens built from others (--focus-ring, the shadows, --scrim) are worked out here on :root,
+ * so a component that sets its own --accent or --ink has to set those again too.
+ */
 :root {
+  /* Surfaces and text */
   --ground: #f2f4f7;
   --surface: #ffffff;
-  --ink: #14213d;
+  --ink-rgb: 20 33 61; /* #14213d, as channels so shadows and the scrim can derive from it */
+  --ink: rgb(var(--ink-rgb));
   --muted: #4a5568;
+  --placeholder: #6b7280;
   --line: #dce1e8;
   --line-soft: #e5e9ef;
   --field-border: #7b8798;
-  --accent: #c2410c; /* buttons, labels: white text passes contrast */
+
+  /* Accent */
+  --accent-rgb: 194 65 12; /* #c2410c, as channels for --shadow-accent */
+  --accent: rgb(var(--accent-rgb)); /* buttons, labels: white text passes contrast */
   --accent-bright: #ea580c; /* checkmarks, the wordmark dot */
   --accent-tint: #ffedd5;
+  --accent-ink: #9a3412; /* text on the tint: passes 4.5:1 */
+
+  /* Status. White text passes 4.5:1 on --danger and --success. */
+  --danger: #b91c1c;
+  --success: #15803d;
+  --success-tint: #dcfce7;
+  --success-ink: #166534;
+  --neutral-tint: #e2e8f0;
+  --neutral-ink: #1e293b;
+
+  /* On solid fills (accent, danger, success, ink) */
+  --on-solid: #ffffff;
+  --on-ink-muted: #cbd5e1; /* secondary text and borders on ink */
+  --on-ink-line: rgb(255 255 255 / 0.28);
+  --on-ink-fill: rgb(255 255 255 / 0.1);
+  --on-ink-fill-pressed: rgb(255 255 255 / 0.2);
+
+  /* Member colours (brand.tsx): light tint with dark text, all above 4.5:1. Their own values,
+     not the accent's or success's, so retuning those doesn't recolour anyone's avatar. */
+  --member-0-tint: #ffedd5;
+  --member-0-ink: #9a3412;
+  --member-1-tint: #dbeafe;
+  --member-1-ink: #1d4ed8;
+  --member-2-tint: #dcfce7;
+  --member-2-ink: #166534;
+  --member-3-tint: #f3e8ff;
+  --member-3-ink: #6b21a8;
+  --member-4-tint: #fce7f3;
+  --member-4-ink: #9d174d;
+
+  /* Type */
   --display: "Bricolage Grotesque", "DM Sans", sans-serif;
   --body: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --text-2xs: 11px; /* tags */
+  --text-xs: 12px; /* eyebrows, tab labels, legends */
+  --text-sm: 13px; /* meta lines, hints */
+  --text-md: 14px; /* secondary text, labels */
+  --text-base: 15px; /* body, chips */
+  --text-lg: 16px; /* list items, buttons */
+  --text-input: 16px; /* fields: below 16px iOS zooms in on focus, so this stays put */
+  --text-xl: 18px; /* card titles, big buttons */
+  --text-2xl: 22px; /* shelf titles */
+  --text-3xl: 24px; /* link codes */
+  --text-4xl: 26px; /* sheet titles */
+  --text-5xl: 30px; /* the wordmark, a sheet's big title */
+  --text-6xl: 34px; /* display */
+  --text-7xl: 38px; /* screen titles */
+
+  /* Sizes: tap targets and controls */
+  --tap-min: 44px; /* the smallest anything tappable gets */
+  --control-height: 48px; /* buttons, fields, steppers */
+  --control-height-lg: 56px; /* the main action in a sheet, the + button, link codes */
+
+  /* Radius */
+  --radius-xs: 4px;
+  --radius-sm: 6px; /* checkbox, small posters */
+  --radius-md: 10px; /* icon and text buttons, focus rings around them */
+  --radius-lg: 12px; /* fields, cards inside a card */
+  --radius-xl: 16px; /* cards, lists, floating bars */
+  --radius-2xl: 20px; /* feature cards */
+  --radius-sheet: 24px; /* a sheet's top corners */
+  --radius-pill: 999px;
+  --radius-round: 50%;
+
+  /* Elevation */
+  --shadow-float: 0 6px 20px rgb(var(--ink-rgb) / 0.25); /* bars floating over the screen */
+  --shadow-accent: 0 6px 20px rgb(var(--accent-rgb) / 0.35); /* the + button */
+  --scrim: rgb(var(--ink-rgb) / 0.45); /* behind a sheet */
+
+  /* Focus: outline: var(--focus-ring). On ink, var(--focus-width) solid var(--accent-tint). */
+  --focus-width: 2px;
+  --focus-ring: var(--focus-width) solid var(--accent);
+
+  /* Motion */
+  /* Not named ease-in/ease-out: those CSS keywords are other curves, still used for presses and fades. */
+  --ease-decelerate: cubic-bezier(0.2, 0.8, 0.2, 1); /* most things arriving or moving */
+  --ease-spring: cubic-bezier(0.2, 0.8, 0.2, 1.4); /* a small overshoot: picked, armed */
+  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1); /* leaving */
+  --duration-press: 80ms; /* the squeeze when pressed */
+  --duration-fast: 120ms; /* colour changes */
+
+  /* Layers */
+  --z-undo: 5;
+  --z-sheet: 10;
+  --z-notice: 11; /* the offline notice, over a sheet */
 }
 
 * {
@@ -43,7 +138,7 @@ input {
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 240ms;
-  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation-timing-function: var(--ease-decelerate);
 }
 html:active-view-transition-type(forward)::view-transition-old(root) {
   animation-name: slide-out-left;
@@ -151,16 +246,16 @@ html:active-view-transition-type(back)::view-transition-new(root) {
 ::view-transition-group(.item),
 ::view-transition-group(.block) {
   animation-duration: 340ms;
-  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation-timing-function: var(--ease-decelerate);
 }
 
 /* Arriving: drops in. */
 ::view-transition-new(.item):only-child {
-  animation: item-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: item-in 260ms var(--ease-decelerate) both;
 }
 /* Leaving: slides out to the left (delete, Clear)... */
 ::view-transition-old(.item):only-child {
-  animation: item-out-left 280ms cubic-bezier(0.4, 0, 1, 1) both;
+  animation: item-out-left 280ms var(--ease-accelerate) both;
 }
 /* ...or to the right when ticked or put back ("check"), like the swipe. */
 html:active-view-transition-type(check)::view-transition-old(.item):only-child {

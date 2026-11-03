@@ -7,7 +7,7 @@
 
 .card {
   padding: 18px;
-  border-radius: 20px;
+  border-radius: var(--radius-2xl);
   background: var(--surface);
   display: flex;
   flex-direction: column;
@@ -24,7 +24,7 @@
 .cardIcon {
   width: 44px;
   height: 44px;
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   background: var(--accent-tint);
   color: var(--accent);
   display: flex;
@@ -39,10 +39,10 @@
   color: var(--ink);
 }
 .cardTitle strong {
-  font-size: 18px;
+  font-size: var(--text-xl);
 }
 .cardTitle span {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--muted);
 }
 
@@ -61,9 +61,9 @@
 
 .chip {
   padding: 5px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--ground);
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 .reminders {
@@ -77,22 +77,22 @@
   justify-content: space-between;
   gap: 10px;
   padding: 0 12px;
-  font-size: 15px;
+  font-size: var(--text-base);
 }
 .reminder > :last-child {
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 /* Due: dark like on the Reminders screen. */
 .due {
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--ink);
-  color: #fff;
+  color: var(--on-solid);
 }
 .due strong {
   font-weight: 600;
 }
 .due > :last-child {
-  color: #cbd5e1;
+  color: var(--on-ink-muted);
 }

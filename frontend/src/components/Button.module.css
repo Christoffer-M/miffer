@@ -5,13 +5,13 @@
   color: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 80ms ease-out;
+  transition: transform var(--duration-press) ease-out;
 }
 .base[data-pressed] {
   transform: scale(0.97);
 }
 .base[data-focus-visible] {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 .base[data-disabled] {
@@ -23,10 +23,10 @@
 .primary,
 .outline,
 .danger {
-  height: 48px;
+  height: var(--control-height);
   padding: 0 20px;
-  border-radius: 999px;
-  font-size: 16px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-lg);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -35,31 +35,31 @@
 }
 .primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-solid);
 }
 .outline {
   border: 2px solid var(--ink);
   color: var(--ink);
 }
 .danger {
-  background: #b91c1c; /* white text on this passes 4.5:1 */
-  color: #fff;
+  background: var(--danger);
+  color: var(--on-solid);
 }
 
 .text {
-  min-height: 44px;
+  min-height: var(--tap-min);
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   color: var(--accent);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 700;
 }
 
 .icon {
-  width: 44px;
-  height: 44px;
+  width: var(--tap-min);
+  height: var(--tap-min);
   flex-shrink: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   color: var(--muted);
   display: flex;
   align-items: center;

@@ -21,7 +21,7 @@
 .handle {
   width: 40px;
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   background: var(--line);
   align-self: center;
 }
@@ -33,10 +33,10 @@
   gap: var(--gap);
 }
 .next {
-  animation: card-next 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: card-next 280ms var(--ease-decelerate);
 }
 .back {
-  animation: card-back 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: card-back 280ms var(--ease-decelerate);
 }
 @keyframes card-next {
   from {
@@ -60,7 +60,7 @@
   width: 40px;
   height: 40px;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--accent-tint);
   color: var(--accent);
   display: flex;
@@ -74,7 +74,7 @@
   gap: 2px;
 }
 .count {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--muted);
 }
@@ -87,7 +87,7 @@
 .title {
   margin: 0;
   font-family: var(--display);
-  font-size: 32px;
+  font-size: var(--text-5xl);
   line-height: 1.1;
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;
@@ -98,15 +98,15 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--muted);
 }
 .notes {
   margin: 0;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--ground);
-  font-size: 15px;
+  font-size: var(--text-base);
   line-height: 1.45;
   white-space: pre-line;
   overflow-wrap: anywhere;
@@ -118,8 +118,8 @@
   gap: 12px;
 }
 .done {
-  height: 56px;
-  font-size: 17px;
+  height: var(--control-height-lg);
+  font-size: var(--text-xl);
 }
 
 .snooze {
@@ -131,7 +131,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--muted);
 }
@@ -142,20 +142,20 @@
 }
 /* Like the chips in the reminder sheet. React Aria marks state with data attributes. */
 .chip {
-  min-height: 48px;
+  min-height: var(--control-height);
   padding: 0 8px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--ground);
   color: var(--ink);
-  font-size: 15px;
+  font-size: var(--text-base);
   font-weight: 600;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition:
-    transform 80ms ease-out,
-    background 120ms,
-    border-color 120ms;
+    transform var(--duration-press) ease-out,
+    background var(--duration-fast),
+    border-color var(--duration-fast);
 }
 .chip[data-pressed] {
   transform: scale(0.97);
@@ -163,7 +163,7 @@
   border-color: var(--accent);
 }
 .chip[data-focus-visible] {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -174,13 +174,13 @@
 }
 .notNow {
   color: var(--muted);
-  font-size: 15px;
+  font-size: var(--text-base);
 }
 .skip {
   display: flex;
   align-items: center;
   gap: 2px;
-  font-size: 15px;
+  font-size: var(--text-base);
 }
 
 .undoInSheet {
@@ -192,7 +192,7 @@
    (or the bottom, while the keyboard hides them), over whatever screen is open. */
 .undoSlot {
   position: relative;
-  z-index: 5;
+  z-index: var(--z-undo);
 }
 .undoSlot > * {
   position: absolute;
