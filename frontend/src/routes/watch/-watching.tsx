@@ -260,17 +260,20 @@ function SeasonList({ tmdbId, at, seasons, onChange }: SeasonListProps) {
   const parts = seasonParts(at, seasons);
   const list = useRef<HTMLDivElement>(null);
 
-  // The open season's first unwatched episode in view, when the sheet opens and when the place
-  // moves to another season: below, just far enough to show it and the one after, so the seasons
-  // above stay when it fits; above (the season before was scrolled and has closed), its season
-  // from the top.
+  // Moved on to another season (its last episode ticked): the sheet scrolls to that season's
+  // first unwatched episode, just far enough to show it and the one after. Not on opening: the
+  // sheet starts at the top, with the poster.
+  const placed = useRef(at.season);
   useEffect(() => {
-    const box = list.current;
-    const first = box?.querySelector<HTMLElement>(`.${s.episodeRow}:not([data-seen])`);
-    if (!box || !first) return;
-    const below = first.offsetTop + 2 * first.offsetHeight - box.clientHeight;
-    if (first.offsetTop - first.offsetHeight < box.scrollTop) box.scrollTop = first.closest<HTMLElement>(`.${s.season}`)!.offsetTop;
-    else if (below > box.scrollTop) box.scrollTop = below;
+    if (placed.current === at.season || open !== at.season) return;
+    placed.current = at.season;
+    const body = list.current?.closest<HTMLElement>(`.${s.infoBody}`);
+    const first = list.current?.querySelector<HTMLElement>(`.${s.episodeRow}:not([data-seen])`);
+    if (!body || !first) return;
+    const view = body.getBoundingClientRect();
+    const row = first.getBoundingClientRect();
+    if (row.top - row.height < view.top) body.scrollTop -= view.top - first.closest(`.${s.season}`)!.getBoundingClientRect().top;
+    else if (row.bottom + row.height > view.bottom) body.scrollTop += row.bottom + row.height - view.bottom;
   }, [at.season, open]);
 
   return (

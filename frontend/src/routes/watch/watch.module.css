@@ -766,14 +766,12 @@
   outline-offset: 2px;
 }
 
-/* Watching's sheet: a row per season, the open one's episodes under it by name. The list
-   scrolls inside the sheet, which doesn't, so it leaves room for the poster and the buttons. */
+/* Watching's sheet: a row per season, the open one's episodes under it by name. It scrolls with
+   the rest of the sheet. */
 .seasons {
-  position: relative; /* the episodes' offsetTop, to scroll the first unwatched into view */
-  max-height: max(240px, calc(var(--app-height, 100dvh) - 340px));
-  overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
+  overflow: clip; /* the rows' corners; unlike hidden, the open row still sticks to the sheet's top */
 }
 .season + .season {
   border-top: 1px solid var(--line-soft);
