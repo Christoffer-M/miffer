@@ -329,6 +329,38 @@
   display: flex;
 }
 
+/* New episodes since it was watched, on the poster on Watch's Series shelf: a ring (inside, as
+   the shelf's row clips anything outside the poster) and a tag in its corner. */
+.flagged {
+  position: relative;
+  display: flex;
+}
+.flagged::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 0 0 3px var(--accent);
+  pointer-events: none;
+}
+.flag {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--on-solid);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgb(var(--ink-rgb) / 0.25);
+}
+
 /* New episodes since it was watched, under the title on Watched. */
 .tag {
   align-self: flex-start;

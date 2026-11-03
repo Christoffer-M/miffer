@@ -65,14 +65,26 @@ type TileProps = {
   sub?: string;
   /** Under the title, e.g. "New season". */
   tag?: string;
+  /** On the poster, which gets a ring: "New season" on Watch's Series shelf. */
+  flag?: string;
 };
 
-export function PosterTile({ item, label, onPress, sub, tag }: TileProps) {
+export function PosterTile({ item, label, onPress, sub, tag, flag }: TileProps) {
   const { members } = useMembers();
   const adder = members.findIndex((m) => m.id === item.addedBy);
   return (
     <AriaButton className={s.tile} onPress={onPress} aria-label={label}>
-      <Poster path={item.posterPath} kind={item.kind} size="fill" />
+      {flag ? (
+        <span className={s.flagged}>
+          <Poster path={item.posterPath} kind={item.kind} size="fill" />
+          <span className={s.flag} aria-hidden>
+            <Tv size={11} strokeWidth={2.5} />
+            {flag}
+          </span>
+        </span>
+      ) : (
+        <Poster path={item.posterPath} kind={item.kind} size="fill" />
+      )}
       {adder >= 0 && (
         <span className={s.badge}>
           <Avatar name={members[adder].name} index={adder} small />

@@ -6,7 +6,7 @@ import type { Watch } from "../../api";
 import { Avatars } from "../../brand";
 import { useOnline } from "../../offline";
 import { useMembers } from "../../queries/household";
-import { useWatchedSeries, watchQuery } from "../../queries/watch";
+import { watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
 import { type Kind, KINDS, placeOf, Poster, PosterTile, tileLabel, toStart } from "../../watch";
 import ui from "../../ui.module.css";
@@ -25,13 +25,12 @@ export const Route = createFileRoute("/watch/")({ component: WatchList });
 function WatchList() {
   const { data: list = [], isPending, error } = useQuery(watchQuery);
   const online = useOnline();
-  const { open, start, sheet, bottom } = useToWatch();
+  // Watched series with new episodes since: first on the Series shelf.
+  const { open, start, sheet, bottom, fresh } = useToWatch();
 
   const toWatch = toStart(list);
   const watching = useWatching(list);
   const watchedCount = list.filter((w) => w.watchedAt).length;
-  // Watched series with a new season since: a dot on Watched says so.
-  const freshCount = useWatchedSeries(list).fresh.size;
 
   return (
     <>
@@ -43,17 +42,8 @@ function WatchList() {
         <div className={`${ui.row} ${g.titleRow}`}>
           <h1 className={ui.display}>Watch</h1>
           <div className={s.actions}>
-            <Link
-              to="/watch/watched"
-              // New episodes are on the Series side: open there.
-              search={freshCount ? { kind: "series" } : {}}
-              className={s.action}
-              aria-label={`Watched, ${watchedCount}${freshCount ? `, ${freshCount} with new episodes` : ""}`}
-            >
-              <span className={s.iconWithDot}>
-                <History size={20} aria-hidden />
-                {freshCount > 0 && <span className={s.dot} />}
-              </span>
+            <Link to="/watch/watched" className={s.action} aria-label={`Watched, ${watchedCount}`}>
+              <History size={20} aria-hidden />
               {watchedCount}
             </Link>
             <Avatars />
@@ -63,11 +53,18 @@ function WatchList() {
 
       <main className={s.shelves}>
         {error && <p className={`${ui.error} ${s.shelfNote}`}>{error.message}</p>}
-        {!isPending && toWatch.length === 0 && watching.shown.length === 0 ? (
+        {!isPending && toWatch.length === 0 && watching.shown.length === 0 && fresh.size === 0 ? (
           <p className={`${ui.muted} ${s.shelfNote}`}>Nothing to watch yet. Tap + to add a movie or series.</p>
         ) : (
           (["movie", "series"] as const).map((kind) => (
-            <Shelf key={kind} kind={kind} list={toWatch.filter((w) => w.kind === kind)} onOpen={open} onStart={start}>
+            <Shelf
+              key={kind}
+              kind={kind}
+              list={toWatch.filter((w) => w.kind === kind)}
+              fresh={kind === "series" ? list.flatMap((w) => (fresh.has(w.id) ? [{ item: w, label: fresh.get(w.id)!.label }] : [])) : []}
+              onOpen={open}
+              onStart={start}
+            >
               {kind === "series" && <WatchingCard {...watching} />}
             </Shelf>
           ))
@@ -83,13 +80,15 @@ function WatchList() {
 type ShelfProps = {
   kind: Kind;
   list: Watch[];
+  /** Watched series with new episodes since, before the rest with a tag on the poster. */
+  fresh: { item: Watch; label: string }[];
   onOpen: (w: Watch) => void;
   onStart: (w: Watch) => void;
   /** Between the shelf's title and its posters: on Series, the card for the ones being watched. */
   children?: ReactNode;
 };
 
-function Shelf({ kind, list, onOpen, onStart, children }: ShelfProps) {
+function Shelf({ kind, list, fresh, onOpen, onStart, children }: ShelfProps) {
   const { whoIs } = useMembers();
   const { plural, page, Icon } = KINDS[kind];
   const name = plural.toLowerCase();
@@ -114,10 +113,15 @@ function Shelf({ kind, list, onOpen, onStart, children }: ShelfProps) {
         )}
       </div>
       {children}
-      {list.length === 0 ? (
+      {list.length === 0 && fresh.length === 0 ? (
         <p className={`${ui.muted} ${s.shelfNote}`}>No {name} to {kind === "series" ? "start" : "watch"}. Tap + to add one.</p>
       ) : (
         <ul className={s.row} aria-label={`${plural} to watch`}>
+          {fresh.map(({ item, label }) => (
+            <li key={item.id} {...animatedItem(`watch-${item.id}`)}>
+              <PosterTile item={item} flag={label} label={tileLabel(item, label.toLowerCase())} onPress={() => onOpen(item)} />
+            </li>
+          ))}
           {list.map((w) => (
             <li key={w.id} {...animatedItem(`watch-${w.id}`)}>
               <PosterTile item={w} label={tileLabel(w, `added by ${whoIs(w.addedBy)}`)} onPress={() => onOpen(w)} />
