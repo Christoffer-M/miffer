@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
-import { Button as AriaButton, Dialog, DialogTrigger, Heading, Modal, ModalOverlay, Popover } from "react-aria-components";
+import { Button as AriaButton, Dialog, DialogTrigger, Heading, ModalOverlay, Popover } from "react-aria-components";
 import { ChevronLeft, ChevronRight, Film, Star, Tv } from "lucide-react";
 import type { Watch } from "./api";
 import { caughtUp, count, type Place, settle } from "./progress";
 import { Avatar } from "./brand";
-import { SheetGrabber } from "./components/SheetGrabber";
+import { Sheet } from "./components/Sheet";
 import { useMembers } from "./queries/household";
 import { detailsQuery } from "./queries/watch";
 import ui from "./ui.module.css";
@@ -139,8 +139,7 @@ type SheetProps = {
 export function WatchSheet({ item, isOpen, onClose, eyebrow, note, actions, children }: SheetProps) {
   return (
     <ModalOverlay isOpen={isOpen} onOpenChange={(open) => !open && onClose()} isDismissable className={sheet.overlay}>
-      <Modal className={`${sheet.sheet} ${s.infoSheet}`}>
-        <SheetGrabber />
+      <Sheet className={s.infoSheet}>
         <Dialog className={`${sheet.dialog} ${s.info}`}>
           {item && (
             <>
@@ -154,7 +153,7 @@ export function WatchSheet({ item, isOpen, onClose, eyebrow, note, actions, chil
             </>
           )}
         </Dialog>
-      </Modal>
+      </Sheet>
     </ModalOverlay>
   );
 }

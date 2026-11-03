@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
-import { Dialog, DialogTrigger, Heading, Modal, ModalOverlay } from "react-aria-components";
+import { Dialog, DialogTrigger, Heading, ModalOverlay } from "react-aria-components";
 import { Button } from "./Button";
-import { SheetGrabber } from "./SheetGrabber";
+import { Sheet } from "./Sheet";
 import s from "./Confirm.module.css";
 
 type Props = {
@@ -19,8 +19,7 @@ export function Confirm({ children, title, message, confirmLabel, onConfirm }: P
     <DialogTrigger>
       {children}
       <ModalOverlay isDismissable className={s.overlay}>
-        <Modal className={s.sheet}>
-          <SheetGrabber />
+        <Sheet>
           <Dialog role="alertdialog" className={s.dialog}>
             {({ close }) => (
               <>
@@ -45,7 +44,7 @@ export function Confirm({ children, title, message, confirmLabel, onConfirm }: P
               </>
             )}
           </Dialog>
-        </Modal>
+        </Sheet>
       </ModalOverlay>
     </DialogTrigger>
   );

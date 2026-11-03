@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
+import { Dialog, Heading, ModalOverlay } from "react-aria-components";
 import { canPush, useSetPush } from "../mutations/household";
 import { meQuery } from "../queries/household";
 import { Button } from "./Button";
-import { SheetGrabber } from "./SheetGrabber";
+import { Sheet } from "./Sheet";
 import s from "./Confirm.module.css";
 import ui from "../ui.module.css";
 
@@ -24,8 +24,7 @@ export function AskForNotifications() {
 
   return (
     <ModalOverlay isOpen={ask} onOpenChange={(open) => !open && setNotNow(true)} isDismissable className={s.overlay}>
-      <Modal className={s.sheet}>
-        <SheetGrabber />
+      <Sheet>
         <Dialog className={s.dialog}>
           <Heading slot="title" className={s.title}>
             Know when something's added?
@@ -43,7 +42,7 @@ export function AskForNotifications() {
             </Button>
           </div>
         </Dialog>
-      </Modal>
+      </Sheet>
     </ModalOverlay>
   );
 }

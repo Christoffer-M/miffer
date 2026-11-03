@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Button as AriaButton, Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
+import { Button as AriaButton, Dialog, Heading, ModalOverlay } from "react-aria-components";
 import { AlarmClock, Bell, Check, ChevronRight, Pencil, Repeat } from "lucide-react";
 import { type Reminder, session } from "../api";
 import { Avatar } from "../brand";
@@ -12,7 +12,7 @@ import { remindersQuery } from "../queries/reminders";
 import { dueAt, dueFor, formatBack, formatDue, nextTime, REPEATS, SNOOZES } from "../reminders";
 import { Button } from "./Button";
 import { ReminderSheet } from "./ReminderSheet";
-import { SheetGrabber } from "./SheetGrabber";
+import { Sheet } from "./Sheet";
 import { UndoBar, useUndoable } from "./UndoBar";
 import confirm from "./Confirm.module.css";
 import ui from "../ui.module.css";
@@ -124,8 +124,7 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
         onOpenChange={(open) => !open && setNotNow(queue.map((r) => r.id))}
         className={confirm.overlay}
       >
-        <Modal className={`${confirm.sheet} ${s.sheet}`}>
-          <SheetGrabber />
+        <Sheet className={s.sheet}>
           {shown && (
             <Dialog className={s.dialog}>
               {/* One item in the column, so the empty status line under the handle takes no room. */}
@@ -209,7 +208,7 @@ export function DueReminders({ undoSpot }: { undoSpot: HTMLElement | null }) {
               </div>
             </Dialog>
           )}
-        </Modal>
+        </Sheet>
       </ModalOverlay>
 
       {editing && <ReminderSheet reminder={editing} onClose={() => setEditing(null)} />}
