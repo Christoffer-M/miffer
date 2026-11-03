@@ -10,7 +10,7 @@ import { db, schema } from "./db/index.js";
 import { notify } from "./live.js";
 import { isPushEndpoint, pushAdded, pushKey } from "./push.js";
 import { complete, isTimeZone } from "./reminders.js";
-import { search, searchOn, seasons } from "./tmdb.js";
+import { episodes, search, searchOn, seasons } from "./tmdb.js";
 import { fillEnds } from "./watched.js";
 
 const { households, devices, items, itemHistory, linkCodes, reminders, watch } = schema;
@@ -510,6 +510,21 @@ const watchRoutes = new Hono<Env>()
         );
       }
       return c.json(found);
+    },
+  )
+  // A season's episode names, for Watching's sheet: ?id=1408&season=3 gives ["Pilot", ...].
+  .get(
+    "/episodes",
+    zValidator("query", z.object({ id: z.coerce.number().int().positive(), season: z.coerce.number().int().positive() })),
+    async (c) => {
+      if (!searchOn) return c.json({ error: "Search isn't set up on the server yet." }, 503);
+      const { id, season } = c.req.valid("query");
+      try {
+        return c.json(await episodes(id, season));
+      } catch (err) {
+        console.error("episodes failed", err);
+        return c.json({ error: "TMDB isn't answering right now." }, 502);
+      }
     },
   )
   .post("/", zValidator("json", watchFields.extend({ id: z.uuid() })), async (c) => {

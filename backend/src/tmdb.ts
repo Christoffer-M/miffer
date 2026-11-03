@@ -85,3 +85,13 @@ export async function seasons(tmdbId: number) {
   if (seasonsKept.size > SEASONS_KEPT) seasonsKept.delete(seasonsKept.keys().next().value!);
   return fresh;
 }
+
+/** The names of a season's episodes, in order: index 0 is episode 1. */
+export async function episodes(tmdbId: number, season: number) {
+  // ponytail: not kept like seasons; a phone asks once per season it opens, keep them if TMDB complains
+  const { episodes = [] } = await get<{ episodes?: { episode_number: number; name: string }[] }>(
+    `/tv/${tmdbId}/season/${season}`,
+    { language: "en-US" },
+  );
+  return episodes.sort((a, b) => a.episode_number - b.episode_number).map((e) => e.name);
+}

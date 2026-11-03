@@ -597,6 +597,20 @@ test("a series' seasons come from TMDB, without the specials", async () => {
   tmdb.mockRestore();
 });
 
+test("a season's episode names come from TMDB, in order", async () => {
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  const tmdb = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    Response.json({ episodes: [{ episode_number: 2, name: "Two" }, { episode_number: 1, name: "Pilot" }] }),
+  );
+  const res = await call("/watch/episodes?id=1408&season=3", { token: anna.token });
+  expect(await res.json()).toEqual(["Pilot", "Two"]);
+  expect(new URL(String(tmdb.mock.calls[0][0])).pathname).toBe("/3/tv/1408/season/3");
+  tmdb.mockResolvedValue(new Response("", { status: 404 }));
+  expect((await call("/watch/episodes?id=1408&season=9", { token: anna.token })).status).toBe(502);
+  expect((await call("/watch/episodes?id=1408&season=0", { token: anna.token })).status).toBe(400);
+  tmdb.mockRestore();
+});
+
 test("a series' seasons are only what's out, and a watched end past that comes back", async () => {
   const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
   // Like Silo: season 3 airing (4 of 10 out), season 4 announced for next year, one with no date yet.
