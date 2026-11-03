@@ -125,6 +125,17 @@ export const seasonsQuery = (tmdbId: number | null) =>
     retry: false,
   });
 
+/** A season's episode names and stills, when Watching's sheet opens it. Not kept on the phone: offline it shows numbers. */
+export const episodesQuery = (tmdbId: number | null, season: number) =>
+  queryOptions({
+    queryKey: ["episodes", tmdbId, season],
+    queryFn: async () =>
+      (await ok(api.watch.episodes.$get({ query: { id: String(tmdbId), season: String(season) } }))).json(),
+    enabled: tmdbId !== null,
+    staleTime: DAY,
+    retry: false,
+  });
+
 /**
  * What Watched says about each watched series that remembers where it ended, from its seasons
  * (fetched for search ones; typed by hand there are none):

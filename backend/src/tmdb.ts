@@ -102,10 +102,25 @@ export async function details(kind: "movie" | "series", tmdbId: number) {
   };
 }
 
-// Seasons asked for lately, so every phone opening Watching doesn't ask TMDB again.
-const SEASONS_FOR_MS = 6 * 60 * 60 * 1000;
-const SEASONS_KEPT = 1000; // series; the oldest goes first
-const seasonsKept = new Map<number, { at: number; seasons: number[] }>();
+/** Answers kept for a while, so phones asking for the same thing don't each ask TMDB; past `max`, the oldest go first. */
+function keeper<K, V>(forMs: number, max: number) {
+  const kept = new Map<K, { at: number; value: V }>();
+  return async (key: K, fetch: () => Promise<V>) => {
+    const k = kept.get(key);
+    if (k && Date.now() - k.at < forMs) return k.value;
+    const value = await fetch();
+    kept.delete(key); // re-added last: a Map keeps insertion order
+    kept.set(key, { at: Date.now(), value });
+    if (kept.size > max) kept.delete(kept.keys().next().value!);
+    return value;
+  };
+}
+
+const KEEP_FOR_MS = 6 * 60 * 60 * 1000;
+// Seasons asked for lately, so every phone opening Watching doesn't ask TMDB again. By series.
+const seasonsKept = keeper<number, { counts: number[]; numbers: number[] }>(KEEP_FOR_MS, 1000);
+// A season's episodes, by series and TMDB's season number.
+const episodesKept = keeper<string, (EpisodeShown | null)[]>(KEEP_FOR_MS, 2000);
 
 type Show = {
   seasons?: { season_number: number; episode_count: number; air_date: string | null }[];
@@ -118,6 +133,19 @@ function out<S extends { season_number: number; air_date: string | null }>(seaso
   return seasons.filter((s) => s.season_number > 0 && s.air_date && s.air_date <= today);
 }
 
+/** The seasons that are out, in order: how many episodes each has, and its number on TMDB. */
+function aired(tmdbId: number) {
+  return seasonsKept(tmdbId, async () => {
+    const show = await get<Show>(`/tv/${tmdbId}`);
+    const last = show.last_episode_to_air;
+    const shown = out(show.seasons).sort((a, b) => a.season_number - b.season_number);
+    return {
+      counts: shown.map((s) => (s.season_number === last?.season_number ? last.episode_number : s.episode_count)),
+      numbers: shown.map((s) => s.season_number),
+    };
+  });
+}
+
 /**
  * How many episodes each season of a series has, in order: [10, 10, 8] for three seasons.
  * Specials (TMDB's season 0) are left out, and so is what isn't out yet: a season announced
@@ -125,15 +153,27 @@ function out<S extends { season_number: number; air_date: string | null }>(seaso
  * it comes out, not when it's announced.
  */
 export async function seasons(tmdbId: number) {
-  const kept = seasonsKept.get(tmdbId);
-  if (kept && Date.now() - kept.at < SEASONS_FOR_MS) return kept.seasons;
-  const show = await get<Show>(`/tv/${tmdbId}`);
-  const last = show.last_episode_to_air;
-  const fresh = out(show.seasons)
-    .sort((a, b) => a.season_number - b.season_number)
-    .map((s) => (s.season_number === last?.season_number ? last.episode_number : s.episode_count));
-  seasonsKept.delete(tmdbId); // re-added last: a Map keeps insertion order
-  seasonsKept.set(tmdbId, { at: Date.now(), seasons: fresh });
-  if (seasonsKept.size > SEASONS_KEPT) seasonsKept.delete(seasonsKept.keys().next().value!);
-  return fresh;
+  return (await aired(tmdbId)).counts;
+}
+
+type Episode = { episode_number: number; name: string; still_path?: string | null };
+type EpisodeShown = { name: string; still: string | null };
+
+/**
+ * A season's episodes, the season counted as seasons() counts them (the second one out may be
+ * TMDB's season 3, when one has no date). By episode number: index 0 is episode 1, null where
+ * TMDB has none. Each one's name and still, a TMDB image name. A season that isn't out has none.
+ */
+export async function episodes(tmdbId: number, season: number) {
+  const number = (await aired(tmdbId)).numbers[season - 1];
+  if (number === undefined) return [];
+  return episodesKept(`${tmdbId}/${number}`, async () => {
+    const found = await get<{ episodes?: Episode[] }>(`/tv/${tmdbId}/season/${number}`, { language: "en-US" });
+    const byNumber = new Map((found.episodes ?? []).map((e) => [e.episode_number, e]));
+    const count = Math.max(0, ...byNumber.keys());
+    return Array.from({ length: count }, (_, i) => {
+      const e = byNumber.get(i + 1);
+      return e ? { name: e.name, still: e.still_path ?? null } : null;
+    });
+  });
 }

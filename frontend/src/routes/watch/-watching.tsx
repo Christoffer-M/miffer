@@ -2,9 +2,9 @@
 // The leading "-" keeps the router from taking this file for a route.
 
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button as AriaButton, Group, Input, Label, NumberField } from "react-aria-components";
-import { Check, CircleCheckBig, Minus, Plus, Undo2 } from "lucide-react";
+import { Check, ChevronDown, CircleCheckBig, Minus, Plus, Undo2 } from "lucide-react";
 import type { Watch } from "../../api";
 import { Button } from "../../components/Button";
 import { useSetProgress, useSetWatched } from "../../mutations/watch";
@@ -23,7 +23,7 @@ import {
   short,
   tapEpisode,
 } from "../../progress";
-import { seasonsQuery, watchQuery } from "../../queries/watch";
+import { episodesQuery, seasonsQuery, watchQuery } from "../../queries/watch";
 import { animatedBlock, animatedItem } from "../../viewTransition";
 import { isWatching, placeOf, Poster, WatchSheet, watchingGroups } from "../../watch";
 import ui from "../../ui.module.css";
@@ -190,8 +190,9 @@ export function WatchingPanel({ offer }: { offer: Offer }) {
         >
           {/* No Undo in here: tapping an episode again, or −, puts it back. */}
           {openSeasons?.length ? (
-            <EpisodePicker
+            <SeasonList
               key={open.id}
+              tmdbId={open.tmdbId}
               at={placeOf(open, openSeasons)}
               seasons={openSeasons}
               onChange={(to) => setProgress.mutate({ id: open.id, progress: to })}
@@ -245,79 +246,114 @@ function Hero({ item, seasons, onOpen, onTick }: HeroProps) {
   );
 }
 
+type SeasonListProps = { tmdbId: number | null; at: Place; seasons: number[]; onChange: (to: Place) => void };
+
 /**
- * Where a series is up to, from TMDB's seasons: pick a season, then the last episode seen.
- * Watched ones are filled, the next one is outlined. Tapping the last one seen again unmarks it.
+ * Where a series is up to, from TMDB's seasons: a row per season saying how far it is, and the
+ * open one's episodes by name. Tapping an episode makes it the last one seen; tapping the last
+ * one seen again unmarks it.
  */
-function EpisodePicker({ at, seasons, onChange }: { at: Place; seasons: number[]; onChange: (to: Place) => void }) {
-  // The season shown; it follows along when the place moves to another season.
-  const [viewing, setViewing] = useState(Math.min(at.season, seasons.length));
-  useEffect(() => setViewing(Math.min(at.season, seasons.length)), [at.season, seasons.length]);
+function SeasonList({ tmdbId, at, seasons, onChange }: SeasonListProps) {
+  // The season open, 0 for none; it follows along when the place moves to another season.
+  const [open, setOpen] = useState(Math.min(at.season, seasons.length));
+  useEffect(() => setOpen(Math.min(at.season, seasons.length)), [at.season, seasons.length]);
   const parts = seasonParts(at, seasons);
-  const done = caughtUp(at, seasons);
+  const list = useRef<HTMLDivElement>(null);
+
+  // Moved on to another season (its last episode ticked): the sheet scrolls to that season's
+  // first unwatched episode, with room around it (scroll-margin). Not on opening: the sheet
+  // starts at the top, with the poster.
+  const placed = useRef(at.season);
+  useEffect(() => {
+    if (placed.current === at.season || open !== at.season) return;
+    placed.current = at.season;
+    list.current?.querySelector(`.${s.episodeRow}:not([data-seen])`)?.scrollIntoView({ block: "nearest" });
+  }, [at.season, open]);
 
   return (
     <div className={s.places}>
-      <span className={s.upNextBig}>{done ? "All caught up" : `Next up ${short(at)}`}</span>
-      <div className={s.chips} role="group" aria-label="Seasons">
+      <div className={s.seasons} ref={list}>
         {seasons.map((n, i) => {
           const season = i + 1;
+          const isOpen = season === open;
           const complete = parts[i] === n;
+          const started = !complete && parts[i] > 0;
+          const status = complete ? "Watched" : started ? `${parts[i]} of ${n}` : `${n} episodes`;
           return (
-            <AriaButton
-              key={season}
-              className={s.chip}
-              data-selected={season === viewing || undefined}
-              data-complete={complete || undefined}
-              aria-pressed={season === viewing}
-              aria-label={`Season ${season}${complete ? ", watched" : ""}`}
-              onPress={() => setViewing(season)}
-            >
-              {complete && <Check size={14} strokeWidth={3} aria-hidden />}S{season}
-            </AriaButton>
+            <div key={season} className={s.season}>
+              <AriaButton
+                className={s.seasonRow}
+                data-open={isOpen || undefined}
+                data-complete={complete || undefined}
+                data-started={started || undefined}
+                aria-expanded={isOpen}
+                onPress={() => setOpen(isOpen ? 0 : season)}
+              >
+                <span className={s.seasonName}>Season {season}</span>
+                <span className={s.seasonStatus}>
+                  {complete && <Check size={14} strokeWidth={3} aria-hidden />}
+                  {status}
+                </span>
+                <ChevronDown className={s.chevron} size={18} strokeWidth={2.5} aria-hidden />
+              </AriaButton>
+              {isOpen && <Episodes tmdbId={tmdbId} season={season} at={at} seasons={seasons} onChange={onChange} />}
+            </div>
           );
         })}
       </div>
-      <div className={s.pickerHead}>
-        <span className={`${ui.eyebrow} ${ui.muted}`}>Season {viewing} episodes</span>
-        <span className={`${ui.muted} ${ui.small}`}>Tap the last one you saw, again to unmark</span>
-      </div>
-      <div className={s.episodes} role="group" aria-label={`Season ${viewing} episodes`}>
-        {Array.from({ length: seasons[viewing - 1] ?? 0 }, (_, i) => {
-          const episode = i + 1;
-          const seen = episode <= parts[viewing - 1];
-          const isNext = !seen && viewing === at.season && episode === at.episode;
-          const tapTo = tapEpisode(at, { season: viewing, episode }, seasons);
-          const isLastSeen = seen && tapTo.season === viewing && tapTo.episode === episode;
-          return (
+      <span className={`${ui.muted} ${ui.small}`}>Tap the last episode you watched, again to unmark.</span>
+    </div>
+  );
+}
+
+/** A season's episodes, with their names and stills once TMDB has them; numbers alone before that, or offline. */
+function Episodes({ tmdbId, season, at, seasons, onChange }: SeasonListProps & { season: number }) {
+  const { data: found } = useQuery(episodesQuery(tmdbId, season));
+  const seenUpTo = seasonParts(at, seasons)[season - 1];
+  const list = useRef<HTMLOListElement>(null);
+
+  // Opened partway through: scrolled to the first unwatched one, the last one watched above it.
+  useEffect(() => {
+    const first = list.current?.querySelector<HTMLElement>(`.${s.episodeRow}:not([data-seen])`);
+    if (first) list.current!.scrollTop = first.offsetTop - first.offsetHeight;
+  }, []);
+
+  return (
+    <ol className={s.episodeList} ref={list} aria-label={`Season ${season} episodes`}>
+      {Array.from({ length: seasons[season - 1] }, (_, i) => {
+        const episode = i + 1;
+        const { name, still } = found?.[i] ?? {};
+        const seen = episode <= seenUpTo;
+        const tapTo = tapEpisode(at, { season, episode }, seasons);
+        const isLastSeen = seen && tapTo.season === season && tapTo.episode === episode;
+        return (
+          <li key={episode}>
             <AriaButton
-              key={episode}
-              className={s.episode}
+              className={s.episodeRow}
               data-seen={seen || undefined}
-              data-next={isNext || undefined}
-              aria-label={`Episode ${episode}${isLastSeen ? ", the last one watched: tap to unmark" : seen ? ", watched" : isNext ? ", next up" : ""}`}
+              aria-label={`Episode ${episode}${name ? `, ${name}` : ""}${isLastSeen ? ", the last one watched: tap to unmark" : seen ? ", watched" : ""}`}
               onPress={() => onChange(tapTo)}
             >
-              {episode}
+              <span className={s.episodeStill}>
+                {still && (
+                  <img
+                    src={`https://image.tmdb.org/t/p/w300${still}`} // about three times the shown width
+                    alt=""
+                    loading="lazy"
+                    onError={(e) => (e.currentTarget.hidden = true)} // offline: the tint stays
+                  />
+                )}
+              </span>
+              <span className={s.episodeText}>
+                {name && <span className={s.episodeNumber}>Episode {episode}</span>}
+                <span className={s.episodeName}>{name || `Episode ${episode}`}</span>
+              </span>
+              <span className={s.episodeCheck}>{seen && <Check size={16} strokeWidth={3} aria-hidden />}</span>
             </AriaButton>
-          );
-        })}
-      </div>
-      <div className={s.legend} aria-hidden>
-        <span>
-          <span className={s.swatch} data-seen />
-          Watched
-        </span>
-        <span>
-          <span className={s.swatch} data-next />
-          Next up
-        </span>
-        <span>
-          <span className={s.swatch} />
-          Still to come
-        </span>
-      </div>
-    </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
