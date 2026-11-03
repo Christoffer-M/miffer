@@ -576,9 +576,9 @@ test("a series' seasons come from TMDB, without the specials", async () => {
   const tmdb = vi.spyOn(globalThis, "fetch").mockResolvedValue(
     Response.json({
       seasons: [
-        { season_number: 2, episode_count: 8 },
-        { season_number: 0, episode_count: 3 },
-        { season_number: 1, episode_count: 10 },
+        { season_number: 2, episode_count: 8, air_date: "2020-01-01" },
+        { season_number: 0, episode_count: 3, air_date: "2020-01-01" },
+        { season_number: 1, episode_count: 10, air_date: "2020-01-01" },
       ],
     }),
   );
@@ -597,11 +597,46 @@ test("a series' seasons come from TMDB, without the specials", async () => {
   tmdb.mockRestore();
 });
 
+test("a series' seasons are only what's out, and a watched end past that comes back", async () => {
+  const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
+  // Like Silo: season 3 airing (4 of 10 out), season 4 announced for next year, one with no date yet.
+  const tmdb = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+    Response.json({
+      seasons: [
+        { season_number: 1, episode_count: 10, air_date: "2023-05-05" },
+        { season_number: 2, episode_count: 10, air_date: "2024-11-15" },
+        { season_number: 3, episode_count: 10, air_date: "2026-10-01" },
+        { season_number: 4, episode_count: 1, air_date: `${new Date().getFullYear() + 1}-07-01` },
+        { season_number: 5, episode_count: 0, air_date: null },
+      ],
+      last_episode_to_air: { season_number: 3, episode_number: 4 },
+    }),
+  );
+  const tmdbId = 800_000 + Math.floor(Math.random() * 90_000); // not kept from an earlier run
+  expect(await (await call(`/watch/seasons?ids=${tmdbId}`, { token: anna.token })).json()).toEqual({ [tmdbId]: [10, 10, 4] });
+
+  // Watched back when the announced episodes counted: its end comes back to what's out.
+  const add = async (offset: number, place: { season: number; episode: number }) => {
+    const id = crypto.randomUUID();
+    const body = { id, title: "Silo", kind: "series", tmdbId: tmdbId + offset, year: null, posterPath: null };
+    await call("/watch", { method: "POST", token: anna.token, body });
+    await db.update(schema.watch).set({ watchedAt: new Date(), ...place }).where(eq(schema.watch.id, id));
+    return id;
+  };
+  const past = await add(0, { season: 4, episode: 2 });
+  const before = await add(1, { season: 2, episode: 11 }); // watched before season 3 came: left alone
+  await fillEnds();
+  const rows = await (await call("/watch", { token: anna.token })).json();
+  expect(rows.find((w: { id: string }) => w.id === past)).toMatchObject({ season: 3, episode: 5 });
+  expect(rows.find((w: { id: string }) => w.id === before)).toMatchObject({ season: 2, episode: 11 });
+  tmdb.mockRestore();
+});
+
 test("a series watched without saying where it ended gets the end of its last season", async () => {
   const anna = await (await call("/households", { method: "POST", body: { name: "Anna" } })).json();
   // A new answer each time: a body can only be read once.
   const tmdb = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
-    Response.json({ seasons: [{ season_number: 1, episode_count: 10 }, { season_number: 2, episode_count: 8 }] }),
+    Response.json({ seasons: [{ season_number: 1, episode_count: 10, air_date: "2020-01-01" }, { season_number: 2, episode_count: 8, air_date: "2020-01-01" }] }),
   );
   const add = async (tmdbId: number | null) => {
     const id = crypto.randomUUID();
@@ -638,7 +673,7 @@ test("a series watched without saying where it ended gets the end of its last se
   let answer!: () => void;
   tmdb.mockImplementationOnce(async () => {
     await new Promise<void>((resolve) => (answer = resolve));
-    return Response.json({ seasons: [{ season_number: 1, episode_count: 6 }] });
+    return Response.json({ seasons: [{ season_number: 1, episode_count: 6, air_date: "2020-01-01" }] });
   });
   const filling = fillEnds({ id: putBack });
   await vi.waitFor(() => expect(answer).toBeTypeOf("function"));
