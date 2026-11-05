@@ -53,6 +53,7 @@ export const useAddWatch = () =>
               season: null,
               episode: null,
               progressAt: null,
+              toldSeason: null,
               watchedAt: null,
               createdAt: new Date().toISOString(),
             },

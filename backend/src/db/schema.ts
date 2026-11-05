@@ -103,7 +103,8 @@ export const watch = pgTable(
     // When the place last changed, so Watching can put the series watched last first.
     progressAt: timestamp({ withTimezone: true }),
     // A watched series: the most seasons out the household has been told about (watched.ts),
-    // so each new season is announced once. Null until the server first looks.
+    // so each new season is announced once, and a phone with fewer kept asks again (queries/watch.ts).
+    // Null until the server first looks.
     toldSeason: integer(),
     // When it was watched, or null while it's still to watch.
     watchedAt: timestamp({ withTimezone: true }),
