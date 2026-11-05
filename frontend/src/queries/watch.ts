@@ -147,7 +147,13 @@ export const episodesQuery = (tmdbId: number | null, season: number) =>
 export function useWatchedSeries(list: Watch[]) {
   const ended = list.filter((w) => w.kind === "series" && w.watchedAt && w.season != null && w.episode != null);
   return useQueries({
-    queries: ended.map((w) => seasonsQuery(w.tmdbId)),
+    queries: ended.map((w) => ({
+      ...seasonsQuery(w.tmdbId),
+      // The server has told of a season these kept ones don't have (a push, watched.ts): ask now, not in a day.
+      // ponytail: stays stale if TMDB takes a season back, so it asks on each open; the server keeps TMDB's answer.
+      staleTime: (q: { state: { data?: number[] } }) =>
+        w.toldSeason !== null && (q.state.data?.length ?? 0) < w.toldSeason ? 0 : DAY,
+    })),
     combine: (results) => {
       const fresh = new Map<string, { label: string; place: Place }>();
       const seenBy = new Map<string, Seen>();

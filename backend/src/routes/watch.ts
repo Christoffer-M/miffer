@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, desc, eq, getTableColumns, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { auth, type Env, idParam, isMember } from "../auth.js";
@@ -39,14 +39,11 @@ const forSeries = (value: number | Date | null, type: "integer" | "timestamptz")
 // Batches of seasons a phone can ask for at once (Watch asks for every series it shows).
 const SEASONS_AT_ONCE = 100;
 
-// What phones get of a watch row: all but toldSeason, which only the server uses (watched.ts).
-const { toldSeason: _, ...watchShown } = getTableColumns(watch);
-
 export const watchRoutes = new Hono<Env>()
   .use(auth)
   .get("/", async (c) => {
     const rows = await db
-      .select(watchShown)
+      .select()
       .from(watch)
       .where(eq(watch.householdId, c.var.householdId))
       .orderBy(desc(watch.createdAt));
