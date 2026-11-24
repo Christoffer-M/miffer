@@ -73,6 +73,7 @@ function showAdded(body) {
       body: [...(open ? open.body.split("\n") : []), body].slice(-5).join("\n"),
       tag: "added",
       renotify: true,
+      data: { url: "/groceries" },
     }),
   );
 }
@@ -115,7 +116,7 @@ async function act(id, action) {
 }
 
 /**
- * Brings the app forward, on that screen if there is one (reminders); else opens it on Groceries.
+ * Brings the app forward on the screen the notification is about (Groceries when it says nothing).
  * For a reminder the app asks what to do with it straight away, before any other that's due (DueReminders.tsx).
  */
 function open(url, reminder) {
@@ -124,9 +125,9 @@ function open(url, reminder) {
       // Uncontrolled too: the page that registered this worker isn't controlled until it reloads.
       .matchAll({ type: "window", includeUncontrolled: true })
       .then(([win]) => {
-        if (!win) return self.clients.openWindow(reminder ? `${url}?reminder=${reminder}` : (url ?? "/groceries"));
-        // An app that's already open stays where it is for something added, as it always has.
-        if (url) win.postMessage({ open: url, reminder }); // main.tsx takes it to that screen
+        url ??= "/groceries";
+        if (!win) return self.clients.openWindow(reminder ? `${url}?reminder=${reminder}` : url);
+        win.postMessage({ open: url, reminder }); // main.tsx takes it to that screen
         return win.focus();
       })
   );
