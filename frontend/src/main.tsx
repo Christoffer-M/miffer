@@ -43,8 +43,9 @@ const router = createRouter({
 });
 
 // A tapped notification brings an already open app to the screen it's about (sw.js).
+// href, not to: the screen can come with a search, like Watched's ?kind=series.
 navigator.serviceWorker?.addEventListener("message", (e) => {
-  if (typeof e.data?.open === "string") router.navigate({ to: e.data.open });
+  if (typeof e.data?.open === "string") router.navigate({ href: e.data.open });
 });
 
 declare module "@tanstack/react-router" {
