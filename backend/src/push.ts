@@ -47,7 +47,8 @@ export async function pushAdded(householdId: string, deviceId: string, item: str
 export async function pushNewSeason(householdId: string, watchId: string, title: string, season: number) {
   if (!pushKey) return;
   const phones = await householdPhones(householdId);
-  const payload = { title, body: `Season ${season} is out`, tag: `season-${watchId}`, url: "/watch/watched" };
+  // On Watched's Series tab, where the series with new episodes come first.
+  const payload = { title, body: `Season ${season} is out`, tag: `season-${watchId}`, url: "/watch/watched?kind=series" };
   await Promise.all(phones.map(({ id, push }) => push && send(id, push, payload)));
 }
 

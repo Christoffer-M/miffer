@@ -803,7 +803,7 @@ test("a new season of a watched series is announced once, even with the app clos
   expect(sentHere()).toEqual([
     [
       expect.objectContaining({ endpoint }),
-      JSON.stringify({ title, body: "Season 3 is out", tag: `season-${id}`, url: "/watch/watched" }),
+      JSON.stringify({ title, body: "Season 3 is out", tag: `season-${id}`, url: "/watch/watched?kind=series" }),
       expect.anything(),
     ],
   ]);
